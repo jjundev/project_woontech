@@ -85,6 +85,12 @@ If the patch requires implementor rework:
 - Respond with `IMPLEMENT_REWORK_REQUIRED` on its own line.
 
 Never modify files in the task folder except the feedback / review markdown files.
+
+The harness enforces path restrictions via a PreToolUse hook. Write/Edit calls
+outside the worktree are denied; the only task-folder writes allowed are
+`implement-plan.md`, `implement-checklist.md`, `implement-review.md`, `pr.md`,
+and `implement-feedback-version-*.md` / `plan-feedback-version-*.md`. Do not
+fight the hook.
 """,
     allowed_tools=["Read", "Write", "Edit", "Glob", "Grep", "Bash"],
 )

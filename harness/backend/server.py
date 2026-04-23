@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-import json
 from contextlib import asynccontextmanager
 from dataclasses import asdict
-from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
@@ -13,14 +11,13 @@ from pydantic import BaseModel
 
 from . import state as S
 from . import pipeline as P
+from . import worktree as W
 from .config import load_config
 from .events import bus
-from .spector_session import registry as spector_registry
 from .watcher import start_watcher
 
 
 config = load_config()
-spector_registry.set_config(config)
 _running_pipelines: dict[str, asyncio.Task] = {}
 
 
@@ -44,14 +41,6 @@ app.add_middleware(
 )
 
 
-class CreateTaskReq(BaseModel):
-    title: str
-
-
-class SpectorMessageReq(BaseModel):
-    text: str
-
-
 class StartPipelineReq(BaseModel):
     max_plan_retries: Optional[int] = None
     max_impl_retries: Optional[int] = None
@@ -59,13 +48,7 @@ class StartPipelineReq(BaseModel):
 
 @app.get("/api/tasks")
 async def list_tasks():
-    return [asdict(s) for s in S.list_tasks(config)]
-
-
-@app.post("/api/tasks")
-async def create_task(req: CreateTaskReq):
-    state = S.create_task(config, req.title)
-    return asdict(state)
+    return [asdict(s) for s in S.scan_task_folders(config)]
 
 
 @app.get("/api/tasks/{task_id}")
@@ -74,7 +57,18 @@ async def get_task(task_id: str):
         task_dir = S.find_task_dir(config, task_id)
     except FileNotFoundError:
         raise HTTPException(404, "task not found")
-    state = S.read_state(task_dir)
+    if (task_dir / "state.json").exists():
+        state = S.read_state(task_dir)
+    else:
+        # Synthesize from folder + spec.md so the UI can render pre-pipeline folders.
+        parent = task_dir.parent.name
+        state = S.TaskState(
+            id=task_id,
+            state=S.STATE_FROM_FOLDER.get(parent, "todo"),
+            title=S._title_from_spec(task_dir / "spec.md", task_id),
+            max_plan_retries=config.default_max_plan_retries,
+            max_impl_retries=config.default_max_impl_retries,
+        )
     files = sorted(p.name for p in task_dir.iterdir() if p.is_file() and p.name != "state.json")
     return {"state": asdict(state), "files": files, "task_dir": str(task_dir)}
 
@@ -94,25 +88,13 @@ async def get_task_file(task_id: str, name: str):
     return {"name": name, "content": target.read_text()}
 
 
-@app.post("/api/tasks/{task_id}/spector/message")
-async def spector_message(task_id: str, req: SpectorMessageReq):
+@app.get("/api/tasks/{task_id}/worktree-status")
+async def get_worktree_status(task_id: str):
     try:
-        task_dir = S.find_task_dir(config, task_id)
+        S.find_task_dir(config, task_id)
     except FileNotFoundError:
         raise HTTPException(404, "task not found")
-    try:
-        reply = await spector_registry.send(task_id, task_dir, req.text)
-    except asyncio.TimeoutError:
-        raise HTTPException(504, "spector timed out — session was reset, please retry")
-    except Exception as e:
-        raise HTTPException(502, f"spector error: {e or e.__class__.__name__}")
-    return {"reply": reply, "confirmed": (task_dir / "spec.md").exists()}
-
-
-@app.post("/api/tasks/{task_id}/spector/close")
-async def spector_close(task_id: str):
-    await spector_registry.close(task_id)
-    return {"ok": True}
+    return W.worktree_status(config, task_id)
 
 
 @app.post("/api/tasks/{task_id}/start")
@@ -122,10 +104,9 @@ async def start_pipeline(task_id: str, req: StartPipelineReq):
     except FileNotFoundError:
         raise HTTPException(404, "task not found")
     if not (task_dir / "spec.md").exists():
-        raise HTTPException(400, "spec.md missing — run spector first")
+        raise HTTPException(400, "spec.md missing — add spec.md to the task folder first")
     if task_id in _running_pipelines and not _running_pipelines[task_id].done():
         raise HTTPException(409, "pipeline already running")
-    await spector_registry.close(task_id)
     task = asyncio.create_task(
         P.run_pipeline(
             config,

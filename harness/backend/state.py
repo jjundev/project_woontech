@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import time
-import uuid
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Literal, Optional
@@ -33,6 +33,14 @@ FOLDER_FOR_STATE: dict[str, str] = {
     "needs_attention": "ongoing",
     "done": "done",
 }
+
+STATE_FROM_FOLDER: dict[str, StateName] = {
+    "todo": "todo",
+    "ongoing": "planning",
+    "done": "done",
+}
+
+TASK_ID_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 
 
 @dataclass
@@ -67,9 +75,19 @@ def write_state(task_dir: Path, state: TaskState) -> None:
     _state_file(task_dir).write_text(json.dumps(asdict(state), indent=2))
 
 
-def new_task_id(title: str) -> str:
-    slug = "".join(c if c.isalnum() else "-" for c in title.lower()).strip("-")[:40] or "task"
-    return f"{int(time.time())}-{slug}-{uuid.uuid4().hex[:6]}"
+def is_valid_task_id(name: str) -> bool:
+    return bool(TASK_ID_RE.fullmatch(name))
+
+
+def _title_from_spec(spec_path: Path, fallback: str) -> str:
+    try:
+        for line in spec_path.read_text(encoding="utf-8").splitlines():
+            s = line.strip()
+            if s.startswith("# "):
+                return s[2:].strip()
+    except OSError:
+        pass
+    return fallback
 
 
 def find_task_dir(config: HarnessConfig, task_id: str) -> Path:
@@ -80,43 +98,70 @@ def find_task_dir(config: HarnessConfig, task_id: str) -> Path:
     raise FileNotFoundError(f"Task {task_id} not found in any state folder")
 
 
-def create_task(config: HarnessConfig, title: str) -> TaskState:
-    task_id = new_task_id(title)
-    task_dir = config.todo_dir / task_id
-    task_dir.mkdir(parents=True, exist_ok=False)
-    state = TaskState(
-        id=task_id,
-        state="todo",
-        title=title,
-        max_plan_retries=config.default_max_plan_retries,
-        max_impl_retries=config.default_max_impl_retries,
-    )
-    write_state(task_dir, state)
-    return state
+def scan_task_folders(config: HarnessConfig) -> list[TaskState]:
+    """Discover task folders under todo/ongoing/done that contain a spec.md.
+
+    If state.json exists the persisted TaskState is returned; otherwise a
+    synthetic TaskState is produced with id=folder_name, title=first H1 of
+    spec.md (or folder name), and state derived from the parent folder.
+    """
+    out: list[TaskState] = []
+    for folder in ("todo", "ongoing", "done"):
+        root = config.state_dir(folder)
+        if not root.exists():
+            continue
+        for task_dir in sorted(p for p in root.iterdir() if p.is_dir()):
+            if not is_valid_task_id(task_dir.name):
+                continue
+            if not (task_dir / "spec.md").exists():
+                continue
+            sf = _state_file(task_dir)
+            if sf.exists():
+                try:
+                    out.append(read_state(task_dir))
+                    continue
+                except Exception:
+                    pass
+            out.append(
+                TaskState(
+                    id=task_dir.name,
+                    state=STATE_FROM_FOLDER[folder],
+                    title=_title_from_spec(task_dir / "spec.md", task_dir.name),
+                    max_plan_retries=config.default_max_plan_retries,
+                    max_impl_retries=config.default_max_impl_retries,
+                )
+            )
+    return out
 
 
 def transition(config: HarnessConfig, task_id: str, new_state: StateName) -> Path:
-    """Move task folder to the directory corresponding to new_state and update state.json."""
+    """Move task folder to the directory corresponding to new_state and update state.json.
+
+    If state.json does not exist yet (task was discovered from a folder with
+    only spec.md), it is materialized here using defaults + spec.md H1.
+    """
     current = find_task_dir(config, task_id)
-    state = read_state(current)
     target_folder = FOLDER_FOR_STATE[new_state]
     target_dir = config.state_dir(target_folder) / task_id
     if current != target_dir:
         target_dir.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(current), str(target_dir))
+
+    sf = _state_file(target_dir)
+    if sf.exists():
+        state = read_state(target_dir)
+    else:
+        state = TaskState(
+            id=task_id,
+            state=new_state,
+            title=_title_from_spec(target_dir / "spec.md", task_id),
+            max_plan_retries=config.default_max_plan_retries,
+            max_impl_retries=config.default_max_impl_retries,
+        )
     state.state = new_state
     write_state(target_dir, state)
     return target_dir
 
 
 def list_tasks(config: HarnessConfig) -> list[TaskState]:
-    out: list[TaskState] = []
-    for folder in ("todo", "ongoing", "done"):
-        for task_dir in sorted(config.state_dir(folder).glob("*/")):
-            state_file = _state_file(task_dir)
-            if state_file.exists():
-                try:
-                    out.append(read_state(task_dir))
-                except Exception:
-                    continue
-    return out
+    return scan_task_folders(config)

@@ -35,7 +35,6 @@ def test_load_config_parses_agent_models(tmp_path: Path):
             """\
             agents:
               publisher: { model: claude-haiku-4-5-20251001 }
-              spector:   { model: claude-sonnet-4-6 }
               planner:   { model: null }
             """
         ),
@@ -44,7 +43,6 @@ def test_load_config_parses_agent_models(tmp_path: Path):
     config = load_config(path)
 
     assert config.agent_models["publisher"] == "claude-haiku-4-5-20251001"
-    assert config.agent_models["spector"] == "claude-sonnet-4-6"
     assert config.agent_models["planner"] is None
 
 
@@ -123,13 +121,23 @@ def test_resolve_agent_treats_null_override_as_default():
 
 
 def test_packaged_config_yaml_has_expected_overrides():
-    """The shipped harness.config.yaml should downgrade publisher + spector."""
+    """The shipped harness.config.yaml should downgrade publisher only."""
     root = Path(__file__).resolve().parents[2] / "harness.config.yaml"
     data = yaml.safe_load(root.read_text())
 
     agents = data.get("agents") or {}
     assert agents.get("publisher", {}).get("model") == "claude-haiku-4-5-20251001"
-    assert agents.get("spector", {}).get("model") == "claude-sonnet-4-6"
+    # spector is removed from the harness; no override should be declared for it.
+    assert "spector" not in agents
     # Core reasoning roles must stay on the default (Opus).
     for role in ("planner", "plan-reviewer", "implementor", "implement-reviewer"):
         assert agents.get(role, {}).get("model") is None, role
+
+
+def test_packaged_config_yaml_uses_only_testing_tokens():
+    """Test commands must be templates so pipeline.py can inject -only-testing:."""
+    root = Path(__file__).resolve().parents[2] / "harness.config.yaml"
+    data = yaml.safe_load(root.read_text())
+
+    assert "{only_testing:WoontechTests}" in data["unit_test_cmd"]
+    assert "{only_testing:WoontechUITests}" in data["ui_test_cmd"]

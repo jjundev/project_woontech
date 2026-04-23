@@ -1,9 +1,9 @@
 ios_root: ../ios
 worktrees_dir: ../ios/worktrees
 
-build_cmd: "xcodebuild -scheme App -destination 'platform=iOS Simulator,name=iPhone 15' build"
-unit_test_cmd: "xcodebuild test -scheme App -destination 'platform=iOS Simulator,name=iPhone 15' -only-testing:AppTests"
-ui_test_cmd: "xcodebuild test -scheme App -destination 'platform=iOS Simulator,name=iPhone 15' -only-testing:AppUITests"
+build_cmd: "xcodebuild -scheme Woontech -destination 'platform=iOS Simulator,name=iPhone 15' build"
+unit_test_cmd: "xcodebuild test -scheme Woontech -destination 'platform=iOS Simulator,name=iPhone 15' {only_testing:WoontechTests}"
+ui_test_cmd: "xcodebuild test -scheme Woontech -destination 'platform=iOS Simulator,name=iPhone 15' {only_testing:WoontechUITests}"
 
 default_max_plan_retries: 3
 default_max_impl_retries: 3
@@ -17,7 +17,6 @@ port: 8765
 # Per-agent model override. null (or missing) = SDK default (Opus).
 # Smaller models on low-complexity roles reduce cost without hurting output quality.
 agents:
-  spector:            { model: claude-sonnet-4-6 }
   planner:            { model: null }
   plan-reviewer:      { model: null }
   implementor:        { model: null }

@@ -5,6 +5,14 @@ async function j<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export type WorktreeFile = { path: string; change: string };
+export type WorktreeStatus = {
+  exists: boolean;
+  branch: string | null;
+  files: WorktreeFile[];
+  commits_ahead: number;
+};
+
 export const api = {
   listTasks: () => fetch("/api/tasks").then((r) => j<TaskState[]>(r)),
   getTask: (id: string) =>
@@ -15,20 +23,8 @@ export const api = {
     fetch(`/api/tasks/${id}/files/${encodeURIComponent(name)}`).then((r) =>
       j<{ name: string; content: string }>(r),
     ),
-  createTask: (title: string) =>
-    fetch("/api/tasks", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ title }),
-    }).then((r) => j<TaskState>(r)),
-  spectorMessage: (id: string, text: string) =>
-    fetch(`/api/tasks/${id}/spector/message`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ text }),
-    }).then((r) => j<{ reply: string; confirmed: boolean }>(r)),
-  spectorClose: (id: string) =>
-    fetch(`/api/tasks/${id}/spector/close`, { method: "POST" }).then((r) => j<{ ok: true }>(r)),
+  getWorktreeStatus: (id: string) =>
+    fetch(`/api/tasks/${id}/worktree-status`).then((r) => j<WorktreeStatus>(r)),
   startPipeline: (id: string, opts: { max_plan_retries?: number; max_impl_retries?: number }) =>
     fetch(`/api/tasks/${id}/start`, {
       method: "POST",

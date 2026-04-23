@@ -370,6 +370,48 @@ Push the branch and open a PR via gh. Write pr.md. Respond PUBLISH_DONE or PUBLI
     return _has_token(result.text, "PUBLISH_DONE")
 
 
+def _resume_phase_index(state: S.TaskState) -> int:
+    """Returns which phase to start from: 0=plan, 1=impl, 2=publish."""
+    if state.state in ("planning", "plan_review", "todo", "draft"):
+        return 0
+    if state.state in ("implementing", "impl_review"):
+        return 1
+    if state.state == "publishing":
+        return 2
+    if state.state == "needs_attention":
+        esc = (state.escalation or "").lower()
+        if "plan" in esc:
+            return 0
+        if "impl" in esc:
+            return 1
+        if "publish" in esc:
+            return 2
+        return 0
+    return 0
+
+
+def _clear_escalation(task_dir: Path) -> None:
+    state = S.read_state(task_dir)
+    if state.escalation is None:
+        return
+    state.escalation = None
+    S.write_state(task_dir, state)
+
+
+async def _prepare_resume_state(
+    config: HarnessConfig,
+    task_id: str,
+    task_dir: Path,
+    state: S.TaskState,
+    resume_phase: int,
+) -> Path:
+    target_state = ("planning", "implementing", "publishing")[resume_phase]
+    if state.state != target_state:
+        task_dir = await _set_state(config, task_id, target_state)
+    _clear_escalation(task_dir)
+    return task_dir
+
+
 async def run_pipeline(
     config: HarnessConfig,
     task_id: str,
@@ -382,49 +424,67 @@ async def run_pipeline(
 
     await emit("pipeline_started", task_id=task_id)
 
-    # Move to ongoing + create worktree. `_set_state` materializes state.json on
-    # first entry for folders that were discovered but had no persisted state.
-    task_dir = await _set_state(config, task_id, "planning")
-    state = S.read_state(task_dir)
-    state.max_plan_retries = max_plan_retries
-    state.max_impl_retries = max_impl_retries
-    S.write_state(task_dir, state)
-    worktree_dir = W.create_worktree(config, task_id)
-    state = S.read_state(task_dir)
-    state.branch = W.worktree_branch(task_id)
-    S.write_state(task_dir, state)
+    worktree_path = config.worktree_path(task_id)
+    is_resume = False
+    if worktree_path.exists():
+        # Worktree already exists — read persisted state and resume from the right phase.
+        task_dir = S.find_task_dir(config, task_id)
+        state = S.read_state(task_dir)
+        resume_phase = _resume_phase_index(state)
+        await emit("pipeline_resuming", task_id=task_id, state=state.state)
+        task_dir = await _prepare_resume_state(config, task_id, task_dir, state, resume_phase)
+        is_resume = True
+    else:
+        # Fresh start: move to ongoing, materialize state.json, and create worktree.
+        task_dir = await _set_state(config, task_id, "planning")
+        state = S.read_state(task_dir)
+        state.max_plan_retries = max_plan_retries
+        state.max_impl_retries = max_impl_retries
+        S.write_state(task_dir, state)
+        W.create_worktree(config, task_id)
+        state = S.read_state(task_dir)
+        state.branch = W.worktree_branch(task_id)
+        S.write_state(task_dir, state)
+        resume_phase = 0
+
+    worktree_dir = worktree_path
 
     # Plan phase
-    plan_ok = await run_plan_phase(config, task_id, task_dir, worktree_dir, max_plan_retries)
-    if not plan_ok:
-        s = S.read_state(task_dir)
-        s.escalation = "plan_review_exhausted"
-        S.write_state(task_dir, s)
-        await _set_state(config, task_id, "needs_attention")
-        await emit("escalation", task_id=task_id, phase="plan_review")
-        return
+    if resume_phase <= 0:
+        plan_ok = await run_plan_phase(config, task_id, task_dir, worktree_dir, max_plan_retries)
+        if not plan_ok:
+            s = S.read_state(task_dir)
+            s.escalation = "plan_review_exhausted"
+            S.write_state(task_dir, s)
+            await _set_state(config, task_id, "needs_attention")
+            await emit("escalation", task_id=task_id, phase="plan_review")
+            return
 
     # Implement phase
-    task_dir = await _set_state(config, task_id, "implementing")
-    impl_ok = await run_impl_phase(config, task_id, task_dir, worktree_dir, max_impl_retries)
-    if not impl_ok:
-        s = S.read_state(task_dir)
-        s.escalation = "impl_review_exhausted"
-        S.write_state(task_dir, s)
-        await _set_state(config, task_id, "needs_attention")
-        await emit("escalation", task_id=task_id, phase="impl_review")
-        return
+    if resume_phase <= 1:
+        if not (is_resume and resume_phase == 1):
+            task_dir = await _set_state(config, task_id, "implementing")
+        impl_ok = await run_impl_phase(config, task_id, task_dir, worktree_dir, max_impl_retries)
+        if not impl_ok:
+            s = S.read_state(task_dir)
+            s.escalation = "impl_review_exhausted"
+            S.write_state(task_dir, s)
+            await _set_state(config, task_id, "needs_attention")
+            await emit("escalation", task_id=task_id, phase="impl_review")
+            return
 
     # Publish phase
-    task_dir = await _set_state(config, task_id, "publishing")
-    pub_ok = await run_publish_phase(config, task_id, task_dir, worktree_dir)
-    if not pub_ok:
-        s = S.read_state(task_dir)
-        s.escalation = "publish_failed"
-        S.write_state(task_dir, s)
-        await _set_state(config, task_id, "needs_attention")
-        await emit("escalation", task_id=task_id, phase="publishing")
-        return
+    if resume_phase <= 2:
+        if not (is_resume and resume_phase == 2):
+            task_dir = await _set_state(config, task_id, "publishing")
+        pub_ok = await run_publish_phase(config, task_id, task_dir, worktree_dir)
+        if not pub_ok:
+            s = S.read_state(task_dir)
+            s.escalation = "publish_failed"
+            S.write_state(task_dir, s)
+            await _set_state(config, task_id, "needs_attention")
+            await emit("escalation", task_id=task_id, phase="publishing")
+            return
 
     # Done
     task_dir = await _set_state(config, task_id, "done")

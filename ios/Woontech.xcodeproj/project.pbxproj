@@ -1,0 +1,635 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		02F6CA4FC6F8A9EEADAE9E79 /* PrimaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CC3AB3F7A01628B2D1C1491 /* PrimaryButton.swift */; };
+		1B009695CC93FAECB1210B4B /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4B901D898BA88FAECCC27A1 /* DesignTokens.swift */; };
+		32B9F76964FFB911284C85D0 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 02569F0B937606D05EB986F1 /* Localizable.strings */; };
+		34C71C4E959F6A19B7F51887 /* OnboardingUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 702C0112632690D16DE08C4F /* OnboardingUITests.swift */; };
+		35C1C2E83EEB581287C97BA4 /* PageIndicatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC9B0FCAE7E62615F155A325 /* PageIndicatorView.swift */; };
+		4352EF96565329E497585C72 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50E02A39A4697609258292E6 /* RootView.swift */; };
+		4380F54E8057F1E3E7C39D18 /* OnboardingContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08401F1852801C16B0C81901 /* OnboardingContent.swift */; };
+		5FC3438DDB7475CFB3FFEE88 /* OnboardingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 087518D16D2CCEFF0C33D269 /* OnboardingStore.swift */; };
+		6526CA63C0E297BB6B8CC595 /* DisclaimerCheckboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58C52BFF016D4560F028EAA8 /* DisclaimerCheckboxView.swift */; };
+		7CFD82E58CB6806F3FB49A6E /* WoontechApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 462F6E1094BC2B78720750A3 /* WoontechApp.swift */; };
+		81D373491FEFA7B8D19425E8 /* OnboardingFlowStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E7C549E36616AECF819A8CA /* OnboardingFlowStateTests.swift */; };
+		8D4CD17C570369BB08DF54E2 /* OnboardingStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C3A74E7D9698C5B4F24C778 /* OnboardingStepView.swift */; };
+		8E468EDB10E01C846286405D /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C644AABC878D71E9F9A95870 /* OnboardingView.swift */; };
+		959C287AC9966A8561094CA5 /* SajuInputPlaceholderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F02C5F5FA1E7C282BE891C4 /* SajuInputPlaceholderView.swift */; };
+		98A82AEC0357FB3DCCA220DF /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4781947525E101E9C4376774 /* Assets.xcassets */; };
+		B1D7D71D171165CD027512B8 /* OnboardingStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 267FF3811964764EF1E9DB25 /* OnboardingStoreTests.swift */; };
+		CEA5B514DA080AE3DB80FA51 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6A5DF045B3B3180AA789099 /* SplashView.swift */; };
+		F01383A9BF11A432A00FA576 /* OnboardingFlowModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37ED5F66605992BA4E6AFAD9 /* OnboardingFlowModel.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		0C3FC0EEDC8BF560C428F1B7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 716F5768A900A6C66017879D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DD39A93CBB9AE53899ABB6B9;
+			remoteInfo = Woontech;
+		};
+		AAB265173D1768268E2D2BB3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 716F5768A900A6C66017879D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DD39A93CBB9AE53899ABB6B9;
+			remoteInfo = Woontech;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		02569F0B937606D05EB986F1 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = ko.lproj/Localizable.strings; sourceTree = "<group>"; };
+		03357E390570B305FE3765FC /* Woontech.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Woontech.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		08401F1852801C16B0C81901 /* OnboardingContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingContent.swift; sourceTree = "<group>"; };
+		087518D16D2CCEFF0C33D269 /* OnboardingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingStore.swift; sourceTree = "<group>"; };
+		267FF3811964764EF1E9DB25 /* OnboardingStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingStoreTests.swift; sourceTree = "<group>"; };
+		37ED5F66605992BA4E6AFAD9 /* OnboardingFlowModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowModel.swift; sourceTree = "<group>"; };
+		462F6E1094BC2B78720750A3 /* WoontechApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WoontechApp.swift; sourceTree = "<group>"; };
+		4781947525E101E9C4376774 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		4CC3AB3F7A01628B2D1C1491 /* PrimaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryButton.swift; sourceTree = "<group>"; };
+		50E02A39A4697609258292E6 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		58C52BFF016D4560F028EAA8 /* DisclaimerCheckboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisclaimerCheckboxView.swift; sourceTree = "<group>"; };
+		5C3A74E7D9698C5B4F24C778 /* OnboardingStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingStepView.swift; sourceTree = "<group>"; };
+		6E7C549E36616AECF819A8CA /* OnboardingFlowStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowStateTests.swift; sourceTree = "<group>"; };
+		702C0112632690D16DE08C4F /* OnboardingUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingUITests.swift; sourceTree = "<group>"; };
+		7F0394D3FFB2B768BCF36423 /* WoontechUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = WoontechUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8F02C5F5FA1E7C282BE891C4 /* SajuInputPlaceholderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuInputPlaceholderView.swift; sourceTree = "<group>"; };
+		A6A5DF045B3B3180AA789099 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
+		C4B901D898BA88FAECCC27A1 /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
+		C644AABC878D71E9F9A95870 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		DF6CF9165EF50341F3D4634D /* WoontechTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = WoontechTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		EC9B0FCAE7E62615F155A325 /* PageIndicatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageIndicatorView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		0EAF19F02DA02F27098FAA42 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				58C52BFF016D4560F028EAA8 /* DisclaimerCheckboxView.swift */,
+				08401F1852801C16B0C81901 /* OnboardingContent.swift */,
+				5C3A74E7D9698C5B4F24C778 /* OnboardingStepView.swift */,
+				C644AABC878D71E9F9A95870 /* OnboardingView.swift */,
+				EC9B0FCAE7E62615F155A325 /* PageIndicatorView.swift */,
+				4CC3AB3F7A01628B2D1C1491 /* PrimaryButton.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		1865F97C6A62F790991AF14D /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				4781947525E101E9C4376774 /* Assets.xcassets */,
+				02569F0B937606D05EB986F1 /* Localizable.strings */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		208CA9F8925CC6A9024D2C1C = {
+			isa = PBXGroup;
+			children = (
+				3F4DD046034C73D8B99C2E7D /* Woontech */,
+				F820527970DB7957FFA9B65E /* WoontechTests */,
+				A054AB5A9DB9BFF9AD6B6FA9 /* WoontechUITests */,
+				C05C4011366127DE38B8F34B /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		3F4DD046034C73D8B99C2E7D /* Woontech */ = {
+			isa = PBXGroup;
+			children = (
+				F34F5761E850EC6ED79A9D7F /* App */,
+				8EC1E076CEB175284A1A2C2E /* Features */,
+				1865F97C6A62F790991AF14D /* Resources */,
+				7B6FD085F57360344B6F63B8 /* Shared */,
+			);
+			path = Woontech;
+			sourceTree = "<group>";
+		};
+		73994D50D22E9D283929B2DA /* SajuInput */ = {
+			isa = PBXGroup;
+			children = (
+				8F02C5F5FA1E7C282BE891C4 /* SajuInputPlaceholderView.swift */,
+			);
+			path = SajuInput;
+			sourceTree = "<group>";
+		};
+		7B6FD085F57360344B6F63B8 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				C4B901D898BA88FAECCC27A1 /* DesignTokens.swift */,
+				37ED5F66605992BA4E6AFAD9 /* OnboardingFlowModel.swift */,
+				087518D16D2CCEFF0C33D269 /* OnboardingStore.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		8EC1E076CEB175284A1A2C2E /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				0EAF19F02DA02F27098FAA42 /* Onboarding */,
+				73994D50D22E9D283929B2DA /* SajuInput */,
+				9DC8AE54A45A6CABBF6C7939 /* Splash */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		9DC8AE54A45A6CABBF6C7939 /* Splash */ = {
+			isa = PBXGroup;
+			children = (
+				A6A5DF045B3B3180AA789099 /* SplashView.swift */,
+			);
+			path = Splash;
+			sourceTree = "<group>";
+		};
+		A054AB5A9DB9BFF9AD6B6FA9 /* WoontechUITests */ = {
+			isa = PBXGroup;
+			children = (
+				702C0112632690D16DE08C4F /* OnboardingUITests.swift */,
+			);
+			path = WoontechUITests;
+			sourceTree = "<group>";
+		};
+		C05C4011366127DE38B8F34B /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				03357E390570B305FE3765FC /* Woontech.app */,
+				DF6CF9165EF50341F3D4634D /* WoontechTests.xctest */,
+				7F0394D3FFB2B768BCF36423 /* WoontechUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		F34F5761E850EC6ED79A9D7F /* App */ = {
+			isa = PBXGroup;
+			children = (
+				50E02A39A4697609258292E6 /* RootView.swift */,
+				462F6E1094BC2B78720750A3 /* WoontechApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		F820527970DB7957FFA9B65E /* WoontechTests */ = {
+			isa = PBXGroup;
+			children = (
+				6E7C549E36616AECF819A8CA /* OnboardingFlowStateTests.swift */,
+				267FF3811964764EF1E9DB25 /* OnboardingStoreTests.swift */,
+			);
+			path = WoontechTests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		47048FEE551B0739794004EA /* WoontechUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 304A202DF099C2E9378FBEBE /* Build configuration list for PBXNativeTarget "WoontechUITests" */;
+			buildPhases = (
+				C65883223880223155946FE1 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9A6E7A65CBF38B603C7366FC /* PBXTargetDependency */,
+			);
+			name = WoontechUITests;
+			packageProductDependencies = (
+			);
+			productName = WoontechUITests;
+			productReference = 7F0394D3FFB2B768BCF36423 /* WoontechUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		DD39A93CBB9AE53899ABB6B9 /* Woontech */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1ED95394DB291B17C01B358A /* Build configuration list for PBXNativeTarget "Woontech" */;
+			buildPhases = (
+				A3923580EC0B45617124E199 /* Sources */,
+				6B5677B629BCC6D3384CD562 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Woontech;
+			packageProductDependencies = (
+			);
+			productName = Woontech;
+			productReference = 03357E390570B305FE3765FC /* Woontech.app */;
+			productType = "com.apple.product-type.application";
+		};
+		E2EF5BB066B1A3444E656849 /* WoontechTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FD341253CBB58EEB0124B20A /* Build configuration list for PBXNativeTarget "WoontechTests" */;
+			buildPhases = (
+				89ACA6BED39811A3BECE2B06 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FAFEC3D03712DCB6BA5B8465 /* PBXTargetDependency */,
+			);
+			name = WoontechTests;
+			packageProductDependencies = (
+			);
+			productName = WoontechTests;
+			productReference = DF6CF9165EF50341F3D4634D /* WoontechTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		716F5768A900A6C66017879D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					47048FEE551B0739794004EA = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+						TestTargetID = DD39A93CBB9AE53899ABB6B9;
+					};
+					DD39A93CBB9AE53899ABB6B9 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					E2EF5BB066B1A3444E656849 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 64666BC6C0BB4E9B07B32C8D /* Build configuration list for PBXProject "Woontech" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+				ko,
+			);
+			mainGroup = 208CA9F8925CC6A9024D2C1C;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = C05C4011366127DE38B8F34B /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				DD39A93CBB9AE53899ABB6B9 /* Woontech */,
+				E2EF5BB066B1A3444E656849 /* WoontechTests */,
+				47048FEE551B0739794004EA /* WoontechUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		6B5677B629BCC6D3384CD562 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				98A82AEC0357FB3DCCA220DF /* Assets.xcassets in Resources */,
+				32B9F76964FFB911284C85D0 /* Localizable.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		89ACA6BED39811A3BECE2B06 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				81D373491FEFA7B8D19425E8 /* OnboardingFlowStateTests.swift in Sources */,
+				B1D7D71D171165CD027512B8 /* OnboardingStoreTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A3923580EC0B45617124E199 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1B009695CC93FAECB1210B4B /* DesignTokens.swift in Sources */,
+				6526CA63C0E297BB6B8CC595 /* DisclaimerCheckboxView.swift in Sources */,
+				4380F54E8057F1E3E7C39D18 /* OnboardingContent.swift in Sources */,
+				F01383A9BF11A432A00FA576 /* OnboardingFlowModel.swift in Sources */,
+				8D4CD17C570369BB08DF54E2 /* OnboardingStepView.swift in Sources */,
+				5FC3438DDB7475CFB3FFEE88 /* OnboardingStore.swift in Sources */,
+				8E468EDB10E01C846286405D /* OnboardingView.swift in Sources */,
+				35C1C2E83EEB581287C97BA4 /* PageIndicatorView.swift in Sources */,
+				02F6CA4FC6F8A9EEADAE9E79 /* PrimaryButton.swift in Sources */,
+				4352EF96565329E497585C72 /* RootView.swift in Sources */,
+				959C287AC9966A8561094CA5 /* SajuInputPlaceholderView.swift in Sources */,
+				CEA5B514DA080AE3DB80FA51 /* SplashView.swift in Sources */,
+				7CFD82E58CB6806F3FB49A6E /* WoontechApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C65883223880223155946FE1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				34C71C4E959F6A19B7F51887 /* OnboardingUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		9A6E7A65CBF38B603C7366FC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DD39A93CBB9AE53899ABB6B9 /* Woontech */;
+			targetProxy = AAB265173D1768268E2D2BB3 /* PBXContainerItemProxy */;
+		};
+		FAFEC3D03712DCB6BA5B8465 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DD39A93CBB9AE53899ABB6B9 /* Woontech */;
+			targetProxy = 0C3FC0EEDC8BF560C428F1B7 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0105DD5903B4314286407FF5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.woontech.app.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Woontech.app/Woontech";
+			};
+			name = Release;
+		};
+		14F0C0B104C395F383E1FCB1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		1AAC6998101105C8E3D6591B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+		2902791362C42AC070FC871D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_LANGUAGE = ko;
+				INFOPLIST_FILE = Woontech/Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.woontech.app;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		8B186391F6C9AB20F863D683 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.woontech.app.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Woontech;
+			};
+			name = Debug;
+		};
+		BA30C9EB333C7F6DB4F21C99 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_LANGUAGE = ko;
+				INFOPLIST_FILE = Woontech/Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.woontech.app;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		C9C4FD1C9DEF2C1E68E4F32A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.woontech.app.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Woontech;
+			};
+			name = Release;
+		};
+		D0959F443B2372CDCCC8E48C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.woontech.app.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Woontech.app/Woontech";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1ED95394DB291B17C01B358A /* Build configuration list for PBXNativeTarget "Woontech" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2902791362C42AC070FC871D /* Debug */,
+				BA30C9EB333C7F6DB4F21C99 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		304A202DF099C2E9378FBEBE /* Build configuration list for PBXNativeTarget "WoontechUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8B186391F6C9AB20F863D683 /* Debug */,
+				C9C4FD1C9DEF2C1E68E4F32A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		64666BC6C0BB4E9B07B32C8D /* Build configuration list for PBXProject "Woontech" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1AAC6998101105C8E3D6591B /* Debug */,
+				14F0C0B104C395F383E1FCB1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		FD341253CBB58EEB0124B20A /* Build configuration list for PBXNativeTarget "WoontechTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0959F443B2372CDCCC8E48C /* Debug */,
+				0105DD5903B4314286407FF5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 716F5768A900A6C66017879D /* Project object */;
+}

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif; }
+  #root { width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="wf-primitives.jsx"></script>
+<script type="text/babel" src="screens-04-monetize.jsx"></script>
+<script type="text/babel">
+const PHONE_W = 290;
+const PHONE_H = 600;
+function Frame({ children, notes }) {
+  return (
+    <div style={{ position: 'relative', width: PHONE_W, height: PHONE_H }}>
+      <WPhone w={PHONE_W} h={PHONE_H}>{children}</WPhone>
+      {notes}
+    </div>
+  );
+}
+function App() {
+  return (
+    <DesignCanvas title="06 수익화 마이">
+      
+      <DCSection id="monetize" title="⑥ 수익화 · 마이" subtitle="초대 보상 → 바이럴, 페이월 → 전환">
+        <DCArtboard id="referral" label="친구 초대" width={PHONE_W} height={PHONE_H}><Frame notes={<WNote side="left" style={{top:200,left:PHONE_W+16,width:170}}>"사주는 공유하고 싶은 콘텐츠" — 결과 카드 공유 기능 고려</WNote>}><ScrReferral /></Frame></DCArtboard>
+        <DCArtboard id="coupons" label="쿠폰함" width={PHONE_W} height={PHONE_H}><Frame><ScrCoupons /></Frame></DCArtboard>
+        <DCArtboard id="paywall" label="구독 페이월" width={PHONE_W} height={PHONE_H}><Frame notes={<><WNote side="left" style={{top:240,left:PHONE_W+16,width:170}}>연간 플랜 강조 (인기 배지)</WNote><WNote side="left" style={{top:420,left:PHONE_W+16,width:170}}>7일 무료 체험 — 전환율 핵심</WNote></>}><ScrPaywall /></Frame></DCArtboard>
+        <DCArtboard id="profile" label="마이페이지" width={PHONE_W} height={PHONE_H}><Frame><ScrProfile /></Frame></DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

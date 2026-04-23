@@ -1,0 +1,25 @@
+ios_root: ../ios
+worktrees_dir: ../ios/worktrees
+
+build_cmd: "xcodebuild -scheme App -destination 'platform=iOS Simulator,name=iPhone 15' build"
+unit_test_cmd: "xcodebuild test -scheme App -destination 'platform=iOS Simulator,name=iPhone 15' -only-testing:AppTests"
+ui_test_cmd: "xcodebuild test -scheme App -destination 'platform=iOS Simulator,name=iPhone 15' -only-testing:AppUITests"
+
+default_max_plan_retries: 3
+default_max_impl_retries: 3
+
+# github_repo: "your-org/your-repo"  # set to enable gh pr create
+
+main_branch: main
+host: 127.0.0.1
+port: 8765
+
+# Per-agent model override. null (or missing) = SDK default (Opus).
+# Smaller models on low-complexity roles reduce cost without hurting output quality.
+agents:
+  spector:            { model: claude-sonnet-4-6 }
+  planner:            { model: null }
+  plan-reviewer:      { model: null }
+  implementor:        { model: null }
+  implement-reviewer: { model: null }
+  publisher:          { model: claude-haiku-4-5-20251001 }

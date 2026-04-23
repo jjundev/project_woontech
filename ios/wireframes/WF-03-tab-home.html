@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif; }
+  #root { width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="wf-primitives.jsx"></script>
+<script type="text/babel" src="screens-02-home.jsx"></script>
+<script type="text/babel" src="screens-02-home-v6.jsx"></script>
+<script type="text/babel" src="screens-05-saju-v2.jsx"></script>
+<script type="text/babel">
+const PHONE_W = 290;
+const PHONE_H = 600;
+function Frame({ children, notes }) {
+  return (
+    <div style={{ position: 'relative', width: PHONE_W, height: PHONE_H }}>
+      <WPhone w={PHONE_W} h={PHONE_H}>{children}</WPhone>
+      {notes}
+    </div>
+  );
+}
+
+// 홈 대시보드 — below-the-fold scroll view
+function ScrHomeBScroll() {
+  return (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: WF.bg }}>
+      <div style={{ padding: '10px 16px 6px', borderBottom: `1px solid ${WF.line3}` }}>
+        <WText size={9} color={WF.muted}>↑ 위로 스크롤 — 투자 태도 Hero + 일진·6개월 카드</WText>
+      </div>
+      <div style={{ padding: '14px 16px', flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {/* 오늘의 실천 */}
+        <WCard style={{ padding: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 28, height: 28, border: `1px solid ${WF.line2}`, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <WText size={14}>✓</WText>
+            </div>
+            <div style={{ flex: 1 }}>
+              <WText size={10} color={WF.muted}>오늘의 실천</WText>
+              <div style={{ marginTop: 2 }}>
+                <WText size={12} weight={600}>부족한 水 기운 — 오늘 분산 배분 점검해보기</WText>
+              </div>
+            </div>
+          </div>
+        </WCard>
+      </div>
+      {/* 면책 고지 — 최하단에만 */}
+      <div style={{ padding: '8px 14px', borderTop: `1px solid ${WF.line3}`, background: '#fafaf7', marginBottom: 64 }}>
+        <WText size={8} color={WF.muted}>본 앱은 학습·참고용이며 투자 권유가 아닙니다. 투자 결정은 본인 판단과 책임 하에 이루어져야 합니다.</WText>
+      </div>
+      <WTabBar active={0} />
+    </div>
+  );
+}
+
+// 오늘의 일진 v2 — below-the-fold scroll view
+function ScrTodayDetailV2Scroll() {
+  return (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: WF.bg }}>
+      <div style={{ padding: '10px 16px 6px', borderBottom: `1px solid ${WF.line3}` }}>
+        <WText size={9} color={WF.muted}>↑ 위로 스크롤 — 금기 · 점수 · 오늘의 한마디</WText>
+      </div>
+      <div style={{ padding: '14px 16px', flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+        {/* 사주 원국 */}
+        <WCard>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <WSectionLabel>나의 사주 원국</WSectionLabel>
+            <WText size={9} color={WF.muted}>일간(日干) = 나</WText>
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <SajuChart />
+          </div>
+          <div style={{ marginTop: 10, padding: 8, background: WF.gray, borderRadius: 4 }}>
+            <WText size={9} color={WF.muted}>오행 분포</WText>
+            <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+              {[
+                { e: '목', han: '木', n: 1 }, { e: '화', han: '火', n: 3 },
+                { e: '토', han: '土', n: 1 }, { e: '금', han: '金', n: 3 }, { e: '수', han: '水', n: 0 },
+              ].map(x => (
+                <div key={x.e} style={{ flex: 1, textAlign: 'center' }}>
+                  <WText size={11} weight={700}>{x.e}</WText>
+                  <div><span style={{ fontFamily: 'serif', fontSize: 8, color: WF.muted }}>{x.han}</span></div>
+                  <div><WText size={9} color={x.n === 0 ? WF.note : WF.muted}>{x.n}</WText></div>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 4 }}>
+              <WText size={9} color={WF.note}>水 부족 → 水 기운의 날 주의</WText>
+            </div>
+          </div>
+        </WCard>
+
+        {/* 십성 */}
+        <WCard>
+          <WSectionLabel>오늘의 십성(十星)</WSectionLabel>
+          <div style={{ marginTop: 4 }}>
+            <WText size={9} color={WF.muted}>십성: 내 사주와 오늘의 기운이 어떤 관계로 만나는지</WText>
+          </div>
+          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <WBox style={{ width: 56, height: 56, borderRadius: 6, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: WF.ink, borderColor: WF.ink }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>편관</span>
+              <span style={{ fontFamily: 'serif', fontSize: 9, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>偏官</span>
+            </WBox>
+            <div style={{ flex: 1 }}>
+              <WText size={11} weight={700}>갑작스러운 압박의 날</WText>
+              <div style={{ marginTop: 3 }}><WText size={10} color={WF.muted}>내 일간(경·金)을 압박하는 기운</WText></div>
+              <div style={{ marginTop: 4 }}><WText size={9} color={WF.muted}>업무 과중 · 극적 승진 · 위험 감수</WText></div>
+            </div>
+          </div>
+        </WCard>
+
+        {/* 합충 */}
+        <WCard>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <WSectionLabel>오늘의 합충(合沖)</WSectionLabel>
+            <WText size={9} color={WF.muted}>합(+) · 충(−)</WText>
+          </div>
+          <div style={{ marginTop: 8, padding: 10, border: `1px solid ${WF.line3}`, borderRadius: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <WBox style={{ width: 32, height: 32, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: 3 }}>
+                <span style={{ fontFamily: 'serif', fontSize: 13, fontWeight: 700 }}>申</span>
+                <span style={{ fontSize: 7, color: WF.muted }}>신</span>
+              </WBox>
+              <span style={{ color: WF.ink, fontSize: 14 }}>+</span>
+              <WBox style={{ width: 32, height: 32, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: 3 }}>
+                <span style={{ fontFamily: 'serif', fontSize: 13, fontWeight: 700 }}>巳</span>
+                <span style={{ fontSize: 7, color: WF.muted }}>사</span>
+              </WBox>
+              <WBox style={{ padding: '2px 6px', borderRadius: 3, background: WF.ink, borderColor: WF.ink }}>
+                <span style={{ fontSize: 9, color: '#fff', fontWeight: 700 }}>육합(合)</span>
+              </WBox>
+              <WText size={10} weight={600} style={{ marginLeft: 'auto' }}>+12</WText>
+            </div>
+            <div style={{ marginTop: 6 }}><WText size={9} color={WF.muted}>일지 · 시지 → 배우자/파트너 관계 강화</WText></div>
+          </div>
+          <div style={{ marginTop: 6, padding: 10, border: `1px dashed ${WF.note}`, borderRadius: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <WBox style={{ width: 32, height: 32, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: 3 }}>
+                <span style={{ fontFamily: 'serif', fontSize: 13, fontWeight: 700 }}>卯</span>
+                <span style={{ fontSize: 7, color: WF.muted }}>묘</span>
+              </WBox>
+              <span style={{ color: WF.note, fontSize: 14 }}>↔</span>
+              <WBox style={{ width: 32, height: 32, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: 3, borderColor: WF.note }}>
+                <span style={{ fontFamily: 'serif', fontSize: 13, fontWeight: 700, color: WF.note }}>酉</span>
+                <span style={{ fontSize: 7, color: WF.note }}>유</span>
+              </WBox>
+              <WBox style={{ padding: '2px 6px', borderRadius: 3, borderColor: WF.note }}>
+                <span style={{ fontSize: 9, color: WF.note, fontWeight: 700 }}>월지충(沖)</span>
+              </WBox>
+              <WText size={10} weight={600} color={WF.note} style={{ marginLeft: 'auto' }}>−18</WText>
+            </div>
+            <div style={{ marginTop: 6 }}><WText size={9} color={WF.note}>직업궁 충돌 → 부서 이동/갈등 주의</WText></div>
+          </div>
+        </WCard>
+
+      </div>
+      {/* 면책 고지 */}
+      <div style={{ padding: '8px 14px', borderTop: `1px solid ${WF.line3}`, background: '#fafaf7' }}>
+        <WText size={8} color={WF.muted}>본 해석은 참고용이며 투자 권유가 아닙니다.</WText>
+      </div>
+    </div>
+  );
+}
+function App() {
+  return (
+    <DesignCanvas title="03 홈 대시보드">
+
+      <DCSection id="home-v6" title="홈 대시보드" subtitle="Hero 경량화 · Quick Actions · 인사이트 3카드 · 이번 주 흐름 · 이벤트 상세">
+        <DCArtboard id="v6-top" label="홈 (상단 — above fold)" width={PHONE_W} height={PHONE_H}>
+          <Frame notes={<>
+            <WNote side="left" style={{top:44,left:PHONE_W+16,width:190}}>섹션0 헤더: 알림 벨(뱃지) + 프로필 아바타</WNote>
+            <WNote side="left" style={{top:120,left:PHONE_W+16,width:190}}>섹션1 Hero 경량화: 원형 지수 + 한 줄 + 상세 보기만</WNote>
+            <WNote side="left" style={{top:270,left:PHONE_W+16,width:190}}>섹션2 Quick Actions: 4개 아이콘 · 완료=검정 채움</WNote>
+            <WNote side="left" style={{top:400,left:PHONE_W+16,width:190}}>섹션3 인사이트: 가로 스크롤 3카드 (금기·일진·실천)</WNote>
+          </>}>
+            <ScrHomeV6Top />
+          </Frame>
+        </DCArtboard>
+        <DCArtboard id="v6-scroll" label="v6 홈 (스크롤↓ — below fold)" width={PHONE_W} height={PHONE_H}>
+          <Frame notes={<>
+            <WNote side="left" style={{top:60,left:PHONE_W+16,width:190}}>섹션7 이번 주 흐름: 대운·절기·합충 이벤트 카드</WNote>
+            <WNote side="left" style={{top:300,left:PHONE_W+16,width:190}}>시간축 그룹: 이번 주 / 이번 달 / 3개월 이내</WNote>
+            <WNote side="left" style={{top:430,left:PHONE_W+16,width:190}}>충 이벤트 = 빨간 border + 좌측 accent bar</WNote>
+          </>}>
+            <ScrHomeV6Scroll />
+          </Frame>
+        </DCArtboard>
+        <DCArtboard id="v6-event-detail" label="→ 이벤트 상세 (대운 전환)" width={PHONE_W} height={PHONE_H}>
+          <Frame notes={<>
+            <WNote side="left" style={{top:80,left:PHONE_W+16,width:190}}>이벤트 타이틀 + D-day + 날짜</WNote>
+            <WNote side="left" style={{top:200,left:PHONE_W+16,width:190}}>의미 · 내 사주와의 관계 · 투자 관점</WNote>
+            <WNote side="left" style={{top:420,left:PHONE_W+16,width:190}}>알림 설정 · 캘린더 추가 · 학습 CTA</WNote>
+          </>}>
+            <ScrWeeklyDetail />
+          </Frame>
+        </DCArtboard>
+        <DCArtboard id="today-v2" label="→ 오늘의 일진 v2 (상단)" width={PHONE_W} height={PHONE_H}><Frame notes={<><WNote side="left" style={{top:60,left:PHONE_W+16,width:180}}>종합 점수 + 4개 카테고리 스코어링</WNote><WNote side="left" style={{top:280,left:PHONE_W+16,width:180}}>합·충 이벤트 + 오늘의 한 마디</WNote></>}><ScrTodayDetailV2 /></Frame></DCArtboard>
+        <DCArtboard id="today-v2-scroll" label="→ 오늘의 일진 v2 (스크롤↓)" width={PHONE_W} height={PHONE_H}><Frame notes={<WNote side="left" style={{top:60,left:PHONE_W+16,width:180}}>오늘의 금기 카드 + 면책 푸터</WNote>}><ScrTodayDetailV2Scroll /></Frame></DCArtboard>
+      </DCSection>
+
+
+
+
+    </DesignCanvas>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

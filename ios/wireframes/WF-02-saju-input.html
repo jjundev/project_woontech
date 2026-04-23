@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif; }
+  #root { width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="wf-primitives.jsx"></script>
+<script type="text/babel" src="screens-01-onboarding.jsx"></script>
+<script type="text/babel" src="screens-03-core.jsx"></script>
+<script type="text/babel" src="screens-04-monetize.jsx"></script>
+<script type="text/babel" src="screens-05-saju-v2.jsx"></script>
+<script type="text/babel">
+const PHONE_W = 290;
+const PHONE_H = 600;
+function Frame({ children, notes }) {
+  return (
+    <div style={{ position: 'relative', width: PHONE_W, height: PHONE_H }}>
+      <WPhone w={PHONE_W} h={PHONE_H}>{children}</WPhone>
+      {notes}
+    </div>
+  );
+}
+function App() {
+  return (
+    <DesignCanvas title="02 사주 입력 + 분석 결과">
+      
+      <DCSection id="saju-input" title="② 사주 입력 — 6단계" subtitle="각 단계마다 하나의 정보만 입력 — 인지 부하 최소화">
+        <DCArtboard id="saju-1" label="1. 성별" width={PHONE_W} height={PHONE_H}><Frame notes={<WNote side="left" style={{top:40,left:PHONE_W+16,width:180}}>진행 바 — 6단계 중 현재 위치</WNote>}><ScrSajuStep1 /></Frame></DCArtboard>
+        <DCArtboard id="saju-2" label="2. 이름" width={PHONE_W} height={PHONE_H}><Frame><ScrSajuStep2 /></Frame></DCArtboard>
+        <DCArtboard id="saju-3" label="3. 생년월일" width={PHONE_W} height={PHONE_H}><Frame notes={<WNote side="left" style={{top:180,left:PHONE_W+16,width:180}}>휠 피커 — iOS 네이티브 감성 / 양력·음력 토글</WNote>}><ScrSajuStep3 /></Frame></DCArtboard>
+        <DCArtboard id="saju-4" label="4. 태어난 시간" width={PHONE_W} height={PHONE_H}><Frame notes={<WNote side="left" style={{top:260,left:PHONE_W+16,width:180}}>"모르겠어요" 체크 → 시주 없이 3주 분석으로 폴백</WNote>}><ScrSajuStep4 /></Frame></DCArtboard>
+        <DCArtboard id="saju-5" label="5. 출생지" width={PHONE_W} height={PHONE_H}><Frame notes={<WNote side="left" style={{top:180,left:PHONE_W+16,width:180}}>자동완성 검색 UI</WNote>}><ScrSajuStep5 /></Frame></DCArtboard>
+        <DCArtboard id="saju-6" label="6. 진태양시 보정" width={PHONE_W} height={PHONE_H}><Frame notes={<WNote side="left" style={{top:140,left:PHONE_W+16,width:190}}>경도·표준시 차이·보정된 출생시 프리뷰 — 신뢰도 시그널</WNote>}><ScrSajuStep6 /></Frame></DCArtboard>
+        <DCArtboard id="loader" label="7. 분석 중" width={PHONE_W} height={PHONE_H}><Frame><ScrResultLoader /></Frame></DCArtboard>
+        <DCArtboard id="result-merged" label="8. 나의 투자 성향 (상단)" width={PHONE_W} height={PHONE_H}><Frame notes={<WNote side="left" style={{top:60,left:PHONE_W+16,width:190}}>★ 아하 모먼트 단일 화면 — Hero 유형 + 사주 원국 미니 + 오행 균형</WNote>}><ScrInvestmentPersonality /></Frame></DCArtboard>
+        <DCArtboard id="result-merged-scroll" label="8. 나의 투자 성향 (스크롤↓)" width={PHONE_W} height={PHONE_H}><Frame notes={<WNote side="left" style={{top:120,left:PHONE_W+16,width:180}}>강점·주의점·접근 참고 → PRO 페이월 / 하단 CTA → 가입 유도</WNote>}><ScrInvestmentPersonalityScroll /></Frame></DCArtboard>
+        <DCArtboard id="signup-post" label="8.5 회원가입 (결과 후 유도)" width={PHONE_W} height={PHONE_H}><Frame notes={<WNote side="left" style={{top:200,left:PHONE_W+16,width:190}}>Aha 모먼트 직후 가입 유도 — "결과 저장하기"</WNote>}><ScrSignup /></Frame></DCArtboard>
+        <DCArtboard id="referral" label="10. 친구 초대 + 공유 카드" width={PHONE_W} height={PHONE_H}><Frame notes={<WNote side="left" style={{top:180,left:PHONE_W+16,width:190}}>★ MVP 바이럴 — 공유 카드 미리보기 + 인스타 스토리</WNote>}><ScrReferral /></Frame></DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

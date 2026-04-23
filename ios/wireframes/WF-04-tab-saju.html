@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif; }
+  #root { width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="wf-primitives.jsx"></script>
+<script type="text/babel" src="screens-06-saju-tab.jsx"></script>
+<script type="text/babel">
+const PHONE_W = 290;
+const PHONE_H = 600;
+function Frame({ children, notes }) {
+  return (
+    <div style={{ position: 'relative', width: PHONE_W, height: PHONE_H }}>
+      <WPhone w={PHONE_W} h={PHONE_H}>{children}</WPhone>
+      {notes}
+    </div>
+  );
+}
+function App() {
+  return (
+    <DesignCanvas title="04 사주 탭">
+      
+      <DCSection id="saju-tab" title="④ 사주 탭 — 내 사주 · 공부" subtitle="하단 탭 3번째. 내 사주를 더 깊게, 명리학을 배우며 리텐션 강화">
+        <DCArtboard id="saju-tab-home" label="사주 탭 홈" width={PHONE_W} height={PHONE_H}><Frame notes={<><WNote side="left" style={{top:60,left:PHONE_W+16,width:190}}>상단: 내 원국 4주 요약 + 일간 해석 한 줄</WNote><WNote side="left" style={{top:220,left:PHONE_W+16,width:190}}>오행/십성/대운/합충/용신 5개 카테고리</WNote><WNote side="left" style={{top:420,left:PHONE_W+16,width:190}}>사주 공부하기 — 학습 경로 + 용어 사전</WNote></>}><ScrSajuTabHome /></Frame></DCArtboard>
+        <DCArtboard id="saju-elements" label="오행 분포 상세" width={PHONE_W} height={PHONE_H}><Frame notes={<><WNote side="left" style={{top:80,left:PHONE_W+16,width:190}}>요약 카드 — 내 사주 특징 한 줄</WNote><WNote side="left" style={{top:240,left:PHONE_W+16,width:190}}>5행 바 차트 — 부족한 원소 강조</WNote><WNote side="left" style={{top:440,left:PHONE_W+16,width:190}}>보완 가이드 — 방향/색상/시간/행동</WNote></>}><ScrSajuElements /></Frame></DCArtboard>
+        <DCArtboard id="saju-tengods" label="십성 분석 상세" width={PHONE_W} height={PHONE_H}><Frame notes={<><WNote side="left" style={{top:80,left:PHONE_W+16,width:190}}>요약 + 5그룹 분포 바 차트</WNote><WNote side="left" style={{top:300,left:PHONE_W+16,width:190}}>핵심 십성 Top 3 · 투자 함의 박스</WNote><WNote side="left" style={{top:460,left:PHONE_W+16,width:190}}>부재 십성 경고 · 학습 유도</WNote></>}><ScrSajuTenGods /></Frame></DCArtboard>
+        <DCArtboard id="saju-learn" label="사주 공부 리스트" width={PHONE_W} height={PHONE_H}><Frame notes={<><WNote side="left" style={{top:100,left:PHONE_W+16,width:190}}>학습 진행도 배너 — 주간 목표로 습관화</WNote><WNote side="left" style={{top:260,left:PHONE_W+16,width:190}}>듀오링고식 체크·잠금·이어보기</WNote></>}><ScrSajuLearn /></Frame></DCArtboard>
+        <DCArtboard id="saju-lesson" label="레슨 상세" width={PHONE_W} height={PHONE_H}><Frame notes={<><WNote side="left" style={{top:60,left:PHONE_W+16,width:190}}>상단 진행바 — 강의 내 위치 표시</WNote><WNote side="left" style={{top:320,left:PHONE_W+16,width:190}}>인라인 퀴즈 — 몰입도 ↑ 즉시 피드백</WNote></>}><ScrSajuLesson /></Frame></DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

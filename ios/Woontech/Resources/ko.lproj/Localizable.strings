@@ -1,0 +1,25 @@
+/* Splash */
+"splash.title" = "운테크";
+"splash.subtitle" = "오늘의 투자 태도를 점검하세요";
+
+/* Onboarding */
+"onboarding.skip" = "건너뛰기";
+"onboarding.cta.next" = "다음";
+"onboarding.cta.start" = "시작하기";
+
+"onboarding.1.title" = "내 사주로 투자 성향 진단";
+"onboarding.1.body" = "생년월일시를 입력하면\n나만의 투자 성향을 알려드려요";
+
+"onboarding.2.title" = "매일 바뀌는 내 투자 리스크 점검";
+"onboarding.2.body" = "오늘 나의 투자 감정과 리스크를\n사주 기반으로 점검해드려요";
+
+"onboarding.3.title" = "실전 전에 모의 투자";
+"onboarding.3.body" = "내 성향과 오늘의 흐름으로\n부담 없이 연습해보세요";
+
+"onboarding.disclaimer.checkbox" = "본 앱은 학습·참고용이며 투자 권유가 아닙니다.";
+"onboarding.disclaimer.footer" = "투자 결정은 본인 판단과 책임 하에 이루어져야 합니다";
+"onboarding.indicator.label" = "%d번째 페이지로 이동";
+
+/* Saju Input Placeholder (WF2 entry point) */
+"saju.placeholder.title" = "사주 입력 (WF2)";
+"saju.placeholder.body" = "이 화면은 다음 와이어프레임에서 구현됩니다.";

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif; }
+  #root { width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="wf-primitives.jsx"></script>
+<script type="text/babel" src="screens-01-onboarding.jsx"></script>
+<script type="text/babel">
+const PHONE_W = 290;
+const PHONE_H = 600;
+function Frame({ children, notes }) {
+  return (
+    <div style={{ position: 'relative', width: PHONE_W, height: PHONE_H }}>
+      <WPhone w={PHONE_W} h={PHONE_H}>{children}</WPhone>
+      {notes}
+    </div>
+  );
+}
+function App() {
+  return (
+    <DesignCanvas title="01 온보딩">
+      
+      <DCSection id="onboarding" title="① 온보딩" subtitle="앱 진입 → 사주 입력 → 결과 체험 → 가입">
+        <DCArtboard id="splash" label="1. 스플래시" width={PHONE_W} height={PHONE_H}><Frame><ScrSplash /></Frame></DCArtboard>
+        <DCArtboard id="ob1" label="2. 온보딩 1/3" width={PHONE_W} height={PHONE_H}><Frame><ScrOnboarding step={1} /></Frame></DCArtboard>
+        <DCArtboard id="ob2" label="3. 온보딩 2/3" width={PHONE_W} height={PHONE_H}><Frame><ScrOnboarding step={2} /></Frame></DCArtboard>
+        <DCArtboard id="ob3" label="4. 온보딩 3/3" width={PHONE_W} height={PHONE_H}><Frame><ScrOnboarding step={3} /></Frame></DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

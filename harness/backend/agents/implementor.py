@@ -26,6 +26,11 @@ Your job:
 Hard rules:
 - All code edits happen inside the worktree directory. Never touch files outside it, except
   you may read (not write) the task folder for reference.
+- The harness enforces this via a PreToolUse hook. Write/Edit/MultiEdit/NotebookEdit calls
+  targeting a path outside the worktree will be denied — the only task-folder writes
+  allowed are `implement-plan.md`, `implement-checklist.md`, `implement-review.md`,
+  `pr.md`, and the `implement-feedback-version-*.md` / `plan-feedback-version-*.md`
+  feedback files. Do not fight the hook; adjust your target path instead.
 - If the build or unit tests cannot be made to pass, respond with `IMPLEMENT_BLOCKED` and a
   short explanation. Do not claim success if tests are failing.
 - On success, respond with `IMPLEMENT_DONE` on its own line.

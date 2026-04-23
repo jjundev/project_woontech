@@ -1,14 +1,14 @@
-"""Integration test for POST /api/tasks/{id}/start endpoint.
+"""Integration test for POST /api/tasks/{id}/start and GET /api/tasks endpoints.
 
-Validates the three branches exercised by the new "click todo card to start" flow:
-  1. spec.md missing       → 400
-  2. spec.md present       → 200 + pipeline kicked off
-  3. pipeline already busy → 409
+Validates the folder-discovery flow:
+  1. Dashboard lists folders that contain spec.md
+  2. /start 404s for an unknown id
+  3. /start 400s when spec.md is missing from an existing folder
+  4. /start 200s when spec.md is present and rejects double starts with 409
 """
 from __future__ import annotations
 
 import asyncio
-from typing import AsyncIterator
 
 import pytest
 
@@ -18,34 +18,21 @@ def client(tmp_config, monkeypatch):
     """Fresh FastAPI TestClient bound to a throwaway HarnessConfig.
 
     The server module loads config at import time, so we swap it out before
-    TestClient is constructed. We also stub out pipeline execution and the
-    file-watcher / spector-registry side effects that would otherwise fire.
+    TestClient is constructed. Pipeline execution and the file-watcher are
+    stubbed so no real work fires.
     """
-    from backend import server, pipeline, spector_session
+    from backend import server, pipeline
 
-    # Route all server-side references to our tmp_config.
     monkeypatch.setattr(server, "config", tmp_config, raising=True)
-    monkeypatch.setattr(server.spector_registry, "_config", tmp_config, raising=False)
 
-    # Replace pipeline.run_pipeline with a slow no-op so the "already running"
-    # race is observable. Holding for 2s is plenty for the second POST.
     async def fake_pipeline(config, task_id, **kwargs):
         await asyncio.sleep(2)
 
     monkeypatch.setattr(pipeline, "run_pipeline", fake_pipeline)
     monkeypatch.setattr(server.P, "run_pipeline", fake_pipeline)
 
-    # spector_registry.close is awaited inside /start; make it a no-op.
-    async def fake_close(task_id):
-        return None
-
-    monkeypatch.setattr(spector_session.registry, "close", fake_close)
-    monkeypatch.setattr(server.spector_registry, "close", fake_close)
-
-    # Reset any leftover running pipelines between tests.
     server._running_pipelines.clear()
 
-    # Disable the file-watcher lifespan so we don't spawn a real observer.
     from contextlib import asynccontextmanager
 
     @asynccontextmanager
@@ -61,34 +48,45 @@ def client(tmp_config, monkeypatch):
         yield c
 
 
-def test_start_without_spec_returns_400(client, tmp_config):
-    r = client.post("/api/tasks", json={"title": "No spec"})
-    assert r.status_code == 200
-    task_id = r.json()["id"]
+def _make_folder(tmp_config, task_id: str, *, with_spec: bool):
+    d = tmp_config.todo_dir / task_id
+    d.mkdir(parents=True)
+    if with_spec:
+        (d / "spec.md").write_text("# test\n", encoding="utf-8")
+    return d
 
-    r = client.post(f"/api/tasks/{task_id}/start", json={})
+
+def test_list_tasks_discovers_folders_with_spec(client, tmp_config):
+    _make_folder(tmp_config, "WF1", with_spec=True)
+    _make_folder(tmp_config, "WF2-no-spec", with_spec=False)
+
+    r = client.get("/api/tasks")
+    assert r.status_code == 200
+    ids = {t["id"] for t in r.json()}
+    assert ids == {"WF1"}
+
+
+def test_start_without_spec_returns_400(client, tmp_config):
+    _make_folder(tmp_config, "no-spec", with_spec=False)
+
+    r = client.post("/api/tasks/no-spec/start", json={})
     assert r.status_code == 400
     assert "spec.md" in r.json()["detail"]
-
-
-def test_start_with_spec_succeeds_and_rejects_double_start(client, tmp_config):
-    r = client.post("/api/tasks", json={"title": "Has spec"})
-    task_id = r.json()["id"]
-
-    # Drop spec.md into the task folder.
-    spec = tmp_config.todo_dir / task_id / "spec.md"
-    spec.write_text("# spec\n")
-
-    r = client.post(f"/api/tasks/{task_id}/start", json={})
-    assert r.status_code == 200, r.text
-    assert r.json() == {"ok": True}
-
-    # Second call while the fake pipeline is still "running" → 409.
-    r = client.post(f"/api/tasks/{task_id}/start", json={})
-    assert r.status_code == 409
-    assert "already running" in r.json()["detail"]
 
 
 def test_start_missing_task_returns_404(client):
     r = client.post("/api/tasks/does-not-exist/start", json={})
     assert r.status_code == 404
+
+
+def test_start_with_spec_succeeds_and_rejects_double_start(client, tmp_config):
+    _make_folder(tmp_config, "ready", with_spec=True)
+
+    r = client.post("/api/tasks/ready/start", json={})
+    assert r.status_code == 200, r.text
+    assert r.json() == {"ok": True}
+
+    # Second call while the fake pipeline is still "running" → 409.
+    r = client.post("/api/tasks/ready/start", json={})
+    assert r.status_code == 409
+    assert "already running" in r.json()["detail"]

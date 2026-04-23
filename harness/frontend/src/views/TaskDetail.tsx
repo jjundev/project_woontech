@@ -1,6 +1,15 @@
 import { useEffect, useState } from "react";
-import { api } from "../lib/api";
-import type { HarnessEvent, TaskState } from "../lib/types";
+import { api, type WorktreeStatus } from "../lib/api";
+import type { HarnessEvent, TaskState, TaskStateName } from "../lib/types";
+
+const STAGES: { key: TaskStateName; label: string }[] = [
+  { key: "planning", label: "Planning" },
+  { key: "plan_review", label: "Plan Review" },
+  { key: "implementing", label: "Implementing" },
+  { key: "impl_review", label: "Impl Review" },
+  { key: "publishing", label: "Publishing" },
+  { key: "done", label: "Done" },
+];
 
 export function TaskDetail({
   taskId,
@@ -87,6 +96,7 @@ export function TaskDetail({
           자세히
         </label>
       </div>
+      <StageIndicator state={task.state} escalation={task.escalation} />
       <div className="flex-1 grid grid-cols-12 min-h-0">
         <aside className="col-span-2 border-r border-slate-800 p-2 overflow-auto">
           <div className="text-xs uppercase text-slate-500 mb-2">Files</div>
@@ -111,6 +121,7 @@ export function TaskDetail({
           </pre>
         </section>
         <section className="col-span-4 min-h-0 flex flex-col">
+          <WorktreeStatusPanel taskId={taskId} state={task.state} events={events} />
           <div className="px-3 py-2 text-xs text-slate-400 border-b border-slate-800">
             Timeline ({events.length})
           </div>
@@ -125,6 +136,136 @@ export function TaskDetail({
   );
 }
 
+function StageIndicator({
+  state,
+  escalation,
+}: {
+  state: TaskStateName;
+  escalation: string | null;
+}) {
+  if (state === "needs_attention") {
+    return (
+      <div className="px-4 py-2 bg-rose-950 border-b border-rose-800 text-rose-200 text-xs">
+        ⚠ needs_attention{escalation ? ` — ${escalation}` : ""}
+      </div>
+    );
+  }
+  const currentIdx = STAGES.findIndex((s) => s.key === state);
+  return (
+    <div className="px-4 py-2 border-b border-slate-800 flex items-center gap-1 text-xs">
+      {STAGES.map((stage, i) => {
+        const done = currentIdx >= 0 && i < currentIdx;
+        const active = stage.key === state;
+        return (
+          <div key={stage.key} className="flex items-center gap-1">
+            <span
+              className={`px-2 py-0.5 rounded ${
+                active
+                  ? "bg-indigo-600 text-white"
+                  : done
+                  ? "bg-emerald-700 text-emerald-100"
+                  : "bg-slate-800 text-slate-400"
+              }`}
+            >
+              {stage.label}
+            </span>
+            {i < STAGES.length - 1 && (
+              <span className={done ? "text-emerald-600" : "text-slate-700"}>→</span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+const WORKTREE_ACTIVE_STATES: TaskStateName[] = [
+  "planning",
+  "plan_review",
+  "implementing",
+  "impl_review",
+  "publishing",
+  "needs_attention",
+];
+
+function WorktreeStatusPanel({
+  taskId,
+  state,
+  events,
+}: {
+  taskId: string;
+  state: TaskStateName;
+  events: HarnessEvent[];
+}) {
+  const [status, setStatus] = useState<WorktreeStatus | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const active = WORKTREE_ACTIVE_STATES.includes(state);
+
+  useEffect(() => {
+    if (!active) {
+      setStatus(null);
+      return;
+    }
+    let cancelled = false;
+    const load = () =>
+      api
+        .getWorktreeStatus(taskId)
+        .then((r) => {
+          if (!cancelled) {
+            setStatus(r);
+            setError(null);
+          }
+        })
+        .catch((e) => {
+          if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+        });
+    load();
+    const id = setInterval(load, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [taskId, active]);
+
+  useEffect(() => {
+    if (!active || events.length === 0) return;
+    const last = events[events.length - 1];
+    if (last.type === "file_changed" || last.type === "agent_blocked") {
+      api
+        .getWorktreeStatus(taskId)
+        .then(setStatus)
+        .catch(() => {});
+    }
+  }, [events, active, taskId]);
+
+  if (!active) return null;
+
+  return (
+    <div className="border-b border-slate-800 p-2 text-xs">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="uppercase text-slate-500">Worktree</span>
+        {status?.branch && <span className="text-slate-400">· {status.branch}</span>}
+        {status && <span className="text-slate-400">· +{status.commits_ahead} commits</span>}
+      </div>
+      {error && <div className="text-rose-400">[error] {error}</div>}
+      {status && !status.exists && <div className="text-slate-500">not created yet</div>}
+      {status?.exists && status.files.length === 0 && (
+        <div className="text-slate-500">clean</div>
+      )}
+      {status?.exists && status.files.length > 0 && (
+        <ul className="space-y-0.5 max-h-32 overflow-auto">
+          {status.files.map((f, i) => (
+            <li key={i} className="flex gap-2">
+              <span className="text-slate-500 w-16 shrink-0">{f.change}</span>
+              <span className="truncate font-mono">{f.path}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function TimelineItem({ event, verbose }: { event: HarnessEvent; verbose: boolean }) {
   const color =
     event.type === "escalation"
@@ -133,6 +274,10 @@ function TimelineItem({ event, verbose }: { event: HarnessEvent; verbose: boolea
       ? "text-emerald-300"
       : event.type === "retry"
       ? "text-amber-300"
+      : event.type === "agent_blocked"
+      ? "text-rose-300"
+      : event.type === "tests_skipped"
+      ? "text-amber-200"
       : "text-slate-300";
   return (
     <div className={`rounded border border-slate-800 p-2 ${color}`}>

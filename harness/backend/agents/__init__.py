@@ -2,7 +2,6 @@ from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from .base import AgentSpec, run_agent, AgentResult
-from .spector import SPECTOR
 from .planner import PLANNER
 from .plan_reviewer import PLAN_REVIEWER
 from .implementor import IMPLEMENTOR
@@ -26,7 +25,6 @@ __all__ = [
     "AgentResult",
     "run_agent",
     "resolve_agent",
-    "SPECTOR",
     "PLANNER",
     "PLAN_REVIEWER",
     "IMPLEMENTOR",

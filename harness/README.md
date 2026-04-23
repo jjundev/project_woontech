@@ -51,10 +51,24 @@ cd harness
 pytest backend/tests -v
 ```
 
+## Task folders
+
+Create a task by dropping a folder under `../ios/todo/<task-id>/` with a
+`spec.md` inside (write it by hand, from another Claude Code session, or
+however you like). The dashboard auto-discovers every folder that contains
+`spec.md`. Folder name must match `^[A-Za-z0-9_.-]+$` and becomes the task id.
+
 ## Pipeline stages
 
-`spector` → `planner` → `plan-reviewer` (GAN loop, max N) → `implementor` →
+`planner` → `plan-reviewer` (GAN loop, max N) → `implementor` →
 `implement-reviewer` (GAN loop, max N) → `publisher`
+
+When the pipeline starts the task folder moves to `../ios/ongoing/<id>/` and
+a worktree is created at `../ios/worktrees/<id>/`. A PreToolUse hook denies
+Write/Edit outside the worktree (plan/feedback/review/PR markdown in the task
+folder remains writable). The reviewer's test command is rewritten to only
+run test classes newly added in the worktree (vs. `main`); if none exist the
+test step is skipped with a `tests_skipped` event.
 
 Escalation (retry exhausted) leaves the task in `needs_attention` state with the
 worktree preserved for manual inspection. Use the "Resume" button on the task

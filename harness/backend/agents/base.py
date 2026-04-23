@@ -8,6 +8,7 @@ from claude_agent_sdk import (
     AssistantMessage,
     ClaudeAgentOptions,
     ClaudeSDKClient,
+    HookMatcher,
     ResultMessage,
     TextBlock,
     ToolUseBlock,
@@ -43,14 +44,14 @@ async def run_agent(
     cwd: Path,
     task_id: Optional[str] = None,
     iteration: Optional[int] = None,
+    hooks: Optional[dict[str, list[HookMatcher]]] = None,
     on_user_message: Optional[Callable[[str], Awaitable[Optional[str]]]] = None,
 ) -> AgentResult:
     """
     Run an agent to completion on a single prompt.
 
-    `on_user_message` is invoked when the agent produces a user-facing text turn that
-    expects a reply (used by spector for interactive chat). If None, the agent runs
-    non-interactively and the function returns when the model completes its response.
+    `hooks` is forwarded to ClaudeAgentOptions for PreToolUse/PostToolUse control —
+    used by the implementor/reviewer to block Write/Edit outside the worktree.
     """
     options = ClaudeAgentOptions(
         system_prompt=spec.system_prompt,
@@ -59,6 +60,7 @@ async def run_agent(
         permission_mode=spec.permission_mode,
         max_turns=spec.max_turns,
         **({"model": spec.model} if spec.model else {}),
+        **({"hooks": hooks} if hooks else {}),
     )
 
     text_buf: list[str] = []

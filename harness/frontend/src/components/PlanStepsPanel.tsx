@@ -84,6 +84,32 @@ function deriveSteps(events: HarnessEvent[], initialSteps: PlanStep[]): DerivedS
   const status: StepStatus[] = base.map(() => "pending");
   let activeIndex: number | null = null;
   let reachedTerminal = false;
+
+  // pre-resume baseline: 이전 run(들)의 진행 상태를 기준점으로 복원
+  const isResume = events[currentRun.startIndex]?.type === "pipeline_resuming";
+  if (isResume) {
+    let prevActiveIndex: number | null = null;
+    for (let i = 0; i < currentRun.startIndex; i++) {
+      const event = events[i];
+      if (event.type !== "plan_step_progress") continue;
+      if (event.agent && event.agent !== "implementor") continue;
+      const marker = String(event.payload?.marker ?? "");
+      const matched = matchStep(base, marker);
+      if (matched === null) continue;
+      if (prevActiveIndex !== null && prevActiveIndex !== matched) {
+        status[prevActiveIndex] = "done";
+      }
+      for (let j = 0; j < matched; j++) {
+        if (status[j] === "pending") status[j] = "done";
+      }
+      status[matched] = "in_progress";
+      prevActiveIndex = matched;
+    }
+    if (prevActiveIndex !== null && status[prevActiveIndex] === "in_progress") {
+      status[prevActiveIndex] = "done";
+    }
+  }
+
   events.forEach((event, index) => {
     if (!belongsToCurrentRun(event, index, currentRun)) return;
     if (event.type !== "plan_step_progress") return;

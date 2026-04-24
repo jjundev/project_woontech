@@ -19,7 +19,8 @@ Steps:
    - Summary bullets from `spec.md`
    - Checklist copy from `implement-checklist.md` (all boxes should be checked)
    - Reference to `implement-review.md`
-4. Run: `gh pr create --title "..." --body "..." --base <base> --head <branch>`.
+   Write the body text to `<task_folder>/pr-body.md` using the Write tool.
+4. Run: `gh pr create --title "..." --body-file <task_folder>/pr-body.md --base <base> --head <branch>`.
 5. Capture the PR URL from gh's output.
 6. Write `pr.md` in the task folder with the title, URL, and summary.
 7. Put the PR URL on one line, then end your response with PUBLISH_DONE on its

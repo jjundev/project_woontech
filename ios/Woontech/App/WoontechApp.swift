@@ -4,6 +4,7 @@ import SwiftUI
 struct WoontechApp: App {
     @StateObject private var store: OnboardingStore
     @StateObject private var sajuStore: SajuInputStore
+    @StateObject private var homeDeps: HomeDependencies
 
     init() {
         let args = ProcessInfo.processInfo.arguments
@@ -34,8 +35,46 @@ struct WoontechApp: App {
             return try? JSONDecoder().decode(SajuInputModel.self, from: data)
         }()
 
+        // Parse home mock launch args for UI tests
+        let mockUnreadCount: Int? = {
+            guard let idx = args.firstIndex(of: "-mockHomeUnreadCount"),
+                  idx + 1 < args.count,
+                  let count = Int(args[idx + 1]) else { return nil }
+            return count
+        }()
+
+        let mockAvatarInitial: String? = {
+            guard let idx = args.firstIndex(of: "-mockHomeAvatarInitial"),
+                  idx + 1 < args.count else { return nil }
+            return args[idx + 1]
+        }()
+
         _store = StateObject(wrappedValue: OnboardingStore())
         _sajuStore = StateObject(wrappedValue: SajuInputStore(preload: preloadedProfile))
+
+        // Build HomeDependencies, applying any mock overrides from launch args
+        let resolvedDeps: HomeDependencies
+        if mockUnreadCount != nil || mockAvatarInitial != nil {
+            let userProfile: any UserProfileProviding = {
+                if let initial = mockAvatarInitial {
+                    return MockUserProfileProvider(displayName: "홍길동", avatarInitial: initial)
+                }
+                return MockUserProfileProvider()
+            }()
+            let notificationCenter: any NotificationCenterProviding = {
+                if let count = mockUnreadCount {
+                    return MockNotificationCenterProvider(unreadCount: count)
+                }
+                return MockNotificationCenterProvider()
+            }()
+            resolvedDeps = HomeDependencies(
+                userProfile: userProfile,
+                notificationCenter: notificationCenter
+            )
+        } else {
+            resolvedDeps = HomeDependencies.mock
+        }
+        _homeDeps = StateObject(wrappedValue: resolvedDeps)
     }
 
     var body: some Scene {
@@ -43,6 +82,7 @@ struct WoontechApp: App {
             RootView()
                 .environmentObject(store)
                 .environmentObject(sajuStore)
+                .environmentObject(homeDeps)
                 .onAppear {
                     applySajuStartStep()
                     applySignedInFlag()

@@ -10,6 +10,10 @@ enum DesignTokens {
     static let bg = Color.white
     static let disabled = Color(red: 0xC4 / 255, green: 0xC4 / 255, blue: 0xC4 / 255)
 
+    // MARK: - 홈 Header 토큰
+    static let headerBorder = Color(red: 0xE6 / 255, green: 0xE6 / 255, blue: 0xE6 / 255)  // line3 재사용
+    static let avatarBg     = Color(red: 0xF2 / 255, green: 0xF2 / 255, blue: 0xF2 / 255)  // gray 재사용
+
     // MARK: - 오행 색상
     static let woodColor  = Color(red: 0x4C / 255, green: 0xAF / 255, blue: 0x50 / 255)
     static let fireColor  = Color(red: 0xE5 / 255, green: 0x39 / 255, blue: 0x35 / 255)

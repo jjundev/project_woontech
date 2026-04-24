@@ -496,6 +496,11 @@ async def run_impl_phase(
     *,
     skip_implementor: bool = False,
 ) -> bool:
+    implementor_guard = W.make_path_guard(
+        worktree_dir,
+        task_id=task_id,
+        bash_policy=_implementor_bash_policy(config),
+    )
     if skip_implementor:
         await emit(
             "impl_skipped",
@@ -504,11 +509,6 @@ async def run_impl_phase(
             head_sha=_short_sha(_head_sha(worktree_dir)),
         )
     else:
-        implementor_guard = W.make_path_guard(
-            worktree_dir,
-            task_id=task_id,
-            bash_policy=_implementor_bash_policy(config),
-        )
         await emit("phase_started", task_id=task_id, phase="implementing")
         impl_prompt = f"""Task workspace: {task_dir}
 Spec: {task_dir / 'spec.md'}
@@ -579,6 +579,7 @@ Write UI tests but don't run them. Commit.
         )
 
     for iteration in range(1, max_retries + 1):
+        task_dir = await _set_state(config, task_id, "impl_review")
         await emit("phase_started", task_id=task_id, phase="impl_review", iteration=iteration)
         latest_feedback = _latest_feedback(_all_impl_feedback(task_dir))
         new_swift_files = discover_new_swift_files(worktree_dir, config.main_branch)
@@ -639,6 +640,7 @@ If FAIL and reviewer patch is not eligible, write implement-feedback-version-{it
             state.impl_version = iteration + 1
             S.write_state(task_dir, state)
             latest_rework_feedback = _latest_feedback(_all_impl_feedback(task_dir))
+            task_dir = await _set_state(config, task_id, "implementing")
             rework_prompt = f"""Task workspace: {task_dir}
 Spec: {task_dir / 'spec.md'}
 Plan: {task_dir / 'implement-plan.md'}

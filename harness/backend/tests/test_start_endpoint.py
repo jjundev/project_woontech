@@ -162,6 +162,58 @@ def test_resume_accepts_paused_state(client, tmp_config):
     assert client.app.state.pipeline_invocations[0]["paused_from"] == "implementing"
 
 
+def test_resume_from_review_passes_resume_from_to_pipeline(client, tmp_config, monkeypatch):
+    from backend import server
+    from backend import state as S
+
+    _make_folder(tmp_config, "resume-review", with_spec=True)
+    task_dir = S.transition(tmp_config, "resume-review", "impl_review")
+    state = S.read_state(task_dir)
+    state.state = "paused"
+    state.paused_from = "impl_review"
+    S.write_state(task_dir, state)
+
+    monkeypatch.setattr(server.W, "worktree_is_reusable", lambda config, task_id: True)
+    monkeypatch.setattr(
+        server.W,
+        "worktree_status",
+        lambda config, task_id: {"commits_ahead": 1},
+    )
+
+    r = client.post("/api/tasks/resume-review/resume", json={"resume_from": "impl_review"})
+    assert r.status_code == 200, r.text
+
+    deadline = time.time() + 1
+    while time.time() < deadline and not client.app.state.pipeline_invocations:
+        time.sleep(0.01)
+
+    assert client.app.state.pipeline_invocations
+    invocation = client.app.state.pipeline_invocations[0]
+    assert invocation["task_id"] == "resume-review"
+    assert invocation["state"] == "paused"
+    assert invocation["paused_from"] == "impl_review"
+    assert invocation["kwargs"]["resume_from"] == "impl_review"
+
+
+def test_resume_from_review_rejects_non_review_pause(client, tmp_config):
+    from backend import state as S
+
+    _make_folder(tmp_config, "resume-wrong-phase", with_spec=True)
+    task_dir = S.transition(tmp_config, "resume-wrong-phase", "implementing")
+    state = S.read_state(task_dir)
+    state.state = "paused"
+    state.paused_from = "implementing"
+    S.write_state(task_dir, state)
+
+    r = client.post(
+        "/api/tasks/resume-wrong-phase/resume",
+        json={"resume_from": "impl_review"},
+    )
+
+    assert r.status_code == 400
+    assert "requires task to be at impl_review" in r.json()["detail"]
+
+
 def test_resume_requires_needs_attention(client, tmp_config):
     from backend import state as S
 
@@ -197,6 +249,32 @@ def test_pause_persists_paused_from_and_emits_state(client, tmp_config, monkeypa
     assert paused.state == "paused"
     assert paused.paused_from == "implementing"
     assert ("state_changed", "pause-me", {"state": "paused", "paused_from": "implementing"}) in events
+
+
+def test_pause_persists_impl_review_as_paused_from(client, tmp_config, monkeypatch):
+    from backend import server
+    from backend import state as S
+
+    events: list[tuple[str, str | None, dict[str, object]]] = []
+
+    async def fake_emit(event_type: str, *, task_id=None, agent=None, iteration=None, **payload):
+        events.append((event_type, task_id, payload))
+
+    monkeypatch.setattr(server, "emit", fake_emit)
+
+    _make_folder(tmp_config, "pause-review", with_spec=True)
+    S.transition(tmp_config, "pause-review", "impl_review")
+
+    r = client.post("/api/tasks/pause-review/start", json={})
+    assert r.status_code == 200, r.text
+
+    r = client.post("/api/tasks/pause-review/pause")
+    assert r.status_code == 200, r.text
+
+    paused = S.read_state(S.find_task_dir(tmp_config, "pause-review"))
+    assert paused.state == "paused"
+    assert paused.paused_from == "impl_review"
+    assert ("state_changed", "pause-review", {"state": "paused", "paused_from": "impl_review"}) in events
 
 
 def test_list_tasks_includes_paused_task(client, tmp_config):

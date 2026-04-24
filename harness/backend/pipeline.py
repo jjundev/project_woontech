@@ -5,6 +5,7 @@ import re
 import shlex
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 from typing import Optional
 
@@ -13,7 +14,7 @@ from . import state as S
 from . import worktree as W
 from .config import HarnessConfig
 from .event_log import ImplPhaseEventLogger
-from .events import emit
+from .events import emit, reset_current_run_id, set_current_run_id
 from .plan_parser import parse_plan_file
 
 
@@ -862,10 +863,12 @@ async def run_pipeline(
     max_plan_retries = max_plan_retries or config.default_max_plan_retries
     max_impl_retries = max_impl_retries or config.default_max_impl_retries
 
-    await emit("pipeline_started", task_id=task_id)
-
+    run_id = str(uuid.uuid4())
+    run_token = set_current_run_id(run_id)
     current_phase = PHASE_NAMES[0]
     try:
+        await emit("pipeline_started", task_id=task_id)
+
         worktree_path = config.worktree_path(task_id)
 
         # 최우선: 기존 워크트리가 재사용 가능하면 그대로 사용하고,
@@ -890,6 +893,12 @@ async def run_pipeline(
             current_phase = PHASE_NAMES[resume_phase]
             await emit("pipeline_resuming", task_id=task_id, state=state.state)
             task_dir = await _prepare_resume_state(config, task_id, workspace, state, resume_phase)
+            if resume_phase > 0:
+                await emit(
+                    "plan_steps",
+                    task_id=task_id,
+                    steps=parse_plan_file(task_dir / "implement-plan.md"),
+                )
             is_resume = True
         else:
             # Fresh: bootstrap workspace inside worktree, commit spec.md + state.json on feature branch.
@@ -924,14 +933,23 @@ async def run_pipeline(
                 skip_implementor = (
                     is_resume and resume_phase == 1 and resume_from == "impl_review"
                 )
-                impl_ok = await run_impl_phase(
-                    config,
-                    task_id,
-                    task_dir,
-                    worktree_dir,
-                    max_impl_retries,
-                    skip_implementor=skip_implementor,
-                )
+                if skip_implementor:
+                    impl_ok = await run_impl_phase(
+                        config,
+                        task_id,
+                        task_dir,
+                        worktree_dir,
+                        max_impl_retries,
+                        skip_implementor=True,
+                    )
+                else:
+                    impl_ok = await run_impl_phase(
+                        config,
+                        task_id,
+                        task_dir,
+                        worktree_dir,
+                        max_impl_retries,
+                    )
                 if not impl_ok:
                     s = S.read_state(task_dir)
                     s.escalation = "impl_review_exhausted"
@@ -959,3 +977,5 @@ async def run_pipeline(
             await emit("pipeline_done", task_id=task_id)
     except Exception as error:
         await _recover_unexpected_pipeline_error(config, task_id, current_phase, error)
+    finally:
+        reset_current_run_id(run_token)

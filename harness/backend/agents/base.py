@@ -25,6 +25,12 @@ from ..events import emit
 STEP_MARKER_RE = re.compile(r"^STEP:\s*(.+?)\s*$", re.MULTILINE)
 
 
+def step_markers_for_agent(agent_name: str, text: str) -> list[str]:
+    if agent_name != "implementor":
+        return []
+    return [match.group(1) for match in STEP_MARKER_RE.finditer(text)]
+
+
 @dataclass
 class AgentSpec:
     """Declarative description of an agent role."""
@@ -97,13 +103,13 @@ async def run_agent(
                             iteration=iteration,
                             text=block.text,
                         )
-                        for match in STEP_MARKER_RE.finditer(block.text):
+                        for marker in step_markers_for_agent(spec.name, block.text):
                             await emit(
                                 "plan_step_progress",
                                 task_id=task_id,
                                 agent=spec.name,
                                 iteration=iteration,
-                                marker=match.group(1),
+                                marker=marker,
                             )
                     elif isinstance(block, ToolUseBlock):
                         entry = {

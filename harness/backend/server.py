@@ -14,6 +14,7 @@ from . import pipeline as P
 from . import worktree as W
 from .config import load_config
 from .events import bus, emit
+from .plan_parser import parse_plan_file
 from .watcher import start_watcher
 
 
@@ -110,6 +111,15 @@ async def get_task(task_id: str):
         )
     files = sorted(p.name for p in task_dir.iterdir() if p.is_file() and p.name != "state.json")
     return {"state": asdict(state), "files": files, "task_dir": str(task_dir)}
+
+
+@app.get("/api/tasks/{task_id}/plan-steps")
+async def get_plan_steps(task_id: str):
+    try:
+        task_dir = S.find_task_dir(config, task_id)
+    except FileNotFoundError:
+        raise HTTPException(404, "task not found")
+    return {"steps": parse_plan_file(task_dir / "implement-plan.md")}
 
 
 @app.get("/api/tasks/{task_id}/files/{name}")

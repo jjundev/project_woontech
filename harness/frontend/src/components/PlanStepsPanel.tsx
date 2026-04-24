@@ -7,20 +7,26 @@ interface DerivedStep extends PlanStep {
   status: StepStatus;
 }
 
-export function PlanStepsPanel({ events }: { events: HarnessEvent[] }) {
+export function PlanStepsPanel({
+  events,
+  initialSteps,
+}: {
+  events: HarnessEvent[];
+  initialSteps: PlanStep[];
+}) {
   const [collapsed, setCollapsed] = useState(false);
-  const steps = useMemo(() => deriveSteps(events), [events]);
+  const steps = useMemo(() => deriveSteps(events, initialSteps), [events, initialSteps]);
   if (steps.length === 0) return null;
   const doneCount = steps.filter((s) => s.status === "done").length;
   const activeCount = steps.filter((s) => s.status === "in_progress").length;
   return (
-    <div className="border-b border-slate-800 bg-slate-950/40 text-xs">
+    <div className="border-b border-slate-800 bg-slate-950/40 text-xs shrink-0 flex flex-col min-h-0 max-h-[35vh]">
       <button
         onClick={() => setCollapsed((v) => !v)}
-        className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-900/50"
+        className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-900/50 shrink-0"
       >
         <span className="text-slate-300 font-semibold">Plan steps</span>
-        <span className="text-slate-500">
+        <span className="text-slate-500 min-w-0">
           · {doneCount}/{steps.length} done
           {activeCount > 0 && ` · ${activeCount} in progress`}
         </span>
@@ -28,18 +34,20 @@ export function PlanStepsPanel({ events }: { events: HarnessEvent[] }) {
         <span className="text-slate-500">{collapsed ? "▸" : "▾"}</span>
       </button>
       {!collapsed && (
-        <ol className="px-3 pb-2 space-y-1">
+        <ol className="px-3 pb-2 space-y-1 overflow-auto min-h-0">
           {steps.map((step) => (
-            <li key={step.index} className="flex items-baseline gap-2">
-              <StatusDot status={step.status} />
+            <li key={step.index} className="flex items-start gap-2">
+              <span className="w-3 shrink-0 pt-0.5">
+                <StatusDot status={step.status} />
+              </span>
               <span className="text-slate-500 w-5 shrink-0 text-right">{step.index}.</span>
               <span
                 className={
                   step.status === "done"
-                    ? "text-slate-500 line-through"
+                    ? "text-slate-500 line-through break-words min-w-0"
                     : step.status === "in_progress"
-                      ? "text-indigo-200 font-medium"
-                      : "text-slate-300"
+                      ? "text-indigo-200 font-medium break-words min-w-0"
+                      : "text-slate-300 break-words min-w-0"
                 }
               >
                 {step.title}
@@ -67,24 +75,22 @@ function StatusDot({ status }: { status: StepStatus }) {
   return <span className="text-slate-600">○</span>;
 }
 
-function deriveSteps(events: HarnessEvent[]): DerivedStep[] {
-  let base: PlanStep[] = [];
-  for (let i = events.length - 1; i >= 0; i--) {
-    if (events[i].type === "plan_steps") {
-      const raw = (events[i].payload?.steps as PlanStep[] | undefined) ?? [];
-      base = raw.map((s) => ({ index: Number(s.index), title: String(s.title) }));
-      break;
-    }
-  }
+function deriveSteps(events: HarnessEvent[], initialSteps: PlanStep[]): DerivedStep[] {
+  const currentRun = findCurrentRun(events);
+  const latestRunSteps = latestPlanStepsForRun(events, currentRun);
+  const base = latestRunSteps ?? normalizeSteps(initialSteps);
   if (base.length === 0) return [];
 
   const status: StepStatus[] = base.map(() => "pending");
   let activeIndex: number | null = null;
-  for (const event of events) {
-    if (event.type !== "plan_step_progress") continue;
+  let reachedTerminal = false;
+  events.forEach((event, index) => {
+    if (!belongsToCurrentRun(event, index, currentRun)) return;
+    if (event.type !== "plan_step_progress") return;
+    if (event.agent && event.agent !== "implementor") return;
     const marker = String(event.payload?.marker ?? "");
     const matched = matchStep(base, marker);
-    if (matched === null) continue;
+    if (matched === null) return;
     if (activeIndex !== null && activeIndex !== matched && status[activeIndex] === "in_progress") {
       status[activeIndex] = "done";
     }
@@ -93,9 +99,70 @@ function deriveSteps(events: HarnessEvent[]): DerivedStep[] {
     }
     status[matched] = "in_progress";
     activeIndex = matched;
+  });
+
+  events.forEach((event, index) => {
+    if (!belongsToCurrentRun(event, index, currentRun)) return;
+    if (isTerminalProgressEvent(event)) reachedTerminal = true;
+  });
+
+  if (reachedTerminal && activeIndex !== null) {
+    for (let i = 0; i <= activeIndex; i++) {
+      status[i] = "done";
+    }
   }
 
   return base.map((s, i) => ({ ...s, status: status[i] }));
+}
+
+type RunBoundary = {
+  runId: string | null;
+  startIndex: number;
+};
+
+function findCurrentRun(events: HarnessEvent[]): RunBoundary {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const event = events[i];
+    if (event.type === "pipeline_started" || event.type === "pipeline_resuming") {
+      return {
+        runId: typeof event.run_id === "string" && event.run_id.length > 0 ? event.run_id : null,
+        startIndex: i,
+      };
+    }
+  }
+  return { runId: null, startIndex: 0 };
+}
+
+function belongsToCurrentRun(event: HarnessEvent, index: number, currentRun: RunBoundary): boolean {
+  if (currentRun.runId) return event.run_id === currentRun.runId;
+  return index >= currentRun.startIndex;
+}
+
+function latestPlanStepsForRun(
+  events: HarnessEvent[],
+  currentRun: RunBoundary,
+): PlanStep[] | null {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const event = events[i];
+    if (event.type !== "plan_steps") continue;
+    if (!belongsToCurrentRun(event, i, currentRun)) continue;
+    const raw = (event.payload?.steps as PlanStep[] | undefined) ?? [];
+    return normalizeSteps(raw);
+  }
+  return null;
+}
+
+function normalizeSteps(raw: PlanStep[]): PlanStep[] {
+  return raw
+    .map((s) => ({ index: Number(s.index), title: String(s.title) }))
+    .filter((s) => Number.isFinite(s.index) && s.title.length > 0);
+}
+
+function isTerminalProgressEvent(event: HarnessEvent): boolean {
+  if (event.type === "pipeline_done") return true;
+  if (event.type !== "phase_started") return false;
+  const phase = String(event.payload?.phase ?? "");
+  return phase === "impl_review" || phase === "publishing";
 }
 
 function matchStep(steps: PlanStep[], marker: string): number | null {

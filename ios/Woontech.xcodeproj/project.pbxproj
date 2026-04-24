@@ -25,6 +25,50 @@
 		B1D7D71D171165CD027512B8 /* OnboardingStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 267FF3811964764EF1E9DB25 /* OnboardingStoreTests.swift */; };
 		CEA5B514DA080AE3DB80FA51 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6A5DF045B3B3180AA789099 /* SplashView.swift */; };
 		F01383A9BF11A432A00FA576 /* OnboardingFlowModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37ED5F66605992BA4E6AFAD9 /* OnboardingFlowModel.swift */; };
+		B0010001000000000000A001 /* CityCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010001000000000000A001 /* CityCatalog.swift */; };
+		B0010002000000000000A002 /* SajuAnalysisEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010002000000000000A002 /* SajuAnalysisEngine.swift */; };
+		B0010003000000000000A003 /* SajuFlowModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010003000000000000A003 /* SajuFlowModel.swift */; };
+		B0010004000000000000A004 /* SajuInputModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010004000000000000A004 /* SajuInputModel.swift */; };
+		B0010005000000000000A005 /* SajuInputStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010005000000000000A005 /* SajuInputStore.swift */; };
+		B0010006000000000000A006 /* SajuResultModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010006000000000000A006 /* SajuResultModel.swift */; };
+		B0010007000000000000A007 /* ShareCardRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010007000000000000A007 /* ShareCardRenderer.swift */; };
+		B0010008000000000000A008 /* SolarTimeCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010008000000000000A008 /* SolarTimeCalculator.swift */; };
+		B0010010000000000000A010 /* SajuCheckbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010010000000000000A010 /* SajuCheckbox.swift */; };
+		B0010011000000000000A011 /* SajuSegmented.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010011000000000000A011 /* SajuSegmented.swift */; };
+		B0010012000000000000A012 /* SajuStepScaffold.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010012000000000000A012 /* SajuStepScaffold.swift */; };
+		B0010013000000000000A013 /* SajuToggleRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010013000000000000A013 /* SajuToggleRow.swift */; };
+		B0010014000000000000A014 /* StepProgressBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010014000000000000A014 /* StepProgressBarView.swift */; };
+		B0010015000000000000A015 /* WheelPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010015000000000000A015 /* WheelPicker.swift */; };
+		B0010020000000000000A020 /* SajuInputFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010020000000000000A020 /* SajuInputFlowView.swift */; };
+		B0010021000000000000A021 /* Step1GenderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010021000000000000A021 /* Step1GenderView.swift */; };
+		B0010022000000000000A022 /* Step2NameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010022000000000000A022 /* Step2NameView.swift */; };
+		B0010023000000000000A023 /* Step3BirthDateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010023000000000000A023 /* Step3BirthDateView.swift */; };
+		B0010024000000000000A024 /* Step4BirthTimeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010024000000000000A024 /* Step4BirthTimeView.swift */; };
+		B0010025000000000000A025 /* Step5BirthPlaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010025000000000000A025 /* Step5BirthPlaceView.swift */; };
+		B0010026000000000000A026 /* Step6SolarTimeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010026000000000000A026 /* Step6SolarTimeView.swift */; };
+		B0010027000000000000A027 /* Step7LoaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010027000000000000A027 /* Step7LoaderView.swift */; };
+		B0010030000000000000A030 /* Step8ResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010030000000000000A030 /* Step8ResultView.swift */; };
+		B0010031000000000000A031 /* HeroTypeCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010031000000000000A031 /* HeroTypeCardView.swift */; };
+		B0010032000000000000A032 /* SajuMiniChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010032000000000000A032 /* SajuMiniChartView.swift */; };
+		B0010033000000000000A033 /* WuxingBalanceBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010033000000000000A033 /* WuxingBalanceBarView.swift */; };
+		B0010034000000000000A034 /* BulletListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010034000000000000A034 /* BulletListView.swift */; };
+		B0010035000000000000A035 /* AccuracyBadgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010035000000000000A035 /* AccuracyBadgeView.swift */; };
+		B0010036000000000000A036 /* ShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010036000000000000A036 /* ShareCardView.swift */; };
+		B0010040000000000000A040 /* Step85SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010040000000000000A040 /* Step85SignUpView.swift */; };
+		B0010050000000000000A050 /* Step10ReferralView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010050000000000000A050 /* Step10ReferralView.swift */; };
+		B0010060000000000000A060 /* HomePlaceholderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010060000000000000A060 /* HomePlaceholderView.swift */; };
+		B0010101000000000000A101 /* SajuInputModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010101000000000000A101 /* SajuInputModelTests.swift */; };
+		B0010102000000000000A102 /* SajuFlowModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010102000000000000A102 /* SajuFlowModelTests.swift */; };
+		B0010103000000000000A103 /* SolarTimeCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010103000000000000A103 /* SolarTimeCalculatorTests.swift */; };
+		B0010104000000000000A104 /* SajuAnalysisEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010104000000000000A104 /* SajuAnalysisEngineTests.swift */; };
+		B0010105000000000000A105 /* CityCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010105000000000000A105 /* CityCatalogTests.swift */; };
+		B0010106000000000000A106 /* SajuInputStorePersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010106000000000000A106 /* SajuInputStorePersistenceTests.swift */; };
+		B0010107000000000000A107 /* SajuResultAccuracyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010107000000000000A107 /* SajuResultAccuracyTests.swift */; };
+		B0010201000000000000A201 /* SajuInputUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010201000000000000A201 /* SajuInputUITests.swift */; };
+		B0010202000000000000A202 /* SajuResultUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010202000000000000A202 /* SajuResultUITests.swift */; };
+		B0010203000000000000A203 /* SajuSignUpUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010203000000000000A203 /* SajuSignUpUITests.swift */; };
+		B0010204000000000000A204 /* SajuReferralUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010204000000000000A204 /* SajuReferralUITests.swift */; };
+		B0010205000000000000A205 /* SajuAccessibilityUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010205000000000000A205 /* SajuAccessibilityUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -66,6 +110,50 @@
 		C644AABC878D71E9F9A95870 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		DF6CF9165EF50341F3D4634D /* WoontechTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = WoontechTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		EC9B0FCAE7E62615F155A325 /* PageIndicatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageIndicatorView.swift; sourceTree = "<group>"; };
+		A0010001000000000000A001 /* CityCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityCatalog.swift; sourceTree = "<group>"; };
+		A0010002000000000000A002 /* SajuAnalysisEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuAnalysisEngine.swift; sourceTree = "<group>"; };
+		A0010003000000000000A003 /* SajuFlowModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuFlowModel.swift; sourceTree = "<group>"; };
+		A0010004000000000000A004 /* SajuInputModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuInputModel.swift; sourceTree = "<group>"; };
+		A0010005000000000000A005 /* SajuInputStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuInputStore.swift; sourceTree = "<group>"; };
+		A0010006000000000000A006 /* SajuResultModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuResultModel.swift; sourceTree = "<group>"; };
+		A0010007000000000000A007 /* ShareCardRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareCardRenderer.swift; sourceTree = "<group>"; };
+		A0010008000000000000A008 /* SolarTimeCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SolarTimeCalculator.swift; sourceTree = "<group>"; };
+		A0010010000000000000A010 /* SajuCheckbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuCheckbox.swift; sourceTree = "<group>"; };
+		A0010011000000000000A011 /* SajuSegmented.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuSegmented.swift; sourceTree = "<group>"; };
+		A0010012000000000000A012 /* SajuStepScaffold.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuStepScaffold.swift; sourceTree = "<group>"; };
+		A0010013000000000000A013 /* SajuToggleRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuToggleRow.swift; sourceTree = "<group>"; };
+		A0010014000000000000A014 /* StepProgressBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepProgressBarView.swift; sourceTree = "<group>"; };
+		A0010015000000000000A015 /* WheelPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WheelPicker.swift; sourceTree = "<group>"; };
+		A0010020000000000000A020 /* SajuInputFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuInputFlowView.swift; sourceTree = "<group>"; };
+		A0010021000000000000A021 /* Step1GenderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Step1GenderView.swift; sourceTree = "<group>"; };
+		A0010022000000000000A022 /* Step2NameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Step2NameView.swift; sourceTree = "<group>"; };
+		A0010023000000000000A023 /* Step3BirthDateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Step3BirthDateView.swift; sourceTree = "<group>"; };
+		A0010024000000000000A024 /* Step4BirthTimeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Step4BirthTimeView.swift; sourceTree = "<group>"; };
+		A0010025000000000000A025 /* Step5BirthPlaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Step5BirthPlaceView.swift; sourceTree = "<group>"; };
+		A0010026000000000000A026 /* Step6SolarTimeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Step6SolarTimeView.swift; sourceTree = "<group>"; };
+		A0010027000000000000A027 /* Step7LoaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Step7LoaderView.swift; sourceTree = "<group>"; };
+		A0010030000000000000A030 /* Step8ResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Step8ResultView.swift; sourceTree = "<group>"; };
+		A0010031000000000000A031 /* HeroTypeCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroTypeCardView.swift; sourceTree = "<group>"; };
+		A0010032000000000000A032 /* SajuMiniChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuMiniChartView.swift; sourceTree = "<group>"; };
+		A0010033000000000000A033 /* WuxingBalanceBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WuxingBalanceBarView.swift; sourceTree = "<group>"; };
+		A0010034000000000000A034 /* BulletListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulletListView.swift; sourceTree = "<group>"; };
+		A0010035000000000000A035 /* AccuracyBadgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccuracyBadgeView.swift; sourceTree = "<group>"; };
+		A0010036000000000000A036 /* ShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareCardView.swift; sourceTree = "<group>"; };
+		A0010040000000000000A040 /* Step85SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Step85SignUpView.swift; sourceTree = "<group>"; };
+		A0010050000000000000A050 /* Step10ReferralView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Step10ReferralView.swift; sourceTree = "<group>"; };
+		A0010060000000000000A060 /* HomePlaceholderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomePlaceholderView.swift; sourceTree = "<group>"; };
+		A0010101000000000000A101 /* SajuInputModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuInputModelTests.swift; sourceTree = "<group>"; };
+		A0010102000000000000A102 /* SajuFlowModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuFlowModelTests.swift; sourceTree = "<group>"; };
+		A0010103000000000000A103 /* SolarTimeCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SolarTimeCalculatorTests.swift; sourceTree = "<group>"; };
+		A0010104000000000000A104 /* SajuAnalysisEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuAnalysisEngineTests.swift; sourceTree = "<group>"; };
+		A0010105000000000000A105 /* CityCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityCatalogTests.swift; sourceTree = "<group>"; };
+		A0010106000000000000A106 /* SajuInputStorePersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuInputStorePersistenceTests.swift; sourceTree = "<group>"; };
+		A0010107000000000000A107 /* SajuResultAccuracyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuResultAccuracyTests.swift; sourceTree = "<group>"; };
+		A0010201000000000000A201 /* SajuInputUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuInputUITests.swift; sourceTree = "<group>"; };
+		A0010202000000000000A202 /* SajuResultUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuResultUITests.swift; sourceTree = "<group>"; };
+		A0010203000000000000A203 /* SajuSignUpUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuSignUpUITests.swift; sourceTree = "<group>"; };
+		A0010204000000000000A204 /* SajuReferralUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuReferralUITests.swift; sourceTree = "<group>"; };
+		A0010205000000000000A205 /* SajuAccessibilityUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuAccessibilityUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -116,6 +204,12 @@
 			isa = PBXGroup;
 			children = (
 				8F02C5F5FA1E7C282BE891C4 /* SajuInputPlaceholderView.swift */,
+				A0010020000000000000A020 /* SajuInputFlowView.swift */,
+				A0010901000000000000A901 /* Shared */,
+				A0010902000000000000A902 /* Steps */,
+				A0010903000000000000A903 /* Result */,
+				A0010904000000000000A904 /* SignUp */,
+				A0010905000000000000A905 /* Referral */,
 			);
 			path = SajuInput;
 			sourceTree = "<group>";
@@ -126,6 +220,14 @@
 				C4B901D898BA88FAECCC27A1 /* DesignTokens.swift */,
 				37ED5F66605992BA4E6AFAD9 /* OnboardingFlowModel.swift */,
 				087518D16D2CCEFF0C33D269 /* OnboardingStore.swift */,
+				A0010001000000000000A001 /* CityCatalog.swift */,
+				A0010002000000000000A002 /* SajuAnalysisEngine.swift */,
+				A0010003000000000000A003 /* SajuFlowModel.swift */,
+				A0010004000000000000A004 /* SajuInputModel.swift */,
+				A0010005000000000000A005 /* SajuInputStore.swift */,
+				A0010006000000000000A006 /* SajuResultModel.swift */,
+				A0010007000000000000A007 /* ShareCardRenderer.swift */,
+				A0010008000000000000A008 /* SolarTimeCalculator.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -133,6 +235,7 @@
 		8EC1E076CEB175284A1A2C2E /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				A0010906000000000000A906 /* Home */,
 				0EAF19F02DA02F27098FAA42 /* Onboarding */,
 				73994D50D22E9D283929B2DA /* SajuInput */,
 				9DC8AE54A45A6CABBF6C7939 /* Splash */,
@@ -152,6 +255,11 @@
 			isa = PBXGroup;
 			children = (
 				702C0112632690D16DE08C4F /* OnboardingUITests.swift */,
+				A0010201000000000000A201 /* SajuInputUITests.swift */,
+				A0010202000000000000A202 /* SajuResultUITests.swift */,
+				A0010203000000000000A203 /* SajuSignUpUITests.swift */,
+				A0010204000000000000A204 /* SajuReferralUITests.swift */,
+				A0010205000000000000A205 /* SajuAccessibilityUITests.swift */,
 			);
 			path = WoontechUITests;
 			sourceTree = "<group>";
@@ -180,8 +288,80 @@
 			children = (
 				6E7C549E36616AECF819A8CA /* OnboardingFlowStateTests.swift */,
 				267FF3811964764EF1E9DB25 /* OnboardingStoreTests.swift */,
+				A0010101000000000000A101 /* SajuInputModelTests.swift */,
+				A0010102000000000000A102 /* SajuFlowModelTests.swift */,
+				A0010103000000000000A103 /* SolarTimeCalculatorTests.swift */,
+				A0010104000000000000A104 /* SajuAnalysisEngineTests.swift */,
+				A0010105000000000000A105 /* CityCatalogTests.swift */,
+				A0010106000000000000A106 /* SajuInputStorePersistenceTests.swift */,
+				A0010107000000000000A107 /* SajuResultAccuracyTests.swift */,
 			);
 			path = WoontechTests;
+			sourceTree = "<group>";
+		};
+		A0010901000000000000A901 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				A0010010000000000000A010 /* SajuCheckbox.swift */,
+				A0010011000000000000A011 /* SajuSegmented.swift */,
+				A0010012000000000000A012 /* SajuStepScaffold.swift */,
+				A0010013000000000000A013 /* SajuToggleRow.swift */,
+				A0010014000000000000A014 /* StepProgressBarView.swift */,
+				A0010015000000000000A015 /* WheelPicker.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		A0010902000000000000A902 /* Steps */ = {
+			isa = PBXGroup;
+			children = (
+				A0010021000000000000A021 /* Step1GenderView.swift */,
+				A0010022000000000000A022 /* Step2NameView.swift */,
+				A0010023000000000000A023 /* Step3BirthDateView.swift */,
+				A0010024000000000000A024 /* Step4BirthTimeView.swift */,
+				A0010025000000000000A025 /* Step5BirthPlaceView.swift */,
+				A0010026000000000000A026 /* Step6SolarTimeView.swift */,
+				A0010027000000000000A027 /* Step7LoaderView.swift */,
+			);
+			path = Steps;
+			sourceTree = "<group>";
+		};
+		A0010903000000000000A903 /* Result */ = {
+			isa = PBXGroup;
+			children = (
+				A0010030000000000000A030 /* Step8ResultView.swift */,
+				A0010031000000000000A031 /* HeroTypeCardView.swift */,
+				A0010032000000000000A032 /* SajuMiniChartView.swift */,
+				A0010033000000000000A033 /* WuxingBalanceBarView.swift */,
+				A0010034000000000000A034 /* BulletListView.swift */,
+				A0010035000000000000A035 /* AccuracyBadgeView.swift */,
+				A0010036000000000000A036 /* ShareCardView.swift */,
+			);
+			path = Result;
+			sourceTree = "<group>";
+		};
+		A0010904000000000000A904 /* SignUp */ = {
+			isa = PBXGroup;
+			children = (
+				A0010040000000000000A040 /* Step85SignUpView.swift */,
+			);
+			path = SignUp;
+			sourceTree = "<group>";
+		};
+		A0010905000000000000A905 /* Referral */ = {
+			isa = PBXGroup;
+			children = (
+				A0010050000000000000A050 /* Step10ReferralView.swift */,
+			);
+			path = Referral;
+			sourceTree = "<group>";
+		};
+		A0010906000000000000A906 /* Home */ = {
+			isa = PBXGroup;
+			children = (
+				A0010060000000000000A060 /* HomePlaceholderView.swift */,
+			);
+			path = Home;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -306,6 +486,13 @@
 			files = (
 				81D373491FEFA7B8D19425E8 /* OnboardingFlowStateTests.swift in Sources */,
 				B1D7D71D171165CD027512B8 /* OnboardingStoreTests.swift in Sources */,
+				B0010101000000000000A101 /* SajuInputModelTests.swift in Sources */,
+				B0010102000000000000A102 /* SajuFlowModelTests.swift in Sources */,
+				B0010103000000000000A103 /* SolarTimeCalculatorTests.swift in Sources */,
+				B0010104000000000000A104 /* SajuAnalysisEngineTests.swift in Sources */,
+				B0010105000000000000A105 /* CityCatalogTests.swift in Sources */,
+				B0010106000000000000A106 /* SajuInputStorePersistenceTests.swift in Sources */,
+				B0010107000000000000A107 /* SajuResultAccuracyTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -326,6 +513,38 @@
 				959C287AC9966A8561094CA5 /* SajuInputPlaceholderView.swift in Sources */,
 				CEA5B514DA080AE3DB80FA51 /* SplashView.swift in Sources */,
 				7CFD82E58CB6806F3FB49A6E /* WoontechApp.swift in Sources */,
+				B0010001000000000000A001 /* CityCatalog.swift in Sources */,
+				B0010002000000000000A002 /* SajuAnalysisEngine.swift in Sources */,
+				B0010003000000000000A003 /* SajuFlowModel.swift in Sources */,
+				B0010004000000000000A004 /* SajuInputModel.swift in Sources */,
+				B0010005000000000000A005 /* SajuInputStore.swift in Sources */,
+				B0010006000000000000A006 /* SajuResultModel.swift in Sources */,
+				B0010007000000000000A007 /* ShareCardRenderer.swift in Sources */,
+				B0010008000000000000A008 /* SolarTimeCalculator.swift in Sources */,
+				B0010010000000000000A010 /* SajuCheckbox.swift in Sources */,
+				B0010011000000000000A011 /* SajuSegmented.swift in Sources */,
+				B0010012000000000000A012 /* SajuStepScaffold.swift in Sources */,
+				B0010013000000000000A013 /* SajuToggleRow.swift in Sources */,
+				B0010014000000000000A014 /* StepProgressBarView.swift in Sources */,
+				B0010015000000000000A015 /* WheelPicker.swift in Sources */,
+				B0010020000000000000A020 /* SajuInputFlowView.swift in Sources */,
+				B0010021000000000000A021 /* Step1GenderView.swift in Sources */,
+				B0010022000000000000A022 /* Step2NameView.swift in Sources */,
+				B0010023000000000000A023 /* Step3BirthDateView.swift in Sources */,
+				B0010024000000000000A024 /* Step4BirthTimeView.swift in Sources */,
+				B0010025000000000000A025 /* Step5BirthPlaceView.swift in Sources */,
+				B0010026000000000000A026 /* Step6SolarTimeView.swift in Sources */,
+				B0010027000000000000A027 /* Step7LoaderView.swift in Sources */,
+				B0010030000000000000A030 /* Step8ResultView.swift in Sources */,
+				B0010031000000000000A031 /* HeroTypeCardView.swift in Sources */,
+				B0010032000000000000A032 /* SajuMiniChartView.swift in Sources */,
+				B0010033000000000000A033 /* WuxingBalanceBarView.swift in Sources */,
+				B0010034000000000000A034 /* BulletListView.swift in Sources */,
+				B0010035000000000000A035 /* AccuracyBadgeView.swift in Sources */,
+				B0010036000000000000A036 /* ShareCardView.swift in Sources */,
+				B0010040000000000000A040 /* Step85SignUpView.swift in Sources */,
+				B0010050000000000000A050 /* Step10ReferralView.swift in Sources */,
+				B0010060000000000000A060 /* HomePlaceholderView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -334,6 +553,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				34C71C4E959F6A19B7F51887 /* OnboardingUITests.swift in Sources */,
+				B0010201000000000000A201 /* SajuInputUITests.swift in Sources */,
+				B0010202000000000000A202 /* SajuResultUITests.swift in Sources */,
+				B0010203000000000000A203 /* SajuSignUpUITests.swift in Sources */,
+				B0010204000000000000A204 /* SajuReferralUITests.swift in Sources */,
+				B0010205000000000000A205 /* SajuAccessibilityUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

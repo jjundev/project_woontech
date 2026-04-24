@@ -1,5 +1,8 @@
 import SwiftUI
 
+/// Legacy placeholder kept as a thin shim; the WF2 flow now lives in
+/// `SajuInputFlowView`. The `SajuInputRoot` accessibility identifier has
+/// been moved to the Step 1 container to avoid breaking OnboardingUITests.
 struct SajuInputPlaceholderView: View {
     var body: some View {
         ZStack {
@@ -17,6 +20,5 @@ struct SajuInputPlaceholderView: View {
             }
             .padding(24)
         }
-        .accessibilityIdentifier("SajuInputRoot")
     }
 }

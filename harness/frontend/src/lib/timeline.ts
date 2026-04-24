@@ -294,6 +294,15 @@ export function describeEvent(event: HarnessEvent): EventMeta {
         label: "Step",
         inline: [{ key: "marker", value: trunc(str(p.marker), 80) }],
       };
+    case "plan_skipped":
+      return {
+        category: "warning",
+        icon: "↷",
+        label: "Planner skipped",
+        inline: [
+          ...(p.reason ? [{ key: "reason", value: str(p.reason) }] : []),
+        ],
+      };
     case "impl_skipped":
       return {
         category: "warning",

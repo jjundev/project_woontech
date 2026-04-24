@@ -421,24 +421,29 @@ async def run_plan_phase(
     task_dir: Path,
     worktree_dir: Path,
     max_retries: int,
+    *,
+    skip_planner: bool = False,
 ) -> bool:
     """Return True on pass, False on escalation."""
     guard = W.make_path_guard(worktree_dir, task_id=task_id)
-    # Planner writes v1
-    await emit("phase_started", task_id=task_id, phase="planning")
-    planner_prompt = f"""Task workspace: {task_dir}
+    if skip_planner:
+        await emit("plan_skipped", task_id=task_id, reason="plan_already_written")
+    else:
+        # Planner writes v1
+        await emit("phase_started", task_id=task_id, phase="planning")
+        planner_prompt = f"""Task workspace: {task_dir}
 Spec file: {task_dir / 'spec.md'}
 Worktree (read-only reference for code structure): {worktree_dir}
 
 Write implement-plan.md v1 in the task workspace.
 """
-    await A.run_agent(
-        A.resolve_agent(A.PLANNER, config),
-        planner_prompt,
-        cwd=task_dir,
-        task_id=task_id,
-        hooks=guard,
-    )
+        await A.run_agent(
+            A.resolve_agent(A.PLANNER, config),
+            planner_prompt,
+            cwd=task_dir,
+            task_id=task_id,
+            hooks=guard,
+        )
 
     # GAN loop
     for iteration in range(1, max_retries + 1):
@@ -918,7 +923,11 @@ async def run_pipeline(
             # Plan phase
             current_phase = PHASE_NAMES[0]
             if resume_phase <= 0:
-                plan_ok = await run_plan_phase(config, task_id, task_dir, worktree_dir, max_plan_retries)
+                skip_planner = is_resume and (task_dir / "implement-plan.md").exists()
+                plan_ok = await run_plan_phase(
+                    config, task_id, task_dir, worktree_dir, max_plan_retries,
+                    skip_planner=skip_planner,
+                )
                 if not plan_ok:
                     s = S.read_state(task_dir)
                     s.escalation = "plan_review_exhausted"

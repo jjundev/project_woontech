@@ -102,6 +102,38 @@ async def test_run_pipeline_resumes_from_impl_state(tmp_config, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_run_pipeline_skips_planner_when_resuming_with_existing_plan(tmp_config, monkeypatch):
+    """planning 상태로 resume할 때 implement-plan.md가 이미 있으면 플래너를 건너뛴다."""
+    task_dir = _make_task(tmp_config, "resume-skip-planner", "planning")
+    (task_dir / "implement-plan.md").write_text(
+        "# Plan\n\n## Implementation steps\n1. Do the work\n",
+        encoding="utf-8",
+    )
+    tmp_config.worktree_path("resume-skip-planner").mkdir(parents=True, exist_ok=True)
+
+    planner_called = False
+
+    async def fake_plan_phase(config, task_id, task_dir, worktree_dir, max_retries, *, skip_planner=False):
+        nonlocal planner_called
+        planner_called = not skip_planner
+        return True
+
+    async def fake_impl(*args, **kwargs):
+        return True
+
+    async def fake_publish(*args, **kwargs):
+        return True
+
+    monkeypatch.setattr(P, "run_plan_phase", fake_plan_phase)
+    monkeypatch.setattr(P, "run_impl_phase", fake_impl)
+    monkeypatch.setattr(P, "run_publish_phase", fake_publish)
+
+    await P.run_pipeline(tmp_config, "resume-skip-planner")
+
+    assert not planner_called, "implement-plan.md가 존재할 때 플래너가 재실행되면 안 된다"
+
+
+@pytest.mark.asyncio
 async def test_run_pipeline_reemits_plan_steps_when_resuming_impl(tmp_config, monkeypatch):
     task_dir = _make_task(tmp_config, "resume-plan-steps", "implementing")
     (task_dir / "implement-plan.md").write_text(

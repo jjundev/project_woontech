@@ -11,6 +11,7 @@ struct RootView: View {
 
     @EnvironmentObject private var store: OnboardingStore
     @EnvironmentObject private var sajuStore: SajuInputStore
+    @EnvironmentObject private var homeDeps: HomeDependencies
     @State private var route: Route = .splash
 
     var body: some View {
@@ -33,11 +34,9 @@ struct RootView: View {
                 .environmentObject(sajuStore)
                 .transition(.opacity)
             case .home:
-                HomePlaceholderView(
-                    onOpenReferral: { withAnimation { route = .referral } }
-                )
-                .environmentObject(sajuStore)
-                .transition(.opacity)
+                HomeDashboardView()
+                    .environmentObject(homeDeps)
+                    .transition(.opacity)
             case .referral:
                 Step10ReferralView(onBack: {
                     withAnimation { route = .home }

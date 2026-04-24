@@ -55,7 +55,18 @@
 		B0010036000000000000A036 /* ShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010036000000000000A036 /* ShareCardView.swift */; };
 		B0010040000000000000A040 /* Step85SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010040000000000000A040 /* Step85SignUpView.swift */; };
 		B0010050000000000000A050 /* Step10ReferralView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010050000000000000A050 /* Step10ReferralView.swift */; };
-		B0010060000000000000A060 /* HomePlaceholderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010060000000000000A060 /* HomePlaceholderView.swift */; };
+		B0010061000000000000A061 /* HomeRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010061000000000000A061 /* HomeRoute.swift */; };
+		B0010062000000000000A062 /* HomeDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010062000000000000A062 /* HomeDependencies.swift */; };
+		B0010063000000000000A063 /* HomeDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010063000000000000A063 /* HomeDashboardView.swift */; };
+		B0010064000000000000A064 /* HomeHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010064000000000000A064 /* HomeHeaderView.swift */; };
+		B0010065000000000000A065 /* HomeRouteDestinations.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010065000000000000A065 /* HomeRouteDestinations.swift */; };
+		B0010066000000000000A066 /* UserProfileProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010066000000000000A066 /* UserProfileProviding.swift */; };
+		B0010067000000000000A067 /* NotificationCenterProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010067000000000000A067 /* NotificationCenterProviding.swift */; };
+		B0010068000000000000A068 /* HeroInvestingProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010068000000000000A068 /* HeroInvestingProviding.swift */; };
+		B0010069000000000000A069 /* InsightsProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010069000000000000A069 /* InsightsProviding.swift */; };
+		B001006A000000000000A06A /* WeeklyEventsProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001006A000000000000A06A /* WeeklyEventsProviding.swift */; };
+		B001006B000000000000A06B /* HomeDashboardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001006B000000000000A06B /* HomeDashboardTests.swift */; };
+		B001006C000000000000A06C /* HomeDashboardUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001006C000000000000A06C /* HomeDashboardUITests.swift */; };
 		B0010101000000000000A101 /* SajuInputModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010101000000000000A101 /* SajuInputModelTests.swift */; };
 		B0010102000000000000A102 /* SajuFlowModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010102000000000000A102 /* SajuFlowModelTests.swift */; };
 		B0010103000000000000A103 /* SolarTimeCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010103000000000000A103 /* SolarTimeCalculatorTests.swift */; };
@@ -139,7 +150,18 @@
 		A0010036000000000000A036 /* ShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareCardView.swift; sourceTree = "<group>"; };
 		A0010040000000000000A040 /* Step85SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Step85SignUpView.swift; sourceTree = "<group>"; };
 		A0010050000000000000A050 /* Step10ReferralView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Step10ReferralView.swift; sourceTree = "<group>"; };
-		A0010060000000000000A060 /* HomePlaceholderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomePlaceholderView.swift; sourceTree = "<group>"; };
+		A0010061000000000000A061 /* HomeRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeRoute.swift; sourceTree = "<group>"; };
+		A0010062000000000000A062 /* HomeDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeDependencies.swift; sourceTree = "<group>"; };
+		A0010063000000000000A063 /* HomeDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeDashboardView.swift; sourceTree = "<group>"; };
+		A0010064000000000000A064 /* HomeHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeHeaderView.swift; sourceTree = "<group>"; };
+		A0010065000000000000A065 /* HomeRouteDestinations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeRouteDestinations.swift; sourceTree = "<group>"; };
+		A0010066000000000000A066 /* UserProfileProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileProviding.swift; sourceTree = "<group>"; };
+		A0010067000000000000A067 /* NotificationCenterProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationCenterProviding.swift; sourceTree = "<group>"; };
+		A0010068000000000000A068 /* HeroInvestingProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroInvestingProviding.swift; sourceTree = "<group>"; };
+		A0010069000000000000A069 /* InsightsProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsProviding.swift; sourceTree = "<group>"; };
+		A001006A000000000000A06A /* WeeklyEventsProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyEventsProviding.swift; sourceTree = "<group>"; };
+		A001006B000000000000A06B /* HomeDashboardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeDashboardTests.swift; sourceTree = "<group>"; };
+		A001006C000000000000A06C /* HomeDashboardUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeDashboardUITests.swift; sourceTree = "<group>"; };
 		A0010101000000000000A101 /* SajuInputModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuInputModelTests.swift; sourceTree = "<group>"; };
 		A0010102000000000000A102 /* SajuFlowModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuFlowModelTests.swift; sourceTree = "<group>"; };
 		A0010103000000000000A103 /* SolarTimeCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SolarTimeCalculatorTests.swift; sourceTree = "<group>"; };
@@ -252,6 +274,7 @@
 		A054AB5A9DB9BFF9AD6B6FA9 /* WoontechUITests */ = {
 			isa = PBXGroup;
 			children = (
+				A0010909000000000000A909 /* Home */,
 				702C0112632690D16DE08C4F /* OnboardingUITests.swift */,
 				A0010201000000000000A201 /* SajuInputUITests.swift */,
 				A0010202000000000000A202 /* SajuResultUITests.swift */,
@@ -260,6 +283,14 @@
 				A0010205000000000000A205 /* SajuAccessibilityUITests.swift */,
 			);
 			path = WoontechUITests;
+			sourceTree = "<group>";
+		};
+		A0010909000000000000A909 /* Home */ = {
+			isa = PBXGroup;
+			children = (
+				A001006C000000000000A06C /* HomeDashboardUITests.swift */,
+			);
+			path = Home;
 			sourceTree = "<group>";
 		};
 		C05C4011366127DE38B8F34B /* Products */ = {
@@ -284,6 +315,7 @@
 		F820527970DB7957FFA9B65E /* WoontechTests */ = {
 			isa = PBXGroup;
 			children = (
+				A0010908000000000000A908 /* Home */,
 				6E7C549E36616AECF819A8CA /* OnboardingFlowStateTests.swift */,
 				267FF3811964764EF1E9DB25 /* OnboardingStoreTests.swift */,
 				A0010101000000000000A101 /* SajuInputModelTests.swift */,
@@ -295,6 +327,14 @@
 				A0010107000000000000A107 /* SajuResultAccuracyTests.swift */,
 			);
 			path = WoontechTests;
+			sourceTree = "<group>";
+		};
+		A0010908000000000000A908 /* Home */ = {
+			isa = PBXGroup;
+			children = (
+				A001006B000000000000A06B /* HomeDashboardTests.swift */,
+			);
+			path = Home;
 			sourceTree = "<group>";
 		};
 		A0010901000000000000A901 /* Shared */ = {
@@ -356,9 +396,26 @@
 		A0010906000000000000A906 /* Home */ = {
 			isa = PBXGroup;
 			children = (
-				A0010060000000000000A060 /* HomePlaceholderView.swift */,
+				A0010907000000000000A907 /* Providers */,
+				A0010061000000000000A061 /* HomeRoute.swift */,
+				A0010062000000000000A062 /* HomeDependencies.swift */,
+				A0010063000000000000A063 /* HomeDashboardView.swift */,
+				A0010064000000000000A064 /* HomeHeaderView.swift */,
+				A0010065000000000000A065 /* HomeRouteDestinations.swift */,
 			);
 			path = Home;
+			sourceTree = "<group>";
+		};
+		A0010907000000000000A907 /* Providers */ = {
+			isa = PBXGroup;
+			children = (
+				A0010066000000000000A066 /* UserProfileProviding.swift */,
+				A0010067000000000000A067 /* NotificationCenterProviding.swift */,
+				A0010068000000000000A068 /* HeroInvestingProviding.swift */,
+				A0010069000000000000A069 /* InsightsProviding.swift */,
+				A001006A000000000000A06A /* WeeklyEventsProviding.swift */,
+			);
+			path = Providers;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -490,6 +547,7 @@
 				B0010105000000000000A105 /* CityCatalogTests.swift in Sources */,
 				B0010106000000000000A106 /* SajuInputStorePersistenceTests.swift in Sources */,
 				B0010107000000000000A107 /* SajuResultAccuracyTests.swift in Sources */,
+				B001006B000000000000A06B /* HomeDashboardTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -540,7 +598,16 @@
 				B0010036000000000000A036 /* ShareCardView.swift in Sources */,
 				B0010040000000000000A040 /* Step85SignUpView.swift in Sources */,
 				B0010050000000000000A050 /* Step10ReferralView.swift in Sources */,
-				B0010060000000000000A060 /* HomePlaceholderView.swift in Sources */,
+				B0010061000000000000A061 /* HomeRoute.swift in Sources */,
+				B0010062000000000000A062 /* HomeDependencies.swift in Sources */,
+				B0010063000000000000A063 /* HomeDashboardView.swift in Sources */,
+				B0010064000000000000A064 /* HomeHeaderView.swift in Sources */,
+				B0010065000000000000A065 /* HomeRouteDestinations.swift in Sources */,
+				B0010066000000000000A066 /* UserProfileProviding.swift in Sources */,
+				B0010067000000000000A067 /* NotificationCenterProviding.swift in Sources */,
+				B0010068000000000000A068 /* HeroInvestingProviding.swift in Sources */,
+				B0010069000000000000A069 /* InsightsProviding.swift in Sources */,
+				B001006A000000000000A06A /* WeeklyEventsProviding.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -554,6 +621,7 @@
 				B0010203000000000000A203 /* SajuSignUpUITests.swift in Sources */,
 				B0010204000000000000A204 /* SajuReferralUITests.swift in Sources */,
 				B0010205000000000000A205 /* SajuAccessibilityUITests.swift in Sources */,
+				B001006C000000000000A06C /* HomeDashboardUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -250,6 +250,12 @@ def _only_testing_tail_allowed(tail: tuple[str, ...]) -> bool:
     return bool(tail) and all(arg.startswith("-only-testing:") for arg in tail)
 
 
+def _is_scoped_test_prefix(prefix: tuple[str, ...]) -> bool:
+    if prefix and prefix[0] == "xcodebuild":
+        return True
+    return prefix[:3] == ("python3", "tools/xcode_test_runner.py", "test")
+
+
 def _ls_args_allowed(args: tuple[str, ...]) -> bool:
     seen_option = False
     for arg in args:
@@ -276,7 +282,7 @@ def _matches_bash_policy(tokens: tuple[str, ...], policy: BashPolicy) -> bool:
             return True
         if prefix == ("ls",):
             return _ls_args_allowed(tail)
-        if prefix and prefix[0] == "xcodebuild":
+        if _is_scoped_test_prefix(prefix):
             return _only_testing_tail_allowed(tail)
         return True
     return False

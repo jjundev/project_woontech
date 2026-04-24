@@ -69,7 +69,7 @@ async def test_run_pipeline_resumes_from_impl_state(tmp_config, monkeypatch):
         calls.append(("plan", "", None))
         return True
 
-    async def fake_impl(config, task_id, task_dir, worktree_dir, max_retries):
+    async def fake_impl(config, task_id, task_dir, worktree_dir, max_retries, **kwargs):
         state = S.read_state(task_dir)
         calls.append(("impl", state.state, state.escalation))
         return True
@@ -103,7 +103,7 @@ async def test_run_pipeline_resumes_impl_from_needs_attention(tmp_config, monkey
         calls.append(("plan", "", None))
         return True
 
-    async def fake_impl(config, task_id, task_dir, worktree_dir, max_retries):
+    async def fake_impl(config, task_id, task_dir, worktree_dir, max_retries, **kwargs):
         state = S.read_state(task_dir)
         calls.append(("impl", state.state, state.escalation))
         return True
@@ -198,7 +198,7 @@ async def test_run_pipeline_clears_stale_escalation_after_resume(tmp_config, mon
     async def fake_plan(*args, **kwargs):
         return True
 
-    async def fake_impl(config, task_id, task_dir, worktree_dir, max_retries):
+    async def fake_impl(config, task_id, task_dir, worktree_dir, max_retries, **kwargs):
         state = S.read_state(task_dir)
         assert state.state == "implementing"
         assert state.escalation is None
@@ -236,7 +236,7 @@ async def test_run_pipeline_handles_stale_worktree_on_fresh_start(tmp_config, mo
         assert S.read_state(task_dir).state == "planning"
         return True
 
-    async def fake_impl(config, task_id, task_dir, worktree_dir, max_retries):
+    async def fake_impl(config, task_id, task_dir, worktree_dir, max_retries, **kwargs):
         calls.append("impl")
         return True
 
@@ -330,7 +330,7 @@ async def test_run_pipeline_uses_project_subdir_for_monorepo_phases(monorepo_con
         assert worktree_dir.exists()
         return True
 
-    async def fake_impl(config, task_id, task_dir, worktree_dir, max_retries):
+    async def fake_impl(config, task_id, task_dir, worktree_dir, max_retries, **kwargs):
         calls.append(("impl", str(worktree_dir)))
         assert worktree_dir == expected
         return True

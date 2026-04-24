@@ -160,6 +160,41 @@ def test_bash_allows_only_testing_tail(worktree_dir: Path, bash_policy: W.BashPo
     )
 
 
+def test_bash_allows_xcode_test_runner_only_testing_tail(worktree_dir: Path):
+    policy = W.BashPolicy(
+        allowed_prefixes=(
+            W.tokenize_command("python3 tools/xcode_test_runner.py test --target WoontechTests"),
+        )
+    )
+    cb = _callback(W.make_path_guard(worktree_dir, bash_policy=policy))
+
+    assert (
+        _call_bash(
+            cb,
+            command=(
+                "python3 tools/xcode_test_runner.py test --target WoontechTests "
+                "-only-testing:WoontechTests/FooTests"
+            ),
+        )
+        == {}
+    )
+
+
+def test_bash_blocks_xcode_test_runner_non_only_testing_tail(worktree_dir: Path):
+    policy = W.BashPolicy(
+        allowed_prefixes=(
+            W.tokenize_command("python3 tools/xcode_test_runner.py test --target WoontechTests"),
+        )
+    )
+    cb = _callback(W.make_path_guard(worktree_dir, bash_policy=policy))
+    result = _call_bash(
+        cb,
+        command="python3 tools/xcode_test_runner.py test --target WoontechTests --foo",
+    )
+
+    assert result["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
 def test_bash_blocks_real_pipe_and_redirection(worktree_dir: Path, bash_policy: W.BashPolicy):
     cb = _callback(W.make_path_guard(worktree_dir, bash_policy=bash_policy))
     result = _call_bash(

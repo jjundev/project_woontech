@@ -141,3 +141,19 @@ def test_packaged_config_yaml_uses_only_testing_tokens():
 
     assert "{only_testing:WoontechTests}" in data["unit_test_cmd"]
     assert "{only_testing:WoontechUITests}" in data["ui_test_cmd"]
+
+
+def test_packaged_config_yaml_uses_xcode_test_runner_wrapper():
+    """Build/test commands should use the local wrapper, not raw xcodebuild."""
+    root = Path(__file__).resolve().parents[2] / "harness.config.yaml"
+    data = yaml.safe_load(root.read_text())
+
+    assert data["build_cmd"] == "python3 tools/xcode_test_runner.py build"
+    assert data["unit_test_cmd"] == (
+        "python3 tools/xcode_test_runner.py test --target WoontechTests "
+        "{only_testing:WoontechTests}"
+    )
+    assert data["ui_test_cmd"] == (
+        "python3 tools/xcode_test_runner.py test --target WoontechUITests --ui "
+        "{only_testing:WoontechUITests}"
+    )

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { HarnessEvent } from "../lib/types";
 import {
   agentStyle,
@@ -34,6 +34,7 @@ type Row = (ChatGroup & { kind: "group" }) | PhaseDivider;
 export function ChatTimeline({ events }: { events: HarnessEvent[] }) {
   const [now, setNow] = useState(() => Date.now());
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const endRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
 
   useEffect(() => {
@@ -43,10 +44,10 @@ export function ChatTimeline({ events }: { events: HarnessEvent[] }) {
 
   const rows = useMemo(() => buildRows(events), [events]);
 
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el || !stickToBottomRef.current) return;
-    el.scrollTop = el.scrollHeight;
+  useLayoutEffect(() => {
+    if (stickToBottomRef.current) {
+      endRef.current?.scrollIntoView();
+    }
   }, [rows.length, events.length]);
 
   const onScroll = () => {
@@ -72,6 +73,7 @@ export function ChatTimeline({ events }: { events: HarnessEvent[] }) {
           <ChatBubble key={row.key} group={row} now={now} />
         ),
       )}
+      <div ref={endRef} />
     </div>
   );
 }

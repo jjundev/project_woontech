@@ -7,6 +7,7 @@ import pytest
 from backend import pipeline as P
 from backend import state as S
 from backend import worktree as W
+from backend.events import bus
 
 
 def _make_task(tmp_config, task_id: str, state_name: S.StateName, escalation: str | None = None):
@@ -58,6 +59,14 @@ def test_resume_phase_index_mapping_for_paused_state(paused_from, expected):
     assert P._resume_phase_index(state) == expected
 
 
+def test_step_markers_are_only_extracted_for_implementor():
+    from backend.agents.base import step_markers_for_agent
+
+    text = "Reviewing the plan:\nSTEP: 1. Do the work\n"
+    assert step_markers_for_agent("plan-reviewer", text) == []
+    assert step_markers_for_agent("implementor", text) == ["1. Do the work"]
+
+
 @pytest.mark.asyncio
 async def test_run_pipeline_resumes_from_impl_state(tmp_config, monkeypatch):
     _make_task(tmp_config, "resume-impl", "implementing")
@@ -90,6 +99,86 @@ async def test_run_pipeline_resumes_from_impl_state(tmp_config, monkeypatch):
         ("impl", "implementing", None),
         ("publish", "publishing", None),
     ]
+
+
+@pytest.mark.asyncio
+async def test_run_pipeline_reemits_plan_steps_when_resuming_impl(tmp_config, monkeypatch):
+    task_dir = _make_task(tmp_config, "resume-plan-steps", "implementing")
+    (task_dir / "implement-plan.md").write_text(
+        "# Plan\n\n## Implementation steps\n1. Keep state scoped\n2. Render scrollably\n",
+        encoding="utf-8",
+    )
+    tmp_config.worktree_path("resume-plan-steps").mkdir(parents=True, exist_ok=True)
+
+    events: list[tuple[str, dict[str, object]]] = []
+
+    async def fake_emit(event_type: str, *, task_id=None, agent=None, iteration=None, **payload):
+        events.append((event_type, payload))
+
+    async def fake_plan(*args, **kwargs):
+        raise AssertionError("plan phase should be skipped when resuming implementation")
+
+    async def fake_impl(*args, **kwargs):
+        return True
+
+    async def fake_publish(*args, **kwargs):
+        return True
+
+    monkeypatch.setattr(P, "emit", fake_emit)
+    monkeypatch.setattr(P, "run_plan_phase", fake_plan)
+    monkeypatch.setattr(P, "run_impl_phase", fake_impl)
+    monkeypatch.setattr(P, "run_publish_phase", fake_publish)
+
+    await P.run_pipeline(tmp_config, "resume-plan-steps")
+
+    plan_events = [payload for event_type, payload in events if event_type == "plan_steps"]
+    assert plan_events == [
+        {
+            "steps": [
+                {"index": 1, "title": "Keep state scoped"},
+                {"index": 2, "title": "Render scrollably"},
+            ]
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_run_pipeline_events_include_run_id(tmp_config, monkeypatch):
+    task_id = "run-id"
+    task_dir = tmp_config.todo_dir / task_id
+    task_dir.mkdir(parents=True, exist_ok=True)
+    (task_dir / "spec.md").write_text("# run id\n", encoding="utf-8")
+
+    async def ok_plan(*args, **kwargs):
+        return True
+
+    async def ok_impl(*args, **kwargs):
+        return True
+
+    async def ok_publish(*args, **kwargs):
+        return True
+
+    monkeypatch.setattr(P, "run_plan_phase", ok_plan)
+    monkeypatch.setattr(P, "run_impl_phase", ok_impl)
+    monkeypatch.setattr(P, "run_publish_phase", ok_publish)
+
+    queue = await bus.subscribe()
+    try:
+        await P.run_pipeline(tmp_config, task_id)
+        emitted = []
+        while not queue.empty():
+            emitted.append(queue.get_nowait())
+    finally:
+        await bus.unsubscribe(queue)
+
+    task_events = [event for event in emitted if event.task_id == task_id]
+    started = next(event for event in task_events if event.type == "pipeline_started")
+    assert started.run_id
+    assert {
+        event.run_id
+        for event in task_events
+        if event.type in {"pipeline_started", "state_changed", "pipeline_done"}
+    } == {started.run_id}
 
 
 @pytest.mark.asyncio

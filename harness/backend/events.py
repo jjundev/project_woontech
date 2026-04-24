@@ -3,14 +3,19 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from contextvars import ContextVar, Token
 from dataclasses import dataclass, field, asdict
 from typing import Any, Optional
+
+
+_current_run_id: ContextVar[Optional[str]] = ContextVar("harness_run_id", default=None)
 
 
 @dataclass
 class Event:
     type: str
     task_id: Optional[str] = None
+    run_id: Optional[str] = None
     agent: Optional[str] = None
     iteration: Optional[int] = None
     payload: dict[str, Any] = field(default_factory=dict)
@@ -55,12 +60,30 @@ class EventBus:
 bus = EventBus()
 
 
+def set_current_run_id(run_id: Optional[str]) -> Token[Optional[str]]:
+    return _current_run_id.set(run_id)
+
+
+def reset_current_run_id(token: Token[Optional[str]]) -> None:
+    _current_run_id.reset(token)
+
+
 async def emit(
     type: str,
     *,
     task_id: Optional[str] = None,
+    run_id: Optional[str] = None,
     agent: Optional[str] = None,
     iteration: Optional[int] = None,
     **payload: Any,
 ) -> None:
-    await bus.emit(Event(type=type, task_id=task_id, agent=agent, iteration=iteration, payload=payload))
+    await bus.emit(
+        Event(
+            type=type,
+            task_id=task_id,
+            run_id=run_id if run_id is not None else _current_run_id.get(),
+            agent=agent,
+            iteration=iteration,
+            payload=payload,
+        )
+    )

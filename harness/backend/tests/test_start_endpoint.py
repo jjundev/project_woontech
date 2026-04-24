@@ -113,6 +113,34 @@ def test_start_with_spec_succeeds_and_rejects_double_start(client, tmp_config):
     assert "already running" in r.json()["detail"]
 
 
+def test_get_plan_steps_returns_current_plan(client, tmp_config):
+    from backend import state as S
+
+    _make_folder(tmp_config, "with-plan", with_spec=True)
+    task_dir = S.transition(tmp_config, "with-plan", "implementing")
+    (task_dir / "implement-plan.md").write_text(
+        "# Plan\n\n## Implementation steps\n1. First step\n2. Second step\n",
+        encoding="utf-8",
+    )
+
+    r = client.get("/api/tasks/with-plan/plan-steps")
+    assert r.status_code == 200, r.text
+    assert r.json() == {
+        "steps": [
+            {"index": 1, "title": "First step"},
+            {"index": 2, "title": "Second step"},
+        ]
+    }
+
+
+def test_get_plan_steps_returns_empty_without_plan(client, tmp_config):
+    _make_folder(tmp_config, "without-plan", with_spec=True)
+
+    r = client.get("/api/tasks/without-plan/plan-steps")
+    assert r.status_code == 200, r.text
+    assert r.json() == {"steps": []}
+
+
 def test_resume_preserves_escalation_until_pipeline_starts(client, tmp_config):
     from backend import state as S
 

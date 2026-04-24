@@ -31,6 +31,7 @@ export interface TaskState {
 export interface HarnessEvent {
   type: string;
   task_id?: string;
+  run_id?: string | null;
   agent?: string;
   iteration?: number;
   payload: Record<string, unknown>;

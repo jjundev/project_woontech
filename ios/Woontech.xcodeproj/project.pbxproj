@@ -67,6 +67,9 @@
 		B001006A000000000000A06A /* WeeklyEventsProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001006A000000000000A06A /* WeeklyEventsProviding.swift */; };
 		B001006B000000000000A06B /* HomeDashboardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001006B000000000000A06B /* HomeDashboardTests.swift */; };
 		B001006C000000000000A06C /* HomeDashboardUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001006C000000000000A06C /* HomeDashboardUITests.swift */; };
+		B001006D000000000000A06D /* CollectionExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001006D000000000000A06D /* CollectionExtensions.swift */; };
+		B001006E000000000000A06E /* HeroInvestingCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001006E000000000000A06E /* HeroInvestingCardView.swift */; };
+		B001006F000000000000A06F /* InsightCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001006F000000000000A06F /* InsightCardView.swift */; };
 		B0010101000000000000A101 /* SajuInputModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010101000000000000A101 /* SajuInputModelTests.swift */; };
 		B0010102000000000000A102 /* SajuFlowModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010102000000000000A102 /* SajuFlowModelTests.swift */; };
 		B0010103000000000000A103 /* SolarTimeCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010103000000000000A103 /* SolarTimeCalculatorTests.swift */; };
@@ -162,6 +165,9 @@
 		A001006A000000000000A06A /* WeeklyEventsProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyEventsProviding.swift; sourceTree = "<group>"; };
 		A001006B000000000000A06B /* HomeDashboardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeDashboardTests.swift; sourceTree = "<group>"; };
 		A001006C000000000000A06C /* HomeDashboardUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeDashboardUITests.swift; sourceTree = "<group>"; };
+		A001006D000000000000A06D /* CollectionExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionExtensions.swift; sourceTree = "<group>"; };
+		A001006E000000000000A06E /* HeroInvestingCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroInvestingCardView.swift; sourceTree = "<group>"; };
+		A001006F000000000000A06F /* InsightCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightCardView.swift; sourceTree = "<group>"; };
 		A0010101000000000000A101 /* SajuInputModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuInputModelTests.swift; sourceTree = "<group>"; };
 		A0010102000000000000A102 /* SajuFlowModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuFlowModelTests.swift; sourceTree = "<group>"; };
 		A0010103000000000000A103 /* SolarTimeCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SolarTimeCalculatorTests.swift; sourceTree = "<group>"; };
@@ -238,6 +244,7 @@
 			isa = PBXGroup;
 			children = (
 				C4B901D898BA88FAECCC27A1 /* DesignTokens.swift */,
+				A001006D000000000000A06D /* CollectionExtensions.swift */,
 				37ED5F66605992BA4E6AFAD9 /* OnboardingFlowModel.swift */,
 				087518D16D2CCEFF0C33D269 /* OnboardingStore.swift */,
 				A0010001000000000000A001 /* CityCatalog.swift */,
@@ -402,6 +409,8 @@
 				A0010063000000000000A063 /* HomeDashboardView.swift */,
 				A0010064000000000000A064 /* HomeHeaderView.swift */,
 				A0010065000000000000A065 /* HomeRouteDestinations.swift */,
+				A001006E000000000000A06E /* HeroInvestingCardView.swift */,
+				A001006F000000000000A06F /* InsightCardView.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -608,6 +617,9 @@
 				B0010068000000000000A068 /* HeroInvestingProviding.swift in Sources */,
 				B0010069000000000000A069 /* InsightsProviding.swift in Sources */,
 				B001006A000000000000A06A /* WeeklyEventsProviding.swift in Sources */,
+				B001006D000000000000A06D /* CollectionExtensions.swift in Sources */,
+				B001006E000000000000A06E /* HeroInvestingCardView.swift in Sources */,
+				B001006F000000000000A06F /* InsightCardView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

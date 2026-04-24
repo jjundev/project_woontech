@@ -73,4 +73,82 @@ final class HomeDashboardTests: XCTestCase {
         let event2 = WeeklyEvent(id: sharedID)
         XCTAssertEqual(HomeRoute.event(event1), HomeRoute.event(event2))
     }
+
+    // MARK: - WF3-02 Hero date formatting (AC-2)
+
+    func test_heroDate_jan1_2026_isThursday() {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy.MM.dd EEEE"
+        formatter.locale = Locale(identifier: "ko_KR")
+
+        var comps = DateComponents()
+        comps.year = 2026; comps.month = 1; comps.day = 1
+        let date = Calendar.current.date(from: comps)!
+
+        XCTAssertEqual(formatter.string(from: date), "2026.01.01 목요일")
+    }
+
+    func test_heroDate_apr23_2026_isThursday() {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy.MM.dd EEEE"
+        formatter.locale = Locale(identifier: "ko_KR")
+
+        var comps = DateComponents()
+        comps.year = 2026; comps.month = 4; comps.day = 23
+        let date = Calendar.current.date(from: comps)!
+
+        XCTAssertEqual(formatter.string(from: date), "2026.04.23 목요일")
+    }
+
+    // MARK: - WF3-02 Hero score clamping (AC-4)
+
+    func test_heroScore_clamp_120_to_100() {
+        XCTAssertEqual(clampHeroScore(120), 100)
+    }
+
+    func test_heroScore_clamp_negative_to_0() {
+        XCTAssertEqual(clampHeroScore(-5), 0)
+    }
+
+    func test_heroScore_inRange_unchanged() {
+        XCTAssertEqual(clampHeroScore(72), 72)
+    }
+
+    // MARK: - WF3-02 MockHeroInvestingProvider defaults (AC-5)
+
+    func test_mockHeroInvesting_defaults() {
+        let provider = MockHeroInvestingProvider()
+        XCTAssertEqual(provider.score, 72)
+        XCTAssertEqual(provider.oneLiner, "공격보다 관찰이 내 성향에 맞아요")
+    }
+
+    // MARK: - WF3-02 Insights card count and order (AC-7/8)
+
+    func test_insightsCard_count_3() {
+        XCTAssertEqual(MockInsightsProvider().cards.count, 3)
+    }
+
+    func test_insightsCard_slot0_isTaboo() {
+        XCTAssertEqual(MockInsightsProvider().cards[0].badgeLabel, "금기")
+    }
+
+    func test_insightsCard_slot1_isToday() {
+        XCTAssertEqual(MockInsightsProvider().cards[1].badgeLabel, "일진")
+    }
+
+    func test_insightsCard_slot2_isPractice() {
+        XCTAssertEqual(MockInsightsProvider().cards[2].badgeLabel, "실천")
+    }
+
+    // MARK: - WF3-02 Safe subscript (AC-14)
+
+    func test_insights_safeSubscript_outOfBounds() {
+        let empty: [InsightCard] = []
+        XCTAssertNil(empty[safe: 0])
+    }
+
+    func test_insights_2cardProvider_slot2_isNil() {
+        let twoCards = Array(MockInsightsProvider().cards.prefix(2))
+        XCTAssertNil(twoCards[safe: 2])
+    }
 }

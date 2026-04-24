@@ -1,6 +1,6 @@
 {
   "id": "WF3-02-home-above-fold",
-  "state": "planning",
+  "state": "implementing",
   "paused_from": null,
   "title": "WF3-02 \u2014 \ud648 above-the-fold (Hero + Insights)",
   "plan_version": 0,
@@ -11,7 +11,7 @@
   "max_impl_retries": 3,
   "escalation": null,
   "created_at": 1777042522.436812,
-  "updated_at": 1777042522.437523,
+  "updated_at": 1777044441.3499289,
   "branch": "feature/WF3-02-home-above-fold",
   "pr_url": null
 }

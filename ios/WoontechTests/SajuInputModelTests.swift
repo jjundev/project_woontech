@@ -48,12 +48,17 @@ final class SajuInputModelTests: XCTestCase {
 
     // T11 — FR-3.3 (leap-month availability predicate)
     func test_input_lunar_leapMonth_toggle_availability() {
-        // 2020 is a known year with an intercalary 4th month on the Chinese calendar.
-        let hasLeap2020 = LunarCalendar.hasLeapMonth(year: 2020, month: 4)
-        XCTAssertTrue(hasLeap2020, "2020 should have a leap month in April lunar")
-        // Pick a year/month with no leap — Jan of 2020 has no leap.
-        let hasLeapJan = LunarCalendar.hasLeapMonth(year: 2020, month: 1)
-        XCTAssertFalse(hasLeapJan)
+        // ✅ 양성: 알려진 중국력 윤달 연도
+        XCTAssertTrue(LunarCalendar.hasLeapMonth(year: 2020, month: 4),  "庚子年 閏四月")
+        XCTAssertTrue(LunarCalendar.hasLeapMonth(year: 2023, month: 2),  "癸卯年 閏二月")
+        XCTAssertTrue(LunarCalendar.hasLeapMonth(year: 2025, month: 6),  "乙巳年 閏六月")
+        XCTAssertTrue(LunarCalendar.hasLeapMonth(year: 1972, month: 7),  "壬子年 閏七月")
+
+        // ❌ 음성: 해당 연도에 해당 월 윤달 없음
+        XCTAssertFalse(LunarCalendar.hasLeapMonth(year: 2020, month: 1), "2020년 閏一月 없음")
+        XCTAssertFalse(LunarCalendar.hasLeapMonth(year: 2020, month: 5), "2020년은 閏四月만 존재")
+        XCTAssertFalse(LunarCalendar.hasLeapMonth(year: 2023, month: 4), "2023년은 閏二月만 존재")
+        XCTAssertFalse(LunarCalendar.hasLeapMonth(year: 1972, month: 8), "1972년은 閏七月만 존재")
     }
 
     // T12 — FR-3.7, AC-4
@@ -81,14 +86,14 @@ final class SajuInputModelTests: XCTestCase {
     }
 
     // T16 — FR-5.3
-    func test_input_birthPlace_default_seoul_enablesCTA() {
+    func test_input_birthPlace_default_isIncomplete() {
         let input = SajuInputModel.default
         if case .domestic(let id) = input.birthPlace {
-            XCTAssertEqual(id, "SEOUL")
+            XCTAssertEqual(id, "")  // empty → not yet selected
         } else {
-            XCTFail("Default should be Seoul")
+            XCTFail("Default should be domestic")
         }
-        XCTAssertTrue(input.isBirthPlaceComplete)
+        XCTAssertFalse(input.isBirthPlaceComplete)  // button should start disabled
     }
 
     // T17 — FR-5.5, FR-5.6

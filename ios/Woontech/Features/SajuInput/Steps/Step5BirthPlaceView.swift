@@ -5,6 +5,7 @@ struct Step5BirthPlaceView: View {
     @EnvironmentObject private var store: SajuInputStore
     @State private var query: String = ""
     @State private var longitudeText: String = ""
+    @State private var dropdownOpen: Bool = false
     @FocusState private var searchFocused: Bool
 
     private var catalog: CityCatalog { CityCatalog.shared }
@@ -17,7 +18,9 @@ struct Step5BirthPlaceView: View {
             VStack(alignment: .leading, spacing: 16) {
                 if case .domestic = store.input.birthPlace {
                     searchBox
-                    cityList
+                    if dropdownOpen && !query.isEmpty {
+                        cityList
+                    }
                 } else {
                     overseasField
                 }
@@ -31,7 +34,7 @@ struct Step5BirthPlaceView: View {
                                 store.input.birthPlace = .overseas(longitude: 0)
                                 longitudeText = ""
                             } else {
-                                store.input.birthPlace = .domestic(cityID: CityCatalog.defaultCityID)
+                                store.input.birthPlace = .domestic(cityID: "")
                             }
                         }
                     ),
@@ -53,7 +56,14 @@ struct Step5BirthPlaceView: View {
                 .foregroundStyle(DesignTokens.muted)
             TextField(
                 String(localized: "saju.step5.search.placeholder"),
-                text: $query
+                text: Binding(
+                    get: { query },
+                    set: { newVal in
+                        query = newVal
+                        dropdownOpen = true
+                        store.input.birthPlace = .domestic(cityID: "")
+                    }
+                )
             )
             .focused($searchFocused)
             .textInputAutocapitalization(.never)
@@ -70,9 +80,7 @@ struct Step5BirthPlaceView: View {
     }
 
     private var cityList: some View {
-        let results = query.isEmpty
-            ? catalog.primaryCities
-            : catalog.search(query)
+        let results = catalog.search(query)
         return VStack(alignment: .leading, spacing: 0) {
             ForEach(results) { city in
                 cityRow(city)
@@ -97,6 +105,8 @@ struct Step5BirthPlaceView: View {
         }()
         Button(action: {
             store.input.birthPlace = .domestic(cityID: city.id)
+            query = city.name
+            dropdownOpen = false
         }) {
             HStack {
                 Text(city.name)

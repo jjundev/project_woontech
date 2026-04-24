@@ -129,7 +129,7 @@ final class SajuInputUITests: XCTestCase {
         app.buttons["SajuCTA"].tap() // advance to birthPlace (step 5)
         XCTAssertTrue(app.otherElements["SajuInputStep_5"].waitForExistence(timeout: 4))
         app.buttons["SajuCTA"].tap() // should skip solarTime → loader
-        XCTAssertTrue(app.otherElements["SajuLoaderRoot"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.descendants(matching: .any)["SajuLoaderRoot"].waitForExistence(timeout: 4))
     }
 
     // T44 — AC-11
@@ -166,20 +166,44 @@ final class SajuInputUITests: XCTestCase {
         XCTAssertTrue(cta.waitForExistence(timeout: 6))
         XCTAssertTrue(cta.isEnabled)
         cta.tap()
-        XCTAssertTrue(app.otherElements["SajuLoaderRoot"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.descendants(matching: .any)["SajuLoaderRoot"].waitForExistence(timeout: 4))
     }
 
     // T47 — AC-14
     func test_loader_showsProgress_tips_rotated_minimum1_8seconds() {
         let start = Date()
-        let app = launchOnStep(7)
-        XCTAssertTrue(app.otherElements["SajuLoaderRoot"].waitForExistence(timeout: 6))
-        XCTAssertTrue(app.staticTexts["SajuLoaderTitle"].exists)
-        XCTAssertTrue(app.staticTexts["SajuLoaderCredit"].exists)
+        let app = launchOnStep(7, extraArgs: ["-sajuLoaderMinimumDisplayInterval", "8.0"])
+        XCTAssertTrue(app.descendants(matching: .any)["SajuLoaderRoot"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.descendants(matching: .any)["SajuLoaderTitle"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.descendants(matching: .any)["SajuLoaderTipCarousel"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.descendants(matching: .any)["SajuLoaderTipEyebrow"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.descendants(matching: .any)["SajuLoaderCredit"].exists)
         // Wait for auto transition to result.
-        XCTAssertTrue(app.otherElements["SajuResultRoot"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.descendants(matching: .any)["SajuResultRoot"].waitForExistence(timeout: 6))
         let elapsed = Date().timeIntervalSince(start)
         XCTAssertGreaterThan(elapsed, 1.8)
+    }
+
+    func test_loader_tipCarousel_swipeChangesTip() {
+        let app = launchOnStep(
+            7,
+            extraArgs: [
+                "-sajuLoaderMinimumDisplayInterval", "8.0",
+                "-sajuLoaderTipRotationInterval", "60.0"
+            ]
+        )
+        let carousel = app.descendants(matching: .any)["SajuLoaderTipCarousel"]
+        XCTAssertTrue(carousel.waitForExistence(timeout: 6))
+
+        let tip = app.descendants(matching: .any)["SajuLoaderTip"]
+        XCTAssertTrue(tip.waitForExistence(timeout: 2))
+        let firstTip = tip.label
+
+        carousel.swipeLeft()
+
+        let tipChanged = NSPredicate(format: "label != %@", firstTip)
+        expectation(for: tipChanged, evaluatedWith: tip)
+        waitForExpectations(timeout: 3)
     }
 
     // T62 — OnboardingUITests 회귀 방지 smoke test (SajuInputRoot 식별자 이관)

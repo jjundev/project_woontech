@@ -7,11 +7,16 @@ struct Step8ResultView: View {
     var onStart: () -> Void
 
     @State private var shareItem: ShareItem?
+    @State private var sectionVisible: [Bool] = Array(repeating: false, count: 7)
+    @State private var isAtBottom: Bool = false
 
     var body: some View {
+        ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 headerRow
+                    .opacity(sectionVisible[0] ? 1 : 0)
+                    .offset(y: sectionVisible[0] ? 0 : 20)
 
                 if let result = store.result {
                     HeroTypeCardView(
@@ -20,13 +25,8 @@ struct Step8ResultView: View {
                         dayPillarSummary: result.dayPillarSummary,
                         oneLiner: result.oneLiner
                     )
-
-                    AccuracyBadgeView(
-                        accuracy: result.accuracy,
-                        onAddTime: result.accuracy == .mediumAddTime
-                            ? { store.startEdit(targetStep: .birthTime) }
-                            : nil
-                    )
+                    .opacity(sectionVisible[1] ? 1 : 0)
+                    .offset(y: sectionVisible[1] ? 0 : 20)
 
                     SajuMiniChartView(
                         hourPillar: result.hourPillar,
@@ -34,13 +34,14 @@ struct Step8ResultView: View {
                         monthPillar: result.monthPillar,
                         yearPillar: result.yearPillar,
                         hourUnknown: result.hourUnknown,
-                        metaLabel: result.inputSummary
+                        dayMasterNature: result.dayMasterNature,
+                        wuxing: result.wuxing,
+                        strongElements: result.strongElements,
+                        supplementElements: result.supplementElements,
+                        investmentTags: result.investmentTags
                     )
-
-                    WuxingBalanceBarView(
-                        bars: result.wuxing,
-                        warning: result.wuxingWarning
-                    )
+                    .opacity(sectionVisible[2] ? 1 : 0)
+                    .offset(y: sectionVisible[2] ? 0 : 20)
 
                     BulletListView(
                         style: .strength,
@@ -48,6 +49,8 @@ struct Step8ResultView: View {
                         items: result.strengths,
                         identifier: "SajuStrengths"
                     )
+                    .opacity(sectionVisible[3] ? 1 : 0)
+                    .offset(y: sectionVisible[3] ? 0 : 20)
 
                     BulletListView(
                         style: .caution,
@@ -55,6 +58,8 @@ struct Step8ResultView: View {
                         items: result.cautions,
                         identifier: "SajuCautions"
                     )
+                    .opacity(sectionVisible[4] ? 1 : 0)
+                    .offset(y: sectionVisible[4] ? 0 : 20)
 
                     BulletListView(
                         style: .approach,
@@ -62,20 +67,43 @@ struct Step8ResultView: View {
                         items: result.approaches,
                         identifier: "SajuApproaches"
                     )
+                    .opacity(sectionVisible[5] ? 1 : 0)
+                    .offset(y: sectionVisible[5] ? 0 : 20)
 
-                    inputSummaryCard(result)
                 }
 
                 ctaRow
+                    .opacity(sectionVisible[6] ? 1 : 0)
+                    .offset(y: sectionVisible[6] ? 0 : 20)
 
                 Text("saju.result.disclaimer", bundle: .main)
                     .font(.system(size: 11))
                     .foregroundStyle(DesignTokens.muted)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity, alignment: .center)
                     .accessibilityIdentifier("SajuDisclaimer")
+                    .opacity(sectionVisible[6] ? 1 : 0)
+                    .offset(y: sectionVisible[6] ? 0 : 20)
+
+                Color.clear
+                    .frame(height: 1)
+                    .id("sajuResultBottom")
+                    .background(
+                        GeometryReader { geo in
+                            Color.clear.preference(
+                                key: BottomVisibilityKey.self,
+                                value: geo.frame(in: .global).minY
+                            )
+                        }
+                    )
             }
             .padding(20)
+        }
+        .onPreferenceChange(BottomVisibilityKey.self) { minY in
+            let screenHeight = UIScreen.main.bounds.height
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isAtBottom = minY <= screenHeight
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(DesignTokens.bg)
@@ -86,23 +114,72 @@ struct Step8ResultView: View {
                 store.runAnalysis()
             } else {
                 store.persist()
+                animateIn()
             }
+        }
+        .onChange(of: store.result) { result in
+            if result != nil { animateIn() }
         }
         .sheet(item: $shareItem) { item in
             ShareSheet(activityItems: [item.image])
         }
+        .overlay(alignment: .bottomTrailing) {
+            if !isAtBottom {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.4)) {
+                        proxy.scrollTo("sajuResultBottom", anchor: .bottom)
+                    }
+                } label: {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(DesignTokens.bg)
+                        .frame(width: 52, height: 52)
+                        .background(DesignTokens.ink)
+                        .clipShape(Circle())
+                        .shadow(color: .black.opacity(0.18), radius: 8, x: 0, y: 4)
+                }
+                .buttonStyle(.plain)
+                .padding(.bottom, 24)
+                .padding(.trailing, 20)
+                .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                .accessibilityIdentifier("SajuResultScrollFAB")
+                .accessibilityLabel("화면 아래로 스크롤")
+            }
+        }
+        } // ScrollViewReader
+    }
+
+    private func animateIn() {
+        guard !sectionVisible[0] else { return }
+        let delays: [Double] = [0, 0.22, 0.44, 0.66, 0.88, 1.10, 1.32]
+        for (i, delay) in delays.enumerated() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                withAnimation(.spring(response: 0.55, dampingFraction: 0.85)) {
+                    sectionVisible[i] = true
+                }
+            }
+        }
     }
 
     private var headerRow: some View {
-        HStack {
+        HStack(spacing: 8) {
             Text("saju.result.title", bundle: .main)
                 .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(DesignTokens.ink)
                 .accessibilityAddTraits(.isHeader)
                 .accessibilityIdentifier("SajuResultTitle")
-            Spacer()
-            Button(action: handleShare) {
-                Text("saju.result.share", bundle: .main)
+
+            if let result = store.result {
+                AccuracyBadgeView(
+                    accuracy: result.accuracy,
+                    onAddTime: result.accuracy == .mediumAddTime
+                        ? { store.startEdit(targetStep: .birthTime) }
+                        : nil
+                )
+            }
+
+            Button(action: store.restartInput) {
+                Text("saju.result.reinput", bundle: .main)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(DesignTokens.ink)
                     .underline()
@@ -110,58 +187,8 @@ struct Step8ResultView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityIdentifier("SajuResultShareLink")
+            .accessibilityIdentifier("SajuResultReinputButton")
         }
-    }
-
-    @ViewBuilder
-    private func inputSummaryCard(_ result: SajuResultModel) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("saju.result.input.title", bundle: .main)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(DesignTokens.ink)
-            Text(result.inputSummary)
-                .font(.system(size: 12))
-                .foregroundStyle(DesignTokens.muted)
-
-            HStack(spacing: 8) {
-                editButton(titleKey: "saju.result.input.edit.birthDate",
-                           target: .birthDate,
-                           identifier: "SajuEditBirthDate")
-                editButton(titleKey: "saju.result.input.edit.name",
-                           target: .name,
-                           identifier: "SajuEditName")
-                editButton(titleKey: "saju.result.input.edit.birthTime",
-                           target: .birthTime,
-                           identifier: "SajuEditBirthTime")
-            }
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(DesignTokens.line3, lineWidth: 1)
-        )
-        .accessibilityIdentifier("SajuInputSummary")
-    }
-
-    @ViewBuilder
-    private func editButton(titleKey: LocalizedStringKey,
-                            target: SajuStep,
-                            identifier: String) -> some View {
-        Button(action: { store.startEdit(targetStep: target) }) {
-            Text(titleKey, bundle: .main)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(DesignTokens.ink)
-                .padding(.horizontal, 10)
-                .frame(minHeight: 44)
-                .background(
-                    Capsule().fill(DesignTokens.gray)
-                )
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier(identifier)
     }
 
     private var ctaRow: some View {
@@ -212,4 +239,11 @@ struct ShareSheet: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+private struct BottomVisibilityKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
 }

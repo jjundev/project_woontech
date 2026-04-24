@@ -84,4 +84,20 @@ final class SajuInputStorePersistenceTests: XCTestCase {
         XCTAssertEqual(store.input.name, "")
         XCTAssertNil(defaults.data(forKey: SajuInputStore.Keys.userProfile))
     }
+
+    func test_store_restartInput_clearsProfileAndReturnsToFirstStep() {
+        let defaults = makeInMemoryDefaults()
+        let store = SajuInputStore(defaults: defaults)
+        store.input.name = "민주"
+        store.input.gender = .female
+        store.flow.currentStep = .result
+        store.runAnalysis()
+
+        store.restartInput()
+
+        XCTAssertEqual(store.input, .default)
+        XCTAssertEqual(store.flow, SajuFlowModel())
+        XCTAssertNil(store.result)
+        XCTAssertNil(defaults.data(forKey: SajuInputStore.Keys.userProfile))
+    }
 }

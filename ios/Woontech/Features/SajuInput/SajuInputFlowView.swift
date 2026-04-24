@@ -20,20 +20,19 @@ struct SajuInputFlowView: View {
                     store.flow.currentStep = .result
                 })
                 .environmentObject(store)
-                .accessibilityIdentifier("SajuLoaderContainer")
             case .result:
                 Step8ResultView(onStart: {
                     if store.isSignedIn {
                         onFinish()
                     } else {
-                        store.flow.moveToSignUp()
+                        store.advance()
                     }
                 })
                 .environmentObject(store)
             case .signUp:
                 Step85SignUpView(
-                    onLater: onFinish,
-                    onSignedIn: onFinish
+                    onLater: { onFinish() },
+                    onSignedIn: { onFinish() }
                 )
                 .environmentObject(store)
             case .referral:

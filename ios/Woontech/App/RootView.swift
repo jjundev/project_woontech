@@ -71,6 +71,8 @@ struct RootView: View {
             route = .referral
         } else if args.contains("-openHome") {
             route = .home
+        } else if args.contains("-sajuStartStep") {
+            route = .sajuInput
         }
     }
 }

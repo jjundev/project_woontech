@@ -9,7 +9,6 @@ final class SajuInputStore: ObservableObject {
 
     enum Keys {
         static let userProfile = "userProfile"
-        static let isSignedIn = "isSajuSessionSignedIn"
     }
 
     private let defaults: UserDefaults
@@ -35,7 +34,7 @@ final class SajuInputStore: ObservableObject {
         }
         self.input = initialInput
         self.flow = SajuFlowModel()
-        self.isSignedIn = defaults.bool(forKey: Keys.isSignedIn)
+        self.isSignedIn = false
     }
 
     // MARK: - Persistence (NFC-6)
@@ -56,7 +55,6 @@ final class SajuInputStore: ObservableObject {
 
     func resetForTests() {
         defaults.removeObject(forKey: Keys.userProfile)
-        defaults.removeObject(forKey: Keys.isSignedIn)
         input = .default
         flow = SajuFlowModel()
         result = nil
@@ -65,7 +63,13 @@ final class SajuInputStore: ObservableObject {
 
     func setSignedInForTesting(_ value: Bool) {
         isSignedIn = value
-        defaults.set(value, forKey: Keys.isSignedIn)
+    }
+
+    func restartInput() {
+        defaults.removeObject(forKey: Keys.userProfile)
+        input = .default
+        flow = SajuFlowModel()
+        result = nil
     }
 
     // MARK: - Analysis

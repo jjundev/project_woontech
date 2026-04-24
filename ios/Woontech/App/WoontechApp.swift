@@ -25,7 +25,6 @@ struct WoontechApp: App {
 
         if args.contains("-resetSajuInput") {
             UserDefaults.standard.removeObject(forKey: SajuInputStore.Keys.userProfile)
-            UserDefaults.standard.removeObject(forKey: SajuInputStore.Keys.isSignedIn)
         }
 
         let preloadedProfile: SajuInputModel? = {

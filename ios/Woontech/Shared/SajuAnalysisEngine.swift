@@ -10,18 +10,22 @@ enum SajuAnalysisEngine {
         let typeHash = stableHash(for: input)
         let type = Self.types[typeHash % Self.types.count]
 
-        // 4주 — 스텁 데이터.
+        // 4주 — 스텁 데이터 (한자).
         let hour = SajuPillar(
-            stem: "경", branch: "자", element: "금", isDayPillar: false
+            stem: "丁", branch: "巳",
+            stemElement: "화", branchElement: "화", isDayPillar: false
         )
         let day = SajuPillar(
-            stem: "경", branch: "오", element: "금", isDayPillar: true
+            stem: "庚", branch: "申",
+            stemElement: "금", branchElement: "금", isDayPillar: true
         )
         let month = SajuPillar(
-            stem: "신", branch: "묘", element: "금", isDayPillar: false
+            stem: "己", branch: "卯",
+            stemElement: "토", branchElement: "목", isDayPillar: false
         )
         let year = SajuPillar(
-            stem: "경", branch: "오", element: "금", isDayPillar: false
+            stem: "庚", branch: "午",
+            stemElement: "금", branchElement: "화", isDayPillar: false
         )
 
         let wuxing: [WuxingBar] = [
@@ -60,6 +64,8 @@ enum SajuAnalysisEngine {
                 "중기 흐름에 집중해 보세요",
                 "매매 전 체크리스트 루틴을 만들어보세요"
             ],
+            dayMasterNature: type.dayMasterNature,
+            investmentTags: type.investmentTags,
             inputSummary: inputSummary,
             accuracy: input.accuracy
         )
@@ -71,19 +77,26 @@ enum SajuAnalysisEngine {
         let name: String
         let dayPillar: String
         let oneLiner: String
+        let dayMasterNature: String
+        let investmentTags: String
     }
 
     private static let types: [StubType] = [
         .init(name: "단단한 수집가형", dayPillar: "경금(庚金) 일주 · 정재 중심",
-              oneLiner: "분석과 인내의 장기 플레이어"),
+              oneLiner: "분석과 인내의 장기 플레이어",
+              dayMasterNature: "강철", investmentTags: "원칙형 · 관리형"),
         .init(name: "흐름 파도형", dayPillar: "병화(丙火) 일주 · 식신 중심",
-              oneLiner: "흐름을 읽고 타이밍을 잡는 유형"),
+              oneLiner: "흐름을 읽고 타이밍을 잡는 유형",
+              dayMasterNature: "태양", investmentTags: "타이밍형 · 감각형"),
         .init(name: "묵묵한 축적형", dayPillar: "기토(己土) 일주 · 정인 중심",
-              oneLiner: "꾸준함으로 자산을 쌓아가는 유형"),
+              oneLiner: "꾸준함으로 자산을 쌓아가는 유형",
+              dayMasterNature: "논밭", investmentTags: "안정형 · 축적형"),
         .init(name: "감각적 탐험형", dayPillar: "을목(乙木) 일주 · 편재 중심",
-              oneLiner: "호기심과 유연함으로 기회를 포착"),
+              oneLiner: "호기심과 유연함으로 기회를 포착",
+              dayMasterNature: "풀꽃", investmentTags: "탐험형 · 유연형"),
         .init(name: "깊이 관찰형", dayPillar: "임수(壬水) 일주 · 비견 중심",
-              oneLiner: "신중한 판단과 장기 관찰의 유형")
+              oneLiner: "신중한 판단과 장기 관찰의 유형",
+              dayMasterNature: "바다", investmentTags: "관찰형 · 신중형")
     ]
 
     /// Name-agnostic stable hash. 이름은 라벨에만 영향을 주고 유형은 바뀌지 않도록 한다.

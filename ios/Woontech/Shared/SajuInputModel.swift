@@ -148,7 +148,7 @@ struct SajuInputModel: Codable, Equatable {
         name: "",
         birthDate: .default,
         birthTime: .default,
-        birthPlace: .domestic(cityID: CityCatalog.defaultCityID),
+        birthPlace: .domestic(cityID: ""),
         solarTime: .default
     )
 

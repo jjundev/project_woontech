@@ -56,7 +56,7 @@
 "saju.step4.hint" = "시주는 사주의 네 기둥 중 하나예요";
 "saju.step4.hour" = "시";
 "saju.step4.minute" = "분";
-"saju.step4.unknown" = "시간을 모르겠어요 (시주 없이 3주 기반 분석, 나중에 업데이트 가능)";
+"saju.step4.unknown" = "시간을 모르겠어요\n(시주 없이 3주 기반 분석, 나중에 업데이트 가능)";
 
 /* Step 5 출생지 */
 "saju.step5.title" = "어디서 태어나셨나요?";
@@ -70,7 +70,7 @@
 /* Step 6 진태양시 */
 "saju.step6.title" = "진태양시로 보정할까요?";
 "saju.step6.hint" = "표준시와 실제 태양시의 차이를 보정해요";
-"saju.step6.whats.link" = "진태양시가 뭔가요? →";
+"saju.step6.whats.link" = "진태양시가 무엇인가요? →";
 "saju.step6.toggle.title" = "진태양시 보정";
 "saju.step6.toggle.subtitle" = "정확한 분석을 위해 권장";
 "saju.step6.calc.title" = "계산 결과";
@@ -91,15 +91,24 @@
 "saju.step7.title" = "사주를 분석 중입니다";
 "saju.step7.sub" = "%d년 %d월 %d일생의 원국을 계산하고 있어요";
 "saju.step7.credit" = "Swiss Ephemeris 기반 정밀 계산 중";
+"saju.step7.tip.eyebrow" = "알고 계셨나요?";
 "saju.step7.tip1" = "사주는 태어난 시점의 에너지 지도예요";
 "saju.step7.tip2" = "오행은 균형이 중요합니다";
 "saju.step7.tip3" = "일주는 본인의 성향을 나타냅니다";
 
 /* Step 8 결과 */
 "saju.result.title" = "나의 투자 성향";
-"saju.result.share" = "공유";
+"saju.result.reinput" = "다시 입력하기";
 "saju.result.origin.title" = "사주 원국";
-"saju.result.origin.more" = "내 사주 자세히 보기 →";
+"saju.result.origin.subtitle" = "내 기질과 흐름의 기본 구조";
+"saju.result.origin.me" = "나";
+"saju.result.origin.strong" = "강한 기운";
+"saju.result.origin.supplement" = "보완 기운";
+"saju.result.origin.investmentStyle" = "투자 성향";
+"saju.result.column.yearPillar" = "년주";
+"saju.result.column.monthPillar" = "월주";
+"saju.result.column.dayPillar" = "일주";
+"saju.result.column.hourPillar" = "시주";
 "saju.result.column.hour" = "시";
 "saju.result.column.day" = "일";
 "saju.result.column.month" = "월";
@@ -118,18 +127,18 @@
 "saju.result.accuracy.addTime" = "시간 추가하면 정교해져요 →";
 "saju.result.cta.start" = "시작하기";
 "saju.result.cta.share" = "공유하기";
-"saju.result.disclaimer" = "본 앱은 학습·참고용이며 투자 권유가 아닙니다. 투자 결정은 본인 판단과 책임 하에 이루어져야 합니다.";
+"saju.result.disclaimer" = "본 앱은 학습·참고용이며 투자 권유가 아닙니다.\n투자 결정은 본인 판단과 책임 하에 이루어져야 합니다.";
 
 /* Step 8.5 회원가입 */
-"saju.signup.title" = "결과 저장하기";
-"saju.signup.description" = "방금 본 결과를 계정에 저장해두면 언제든 다시 볼 수 있어요";
-"saju.signup.apple" = "Apple로 계속하기";
+"saju.signup.header" = "시작하기";
+"saju.signup.title" = "3초 만에 시작하기";
+"saju.signup.description" = "결과 저장을 위해 가입이 필요해요";
+"saju.signup.kakao" = "카카오로 계속하기";
 "saju.signup.google" = "Google로 계속하기";
 "saju.signup.email" = "이메일로 가입하기";
-"saju.signup.legal" = "가입 시 서비스 이용약관 및 개인정보 처리방침에 동의합니다.";
-"saju.signup.terms" = "이용약관";
-"saju.signup.privacy" = "개인정보 처리방침";
-"saju.signup.later" = "나중에 하기";
+"saju.signup.guest" = "게스트로 먼저 체험하기 →";
+"saju.signup.guest.note" = "단, 결과는 저장되지 않아요";
+"saju.signup.legal" = "계속 진행 시 이용약관 및 개인정보 처리방침에 동의합니다.";
 
 /* Step 10 친구 초대 */
 "saju.referral.title" = "친구 초대";

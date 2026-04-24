@@ -121,28 +121,32 @@ struct Step3BirthDateView: View {
 
 /// 음력 윤달 판별 헬퍼 — iOS `Calendar(.chinese)`를 사용.
 enum LunarCalendar {
-    /// 해당 (양력 기준) 연도의 (음력) 월에 윤달이 존재하는지 대략 판별.
-    /// 1차 스텁: `Calendar(.chinese)` 기반 범위에서 윤달(isLeapMonth)을 탐색.
+    /// 해당 (양력 기준) 연도의 (음력) 월에 윤달이 존재하는지 판별.
+    ///
+    /// 개선 포인트 (기존 스텁 대비):
+    /// - 탐색 시작점: `(year, month, 1)` 대신 `(year, 1, 1)` — 중국력 연도가 그레고리력 연도와
+    ///   ±1~2개월 어긋나므로, 연도 전체를 커버해야 윤달 누락이 없음.
+    /// - 탐색 간격: 15일 → 7일 — 윤달(29–30일)을 반드시 4회 이상 히트.
+    /// - 탐색 범위: 370일 → 395일 — 늦은 윤달(예: 閏十二月) 버퍼 확보.
+    /// - 타임존: UTC+0 → Asia/Seoul — 한국 사용자 기준 날짜 경계 정합.
+    /// - 날짜 연산: `addingTimeInterval` → `date(byAdding:)` — DST 안전.
     static func hasLeapMonth(year: Int, month: Int) -> Bool {
-        var cal = Calendar(identifier: .chinese)
-        cal.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        var chineseCal = Calendar(identifier: .chinese)
+        chineseCal.timeZone = TimeZone(identifier: "Asia/Seoul") ?? .current
         let gregorian = Calendar(identifier: .gregorian)
-        var comps = DateComponents()
-        comps.year = year
-        comps.month = month
-        comps.day = 1
-        guard let start = gregorian.date(from: comps) else { return false }
-        // Walk through the year and find if any day is a leap month matching `month`.
-        let oneYear: TimeInterval = 60 * 60 * 24 * 370
-        let end = start.addingTimeInterval(oneYear)
-        var cursor = start
-        while cursor <= end {
-            let chineseComps = cal.dateComponents([.month, .isLeapMonth], from: cursor)
-            if chineseComps.isLeapMonth == true,
-               chineseComps.month == month {
+
+        var startComps = DateComponents()
+        startComps.year = year
+        startComps.month = 1
+        startComps.day = 1
+        guard let yearStart = gregorian.date(from: startComps) else { return false }
+
+        for offset in stride(from: 0, through: 395, by: 7) {
+            guard let date = gregorian.date(byAdding: .day, value: offset, to: yearStart) else { continue }
+            let comps = chineseCal.dateComponents([.month, .isLeapMonth], from: date)
+            if comps.isLeapMonth == true, comps.month == month {
                 return true
             }
-            cursor = cursor.addingTimeInterval(60 * 60 * 24 * 15)
         }
         return false
     }

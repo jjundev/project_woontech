@@ -38,7 +38,7 @@ final class SajuAccessibilityUITests: XCTestCase {
     }
 
     // T60 — AC-27
-    func test_hitTargets_backButton_toggle_checkbox_editButton_atLeast44pt() {
+    func test_hitTargets_backButton_toggle_checkbox_atLeast44pt() {
         let app = launchOnStep(6)
         let back = app.buttons["SajuBackButton"]
         XCTAssertTrue(back.waitForExistence(timeout: 6))
@@ -55,17 +55,5 @@ final class SajuAccessibilityUITests: XCTestCase {
         let cb = app4.buttons["SajuHourUnknownCheckbox"]
         XCTAssertTrue(cb.waitForExistence(timeout: 6))
         XCTAssertGreaterThanOrEqual(cb.frame.height, 44)
-
-        // Result edit button (Step 8).
-        let app8 = XCUIApplication()
-        app8.launchArguments = [
-            "-hasSeenOnboarding", "YES",
-            "-resetSajuInput",
-            "-sajuStartStep", "8"
-        ]
-        app8.launch()
-        let edit = app8.buttons["SajuEditName"]
-        XCTAssertTrue(edit.waitForExistence(timeout: 6))
-        XCTAssertGreaterThanOrEqual(edit.frame.height, 44)
     }
 }

@@ -1,103 +1,156 @@
 import SwiftUI
 
-/// Step 8.5 — 결과 저장하기 회원가입 유도. FR-8.5.x / AC-21, AC-22.
+/// Step 8.5 — 회원가입 유도 (결과 후). FR-8.5.x / AC-21, AC-22.
 struct Step85SignUpView: View {
     @EnvironmentObject private var store: SajuInputStore
     var onLater: () -> Void
     var onSignedIn: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("saju.signup.title", bundle: .main)
-                .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(DesignTokens.ink)
-                .accessibilityIdentifier("SajuSignUpTitle")
-
-            Text("saju.signup.description", bundle: .main)
-                .font(.system(size: 13))
-                .foregroundStyle(DesignTokens.muted)
-                .multilineTextAlignment(.leading)
-
-            VStack(spacing: 10) {
-                signUpButton(titleKey: "saju.signup.apple",
-                             systemIcon: "applelogo",
-                             identifier: "SajuSignUpApple")
-                signUpButton(titleKey: "saju.signup.google",
-                             systemIcon: "g.circle",
-                             identifier: "SajuSignUpGoogle")
-                signUpButton(titleKey: "saju.signup.email",
-                             systemIcon: "envelope",
-                             identifier: "SajuSignUpEmail")
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("saju.signup.legal", bundle: .main)
-                    .font(.system(size: 11))
-                    .foregroundStyle(DesignTokens.muted)
-                HStack(spacing: 12) {
-                    Button(action: {}) {
-                        Text("saju.signup.terms", bundle: .main)
-                            .font(.system(size: 11))
+        VStack(spacing: 0) {
+            // Header — back + "시작하기"
+            ZStack {
+                HStack {
+                    Button(action: { store.back() }) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(DesignTokens.ink)
-                            .underline()
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityIdentifier("SajuSignUpTermsLink")
-                    Button(action: {}) {
-                        Text("saju.signup.privacy", bundle: .main)
-                            .font(.system(size: 11))
-                            .foregroundStyle(DesignTokens.ink)
-                            .underline()
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("SajuSignUpPrivacyLink")
+                    .accessibilityIdentifier("SajuSignUpBackButton")
+                    Spacer()
                 }
+                Text("saju.signup.header", bundle: .main)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(DesignTokens.ink)
             }
+            .padding(.horizontal, 16)
 
-            Spacer()
+            Rectangle()
+                .fill(DesignTokens.line3)
+                .frame(height: 1)
 
-            Button(action: onLater) {
-                Text("saju.signup.later", bundle: .main)
-                    .font(.system(size: 13))
+            VStack(spacing: 0) {
+                Spacer()
+
+                // Logo + title + buttons (centered)
+                VStack(spacing: 0) {
+                    RoundedRectangle(cornerRadius: 0)
+                        .stroke(DesignTokens.muted, lineWidth: 1)
+                        .frame(width: 70, height: 70)
+                        .overlay(
+                            Text("LOGO")
+                                .font(.system(size: 10))
+                                .foregroundStyle(DesignTokens.muted)
+                        )
+
+                    Text("saju.signup.title", bundle: .main)
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(DesignTokens.ink)
+                        .padding(.top, 14)
+
+                    Text("saju.signup.description", bundle: .main)
+                        .font(.system(size: 11))
+                        .foregroundStyle(DesignTokens.muted)
+                        .padding(.top, 6)
+
+                    // Sign up buttons
+                    VStack(spacing: 10) {
+                        signUpButton(
+                            titleKey: "saju.signup.kakao",
+                            isPrimary: true,
+                            iconCornerRadius: 3,
+                            identifier: "SajuSignUpKakao"
+                        )
+                        signUpButton(
+                            titleKey: "saju.signup.google",
+                            isPrimary: false,
+                            iconCornerRadius: 9,
+                            identifier: "SajuSignUpGoogle"
+                        )
+                        signUpButton(
+                            titleKey: "saju.signup.email",
+                            isPrimary: false,
+                            iconCornerRadius: 9,
+                            identifier: "SajuSignUpEmail"
+                        )
+                    }
+                    .padding(.top, 28)
+                }
+                .frame(maxWidth: .infinity)
+
+                Spacer()
+
+                // Guest option
+                VStack(spacing: 4) {
+                    Rectangle()
+                        .fill(DesignTokens.line3)
+                        .frame(height: 1)
+
+                    Button(action: onLater) {
+                        Text("saju.signup.guest", bundle: .main)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(DesignTokens.muted)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("SajuSignUpGuestLink")
+
+                    Text("saju.signup.guest.note", bundle: .main)
+                        .font(.system(size: 9))
+                        .foregroundStyle(DesignTokens.muted)
+                }
+
+                // Legal
+                Text("saju.signup.legal", bundle: .main)
+                    .font(.system(size: 9))
                     .foregroundStyle(DesignTokens.muted)
-                    .underline()
+                    .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
-                    .frame(minHeight: 44)
-                    .contentShape(Rectangle())
+                    .padding(.top, 8)
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("SajuSignUpLaterLink")
+            .padding(20)
         }
-        .padding(20)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(DesignTokens.bg)
         .accessibilityIdentifier("SajuSignUpRoot")
     }
 
     @ViewBuilder
     private func signUpButton(titleKey: LocalizedStringKey,
-                              systemIcon: String,
+                              isPrimary: Bool,
+                              iconCornerRadius: CGFloat,
                               identifier: String) -> some View {
         Button(action: {
             // 1차 릴리스는 no-op. 실제 OAuth는 별도 스펙.
             store.setSignedInForTesting(true)
             onSignedIn()
         }) {
-            HStack(spacing: 10) {
-                Image(systemName: systemIcon)
-                    .font(.system(size: 14))
-                    .foregroundStyle(DesignTokens.ink)
+            ZStack {
+                HStack {
+                    RoundedRectangle(cornerRadius: iconCornerRadius)
+                        .stroke(isPrimary ? Color.white : DesignTokens.muted, lineWidth: 1.2)
+                        .frame(width: 18, height: 18)
+                        .padding(.leading, 14)
+                    Spacer()
+                }
                 Text(titleKey, bundle: .main)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(DesignTokens.ink)
-                Spacer()
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(isPrimary ? .white : DesignTokens.ink)
             }
-            .padding(.horizontal, 12)
             .frame(height: 48)
             .frame(maxWidth: .infinity)
             .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(DesignTokens.line3, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isPrimary ? DesignTokens.ink : .clear)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(DesignTokens.ink, lineWidth: 1)
             )
             .contentShape(Rectangle())
         }

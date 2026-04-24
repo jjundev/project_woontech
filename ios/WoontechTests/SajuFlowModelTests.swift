@@ -72,6 +72,7 @@ final class SajuFlowModelTests: XCTestCase {
         var input = SajuInputModel.default
         input.gender = .male
         input.name = "민"
+        input.birthPlace = .domestic(cityID: "SEOUL")
         input.birthTime.hourKnown = false
         flow.advance(using: input)
         XCTAssertEqual(flow.currentStep, .loader,
@@ -84,6 +85,7 @@ final class SajuFlowModelTests: XCTestCase {
         var input = SajuInputModel.default
         input.gender = .male
         input.name = "민"
+        input.birthPlace = .domestic(cityID: "SEOUL")
         input.birthTime.hourKnown = true
         flow.advance(using: input)
         XCTAssertEqual(flow.currentStep, .solarTime)

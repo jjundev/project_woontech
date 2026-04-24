@@ -17,6 +17,28 @@ struct Step7LoaderView: View {
 
     private static let tipRotation: TimeInterval = 2.5
 
+    private static var minimumDisplayInterval: TimeInterval {
+        launchInterval(
+            named: "-sajuLoaderMinimumDisplayInterval",
+            defaultValue: SajuAnalysisEngine.minimumDisplayInterval
+        )
+    }
+
+    private static var tipRotationInterval: TimeInterval {
+        launchInterval(named: "-sajuLoaderTipRotationInterval", defaultValue: tipRotation)
+    }
+
+    private static func launchInterval(named name: String, defaultValue: TimeInterval) -> TimeInterval {
+        let args = ProcessInfo.processInfo.arguments
+        guard let idx = args.firstIndex(of: name),
+              idx + 1 < args.count,
+              let interval = TimeInterval(args[idx + 1]),
+              interval > 0 else {
+            return defaultValue
+        }
+        return interval
+    }
+
     var body: some View {
         VStack(spacing: 24) {
             Spacer()
@@ -73,6 +95,7 @@ struct Step7LoaderView: View {
         }
         .padding(.horizontal, 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("SajuLoaderRoot")
         .onAppear {
             startLoaderAnimation()
@@ -91,30 +114,47 @@ struct Step7LoaderView: View {
     }
 
     private var tipCarousel: some View {
-        VStack(spacing: 8) {
-            Text(Step7LoaderView.tips[tipIndex], bundle: .main)
+        TabView(selection: $tipIndex) {
+            ForEach(Step7LoaderView.tips.indices, id: \.self) { index in
+                tipCard(for: Step7LoaderView.tips[index])
+                    .tag(index)
+            }
+        }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .frame(height: 122)
+        .accessibilityIdentifier("SajuLoaderTipCarousel")
+    }
+
+    private func tipCard(for tip: LocalizedStringKey) -> some View {
+        VStack(spacing: 10) {
+            Text("saju.step7.tip.eyebrow", bundle: .main)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(DesignTokens.muted)
+                .accessibilityIdentifier("SajuLoaderTipEyebrow")
+
+            Text(tip, bundle: .main)
                 .font(.system(size: 13))
                 .foregroundStyle(DesignTokens.ink)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
-                .padding(12)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(DesignTokens.gray)
-                )
-                .id(tipIndex)
-                .transition(.opacity)
                 .accessibilityIdentifier("SajuLoaderTip")
 
             HStack(spacing: 6) {
-                ForEach(0..<3, id: \.self) { i in
+                ForEach(Step7LoaderView.tips.indices, id: \.self) { index in
                     Circle()
-                        .fill(i == tipIndex ? DesignTokens.ink : DesignTokens.gray2)
+                        .fill(index == tipIndex ? DesignTokens.ink : DesignTokens.gray2)
                         .frame(width: 6, height: 6)
-                        .accessibilityIdentifier("SajuLoaderTipDot_\(i)")
+                        .accessibilityIdentifier("SajuLoaderTipDot_\(index)")
                 }
             }
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity, minHeight: 104)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(DesignTokens.gray)
+        )
     }
 
     private func startLoaderAnimation() {
@@ -130,7 +170,7 @@ struct Step7LoaderView: View {
             }
             // Ensure we've also hit the minimum display interval.
             let elapsed = Date().timeIntervalSince(startDate)
-            let remaining = SajuAnalysisEngine.minimumDisplayInterval - elapsed
+            let remaining = Step7LoaderView.minimumDisplayInterval - elapsed
             if remaining > 0 {
                 try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
             }
@@ -142,7 +182,7 @@ struct Step7LoaderView: View {
         // Tip rotation.
         Task { @MainActor in
             while progress < 1.0 {
-                try? await Task.sleep(nanoseconds: UInt64(Step7LoaderView.tipRotation * 1_000_000_000))
+                try? await Task.sleep(nanoseconds: UInt64(Step7LoaderView.tipRotationInterval * 1_000_000_000))
                 if progress < 1.0 {
                     withAnimation(.easeInOut(duration: 0.3)) {
                         tipIndex = (tipIndex + 1) % Step7LoaderView.tips.count

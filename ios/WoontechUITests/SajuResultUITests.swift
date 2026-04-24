@@ -44,7 +44,7 @@ final class SajuResultUITests: XCTestCase {
     }
 
     // T48 — AC-15
-    func test_result_sectionsInOrder_hero_origin_wuxing_strength_caution_approach_input() {
+    func test_result_sectionsInOrder_hero_origin_wuxing_strength_caution_approach() {
         let app = launchOnResult()
         XCTAssertTrue(app.otherElements["SajuResultRoot"].waitForExistence(timeout: 6))
         XCTAssertTrue(app.otherElements["SajuHeroCard"].exists)
@@ -53,7 +53,6 @@ final class SajuResultUITests: XCTestCase {
         XCTAssertTrue(app.otherElements["SajuStrengths"].exists)
         XCTAssertTrue(app.otherElements["SajuCautions"].exists)
         XCTAssertTrue(app.otherElements["SajuApproaches"].exists)
-        XCTAssertTrue(app.otherElements["SajuInputSummary"].exists)
     }
 
     // T49 — AC-16
@@ -90,25 +89,6 @@ final class SajuResultUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["SajuPillar_hour_missing"].exists)
     }
 
-    // T52 — AC-19
-    func test_result_editButton_returnsToStep_appliesChange_reRendersResult() {
-        let app = launchOnResult()
-        let editName = app.buttons["SajuEditName"]
-        XCTAssertTrue(editName.waitForExistence(timeout: 6))
-        editName.tap()
-
-        let field = app.textFields["SajuNameField"]
-        XCTAssertTrue(field.waitForExistence(timeout: 4))
-        field.tap()
-        field.typeText("지우")
-
-        let cta = app.buttons["SajuCTA"]
-        XCTAssertTrue(cta.isEnabled)
-        cta.tap()
-
-        XCTAssertTrue(app.otherElements["SajuResultRoot"].waitForExistence(timeout: 4))
-    }
-
     // T53 — AC-20
     func test_result_share_opensActivityViewController_with1080x1920Image() {
         let app = launchOnResult()
@@ -117,6 +97,14 @@ final class SajuResultUITests: XCTestCase {
         share.tap()
         // Activity view controller is system UI; just verify no crash.
         sleep(1)
+    }
+
+    func test_result_reinputButton_returnsToFirstInputStep() {
+        let app = launchOnResult()
+        let reinput = app.buttons["SajuResultReinputButton"]
+        XCTAssertTrue(reinput.waitForExistence(timeout: 6))
+        reinput.tap()
+        XCTAssertTrue(app.otherElements["SajuInputRoot"].waitForExistence(timeout: 4))
     }
 
     // T54 — AC-21

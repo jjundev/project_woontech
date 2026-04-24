@@ -24,7 +24,7 @@ struct ShareCardView: View {
                 ForEach(result.wuxing, id: \.element) { bar in
                     VStack(spacing: 4) {
                         RoundedRectangle(cornerRadius: 3)
-                            .fill(DesignTokens.ink)
+                            .fill(bar.element.color)
                             .frame(width: 6, height: max(4, CGFloat(bar.value) * 40))
                         Text(bar.element.label)
                             .font(.system(size: 10))

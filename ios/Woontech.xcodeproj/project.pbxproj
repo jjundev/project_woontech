@@ -50,7 +50,6 @@
 		B0010030000000000000A030 /* Step8ResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010030000000000000A030 /* Step8ResultView.swift */; };
 		B0010031000000000000A031 /* HeroTypeCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010031000000000000A031 /* HeroTypeCardView.swift */; };
 		B0010032000000000000A032 /* SajuMiniChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010032000000000000A032 /* SajuMiniChartView.swift */; };
-		B0010033000000000000A033 /* WuxingBalanceBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010033000000000000A033 /* WuxingBalanceBarView.swift */; };
 		B0010034000000000000A034 /* BulletListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010034000000000000A034 /* BulletListView.swift */; };
 		B0010035000000000000A035 /* AccuracyBadgeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010035000000000000A035 /* AccuracyBadgeView.swift */; };
 		B0010036000000000000A036 /* ShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010036000000000000A036 /* ShareCardView.swift */; };
@@ -135,7 +134,6 @@
 		A0010030000000000000A030 /* Step8ResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Step8ResultView.swift; sourceTree = "<group>"; };
 		A0010031000000000000A031 /* HeroTypeCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroTypeCardView.swift; sourceTree = "<group>"; };
 		A0010032000000000000A032 /* SajuMiniChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuMiniChartView.swift; sourceTree = "<group>"; };
-		A0010033000000000000A033 /* WuxingBalanceBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WuxingBalanceBarView.swift; sourceTree = "<group>"; };
 		A0010034000000000000A034 /* BulletListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulletListView.swift; sourceTree = "<group>"; };
 		A0010035000000000000A035 /* AccuracyBadgeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccuracyBadgeView.swift; sourceTree = "<group>"; };
 		A0010036000000000000A036 /* ShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareCardView.swift; sourceTree = "<group>"; };
@@ -332,7 +330,6 @@
 				A0010030000000000000A030 /* Step8ResultView.swift */,
 				A0010031000000000000A031 /* HeroTypeCardView.swift */,
 				A0010032000000000000A032 /* SajuMiniChartView.swift */,
-				A0010033000000000000A033 /* WuxingBalanceBarView.swift */,
 				A0010034000000000000A034 /* BulletListView.swift */,
 				A0010035000000000000A035 /* AccuracyBadgeView.swift */,
 				A0010036000000000000A036 /* ShareCardView.swift */,
@@ -538,7 +535,6 @@
 				B0010030000000000000A030 /* Step8ResultView.swift in Sources */,
 				B0010031000000000000A031 /* HeroTypeCardView.swift in Sources */,
 				B0010032000000000000A032 /* SajuMiniChartView.swift in Sources */,
-				B0010033000000000000A033 /* WuxingBalanceBarView.swift in Sources */,
 				B0010034000000000000A034 /* BulletListView.swift in Sources */,
 				B0010035000000000000A035 /* AccuracyBadgeView.swift in Sources */,
 				B0010036000000000000A036 /* ShareCardView.swift in Sources */,

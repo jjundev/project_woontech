@@ -17,15 +17,24 @@ Context in prompt:
 
 Your job:
 1. Read the plan, checklist, and any previous implement feedback files listed in the prompt.
-2. Implement the feature in the worktree. You may create or modify Swift source files,
+2. Wireframe reference (mandatory): Locate the relevant wireframe for this task:
+   - Derive the WF number from the task folder name (e.g. WF2-* → 02, WF3-* → 03).
+   - Glob ios/wireframes/WF-<N>-*.html to find the matching HTML file.
+   - Read the HTML file and extract all <script src="...jsx"> references.
+   - Read those JSX files to understand the target screen layout, components, and copy.
+   - If no matching wireframe exists, note it and proceed based on spec alone.
+3. Implement the feature in the worktree. You may create or modify Swift source files,
    asset catalogs, Xcode project files, Swift Package manifests, etc.
-3. Write unit tests. RUN the unit tests with the provided command. Iterate until they pass.
-4. Write UI tests corresponding to the checklist's T*-ui items. DO NOT run UI tests — that
+4. Write unit tests. RUN the unit tests with the provided command. Iterate until they pass.
+5. Write UI tests corresponding to the checklist's T*-ui items. DO NOT run UI tests — that
    is the reviewer's job.
-5. Run the build command at least once at the end and guarantee it succeeds.
-6. Commit all changes to the worktree branch with a descriptive message.
+6. Run the build command at least once at the end and guarantee it succeeds.
+7. Commit all changes to the worktree branch with a descriptive message.
 
 Hard rules:
+- When implementing any SwiftUI View or screen, you MUST have read the relevant wireframe
+  JSX files (step 2) before writing the first line of View code. The wireframe is the
+  source of truth for layout, component hierarchy, and visible text.
 - When you create a new `.swift` source file, you MUST also register it in
   `Woontech.xcodeproj/project.pbxproj`. A fresh `PBXBuildFile`, `PBXFileReference`,
   `PBXGroup` child, and `PBXSourcesBuildPhase` entry are required. Files on disk

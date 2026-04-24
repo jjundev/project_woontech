@@ -70,6 +70,38 @@ cd harness
 pytest backend/tests -v
 ```
 
+## iOS build/test execution
+
+The packaged harness commands route through `ios/tools/xcode_test_runner.py`
+instead of invoking `xcodebuild` directly. The wrapper uses an explicit
+simulator UUID destination, isolated DerivedData under
+`/tmp/woontech-derived-data/`, and a one-shot repair/retry when Xcode reports
+LLDB/CoreSimulator launch-infrastructure failures such as:
+
+- `DebuggerVersionStore`
+- `no debugger version`
+- `IDELaunchParametersSnapshot`
+- `Mach error -308`
+
+Run the wrapper from the iOS project root:
+
+```
+cd ios
+python3 tools/xcode_test_runner.py build
+python3 tools/xcode_test_runner.py test --target WoontechTests -only-testing:WoontechTests/HomeDashboardTests
+python3 tools/xcode_test_runner.py test --target WoontechUITests --ui -only-testing:WoontechUITests/HomeDashboardUITests
+```
+
+Useful overrides:
+
+- `WOONTECH_SIMULATOR_UDID=<uuid>` — use a specific available iOS simulator.
+- `WOONTECH_XCODE_DEEP_REPAIR=1` — allow the repair path to also clear global
+  Xcode DerivedData and `com.apple.dt.Xcode` cache after the LLDB signature is
+  detected.
+
+If those launch-infrastructure signatures repeat, treat the result as a
+host-environment failure, not implementor rework for app source code.
+
 ## Task folders
 
 Create a task by dropping a folder under `../ios/todo/<task-id>/` with a

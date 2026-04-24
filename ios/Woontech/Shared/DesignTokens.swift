@@ -9,4 +9,11 @@ enum DesignTokens {
     static let line3 = Color(red: 0xE6 / 255, green: 0xE6 / 255, blue: 0xE6 / 255)
     static let bg = Color.white
     static let disabled = Color(red: 0xC4 / 255, green: 0xC4 / 255, blue: 0xC4 / 255)
+
+    // MARK: - 오행 색상
+    static let woodColor  = Color(red: 0x4C / 255, green: 0xAF / 255, blue: 0x50 / 255)
+    static let fireColor  = Color(red: 0xE5 / 255, green: 0x39 / 255, blue: 0x35 / 255)
+    static let earthColor = Color(red: 0xD4 / 255, green: 0xA0 / 255, blue: 0x17 / 255)
+    static let metalColor = Color(red: 0x78 / 255, green: 0x90 / 255, blue: 0x9C / 255)
+    static let waterColor = Color(red: 0x1E / 255, green: 0x88 / 255, blue: 0xE5 / 255)
 }

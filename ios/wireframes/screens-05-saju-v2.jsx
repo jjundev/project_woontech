@@ -473,7 +473,7 @@ function ScrInvestmentPersonality() {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: WF.bg }}>
-      <WHeader title="나의 투자 성향" back right={<WText size={10} color={WF.muted}>공유</WText>}/>
+      <WHeader title="나의 투자 성향" back right={<WText size={10} color={WF.muted}>다시 입력하기</WText>}/>
       <div style={{ overflow: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 10, padding: '12px 14px 14px' }}>
 
         {/* [1] 감탄 Hero */}

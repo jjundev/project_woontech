@@ -1,0 +1,17 @@
+{
+  "id": "WF3-01-home-foundation",
+  "state": "planning",
+  "paused_from": null,
+  "title": "WF3-01 \u2014 \ud648 \ub300\uc2dc\ubcf4\ub4dc Shell + Header + DI \uc2a4\uce90\ud3f4\ub4dc",
+  "plan_version": 0,
+  "impl_version": 0,
+  "plan_retries": 0,
+  "impl_retries": 0,
+  "max_plan_retries": 3,
+  "max_impl_retries": 3,
+  "escalation": null,
+  "created_at": 1777021059.1995552,
+  "updated_at": 1777021059.200244,
+  "branch": "feature/WF3-01-home-foundation",
+  "pr_url": null
+}

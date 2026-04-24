@@ -78,7 +78,7 @@ async def test_run_pipeline_resumes_from_impl_state(tmp_config, monkeypatch):
         calls.append(("plan", "", None))
         return True
 
-    async def fake_impl(config, task_id, task_dir, worktree_dir, max_retries):
+    async def fake_impl(config, task_id, task_dir, worktree_dir, max_retries, **kwargs):
         state = S.read_state(task_dir)
         calls.append(("impl", state.state, state.escalation))
         return True
@@ -192,7 +192,7 @@ async def test_run_pipeline_resumes_impl_from_needs_attention(tmp_config, monkey
         calls.append(("plan", "", None))
         return True
 
-    async def fake_impl(config, task_id, task_dir, worktree_dir, max_retries):
+    async def fake_impl(config, task_id, task_dir, worktree_dir, max_retries, **kwargs):
         state = S.read_state(task_dir)
         calls.append(("impl", state.state, state.escalation))
         return True
@@ -287,7 +287,7 @@ async def test_run_pipeline_clears_stale_escalation_after_resume(tmp_config, mon
     async def fake_plan(*args, **kwargs):
         return True
 
-    async def fake_impl(config, task_id, task_dir, worktree_dir, max_retries):
+    async def fake_impl(config, task_id, task_dir, worktree_dir, max_retries, **kwargs):
         state = S.read_state(task_dir)
         assert state.state == "implementing"
         assert state.escalation is None
@@ -325,7 +325,7 @@ async def test_run_pipeline_handles_stale_worktree_on_fresh_start(tmp_config, mo
         assert S.read_state(task_dir).state == "planning"
         return True
 
-    async def fake_impl(config, task_id, task_dir, worktree_dir, max_retries):
+    async def fake_impl(config, task_id, task_dir, worktree_dir, max_retries, **kwargs):
         calls.append("impl")
         return True
 
@@ -419,7 +419,7 @@ async def test_run_pipeline_uses_project_subdir_for_monorepo_phases(monorepo_con
         assert worktree_dir.exists()
         return True
 
-    async def fake_impl(config, task_id, task_dir, worktree_dir, max_retries):
+    async def fake_impl(config, task_id, task_dir, worktree_dir, max_retries, **kwargs):
         calls.append(("impl", str(worktree_dir)))
         assert worktree_dir == expected
         return True
@@ -629,6 +629,7 @@ async def test_impl_phase_proceeds_past_implementor_on_done_token(
             (worktree_dir / "Progress.swift").write_text("// work\n", encoding="utf-8")
             return A.AgentResult(text="All good.\nIMPLEMENT_DONE\n", tool_uses=[], stop_reason="end_turn")
         # reviewer
+        assert S.read_state(task_dir).state == "impl_review"
         return A.AgentResult(text="Looks good.\nIMPLEMENT_PASS\n", tool_uses=[], stop_reason="end_turn")
 
     monkeypatch.setattr(P, "emit", fake_emit)
@@ -644,6 +645,67 @@ async def test_impl_phase_proceeds_past_implementor_on_done_token(
     assert ok is True
     assert call_log[0] == "implementor"
     assert call_log[1] == "implement-reviewer"
+
+
+@pytest.mark.asyncio
+async def test_resume_from_review_rework_restores_implementing_state_and_guard(
+    tmp_config,
+    monkeypatch,
+):
+    """Reviewer-only resume can still route back through implementor rework."""
+    from backend import agents as A
+
+    _make_task(tmp_config, "review-rework", "impl_review")
+    task_dir = S.find_task_workspace(tmp_config, "review-rework")
+    assert task_dir is not None
+    W.create_worktree(tmp_config, "review-rework")
+    worktree_dir = W.project_worktree_path(tmp_config, "review-rework")
+
+    reviewer_calls = 0
+    rework_hooks: list[object] = []
+
+    async def fake_emit(event_type, **payload):
+        pass
+
+    async def fake_run_agent(spec, prompt, *, cwd, task_id=None, iteration=None, hooks=None, **kw):
+        nonlocal reviewer_calls
+        if spec.name == "implement-reviewer":
+            reviewer_calls += 1
+            assert S.read_state(task_dir).state == "impl_review"
+            if reviewer_calls == 1:
+                return A.AgentResult(
+                    text="Needs implementor rework.\nIMPLEMENT_REWORK_REQUIRED\n",
+                    tool_uses=[],
+                    stop_reason="end_turn",
+                )
+            return A.AgentResult(text="Looks good.\nIMPLEMENT_PASS\n", tool_uses=[], stop_reason="end_turn")
+
+        assert spec.name == "implementor"
+        assert S.read_state(task_dir).state == "implementing"
+        rework_hooks.append(hooks)
+        (worktree_dir / "Rework.swift").write_text("// rework\n", encoding="utf-8")
+        return A.AgentResult(text="Reworked.\nIMPLEMENT_DONE\n", tool_uses=[], stop_reason="end_turn")
+
+    monkeypatch.setattr(P, "emit", fake_emit)
+    monkeypatch.setattr(P.A, "run_agent", fake_run_agent)
+
+    async def fake_resolve_test_commands(config, worktree_dir, task_id):
+        return "echo unit", "echo ui"
+
+    monkeypatch.setattr(P, "_resolve_test_commands", fake_resolve_test_commands)
+
+    ok = await P.run_impl_phase(
+        tmp_config,
+        "review-rework",
+        task_dir,
+        worktree_dir,
+        3,
+        skip_implementor=True,
+    )
+
+    assert ok is True
+    assert reviewer_calls == 2
+    assert rework_hooks and rework_hooks[0] is not None
 
 
 @pytest.mark.asyncio

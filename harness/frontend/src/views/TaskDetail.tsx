@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { api, type WorktreeBase, type WorktreeStatus } from "../lib/api";
 import type { HarnessEvent, PlanStep, TaskState, TaskStateName } from "../lib/types";
 import {
@@ -679,6 +679,7 @@ function TimelinePanel({ events }: { events: HarnessEvent[] }) {
   const [filters, setFilters] = useState<FilterFlags>(loadFilters);
   const [now, setNow] = useState(() => Date.now());
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const endRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
 
   useEffect(() => {
@@ -697,11 +698,11 @@ function TimelinePanel({ events }: { events: HarnessEvent[] }) {
   );
 
   // Auto-scroll to bottom on new events, unless the user has scrolled up.
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el || !stickToBottomRef.current) return;
-    el.scrollTop = el.scrollHeight;
-  }, [visibleEvents.length]);
+  useLayoutEffect(() => {
+    if (stickToBottomRef.current) {
+      endRef.current?.scrollIntoView();
+    }
+  }, [visibleEvents.length, events.length]);
 
   const onScroll = () => {
     const el = containerRef.current;
@@ -731,6 +732,7 @@ function TimelinePanel({ events }: { events: HarnessEvent[] }) {
         {visibleEvents.map((e, i) => (
           <TimelineItem key={`${e.ts}-${i}`} event={e} now={now} />
         ))}
+        <div ref={endRef} />
       </div>
     </>
   );

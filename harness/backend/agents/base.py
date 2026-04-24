@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
@@ -16,6 +17,12 @@ from claude_agent_sdk import (
 )
 
 from ..events import emit
+
+
+# Lines like `STEP: 3` or `STEP: 3. Wire the share sheet` emitted by the
+# implementor mark the start of a plan step. The harness consumes them to
+# advance the PlanStepsPanel; they remain visible in the agent_text stream.
+STEP_MARKER_RE = re.compile(r"^STEP:\s*(.+?)\s*$", re.MULTILINE)
 
 
 @dataclass
@@ -35,6 +42,10 @@ class AgentResult:
     text: str
     tool_uses: list[dict[str, Any]] = field(default_factory=list)
     stop_reason: Optional[str] = None
+    usage: Optional[dict[str, Any]] = None
+    total_cost_usd: Optional[float] = None
+    duration_ms: Optional[int] = None
+    model_usage: Optional[dict[str, Any]] = None
 
 
 async def run_agent(
@@ -66,6 +77,10 @@ async def run_agent(
     text_buf: list[str] = []
     tool_uses: list[dict[str, Any]] = []
     stop_reason: Optional[str] = None
+    usage: Optional[dict[str, Any]] = None
+    total_cost_usd: Optional[float] = None
+    duration_ms: Optional[int] = None
+    model_usage: Optional[dict[str, Any]] = None
 
     await emit("agent_started", task_id=task_id, agent=spec.name, iteration=iteration)
     async with ClaudeSDKClient(options=options) as client:
@@ -82,6 +97,14 @@ async def run_agent(
                             iteration=iteration,
                             text=block.text,
                         )
+                        for match in STEP_MARKER_RE.finditer(block.text):
+                            await emit(
+                                "plan_step_progress",
+                                task_id=task_id,
+                                agent=spec.name,
+                                iteration=iteration,
+                                marker=match.group(1),
+                            )
                     elif isinstance(block, ToolUseBlock):
                         entry = {
                             "name": block.name,
@@ -98,6 +121,10 @@ async def run_agent(
                         )
             elif isinstance(msg, ResultMessage):
                 stop_reason = getattr(msg, "stop_reason", None) or getattr(msg, "subtype", None)
+                usage = getattr(msg, "usage", None)
+                total_cost_usd = getattr(msg, "total_cost_usd", None)
+                duration_ms = getattr(msg, "duration_ms", None)
+                model_usage = getattr(msg, "model_usage", None)
     await emit(
         "agent_finished",
         task_id=task_id,
@@ -105,4 +132,31 @@ async def run_agent(
         iteration=iteration,
         stop_reason=stop_reason,
     )
-    return AgentResult(text="".join(text_buf), tool_uses=tool_uses, stop_reason=stop_reason)
+    if usage is not None or total_cost_usd is not None:
+        await emit(
+            "agent_usage",
+            task_id=task_id,
+            agent=spec.name,
+            iteration=iteration,
+            model=spec.model,
+            input_tokens=int((usage or {}).get("input_tokens", 0) or 0),
+            output_tokens=int((usage or {}).get("output_tokens", 0) or 0),
+            cache_creation_input_tokens=int(
+                (usage or {}).get("cache_creation_input_tokens", 0) or 0
+            ),
+            cache_read_input_tokens=int(
+                (usage or {}).get("cache_read_input_tokens", 0) or 0
+            ),
+            total_cost_usd=total_cost_usd,
+            duration_ms=duration_ms,
+            model_usage=model_usage,
+        )
+    return AgentResult(
+        text="".join(text_buf),
+        tool_uses=tool_uses,
+        stop_reason=stop_reason,
+        usage=usage,
+        total_cost_usd=total_cost_usd,
+        duration_ms=duration_ms,
+        model_usage=model_usage,
+    )

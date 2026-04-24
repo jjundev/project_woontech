@@ -1,4 +1,37 @@
-/.DS_Store
+**/__pycache__/
+**/*.pyc
+harness/.venv/
+.DS_Store
 /.claude
 /test.md
 /앱 설명.md
+
+# Harness worktrees
+worktrees/
+
+# Xcode
+ios/build/
+ios/DerivedData/
+ios/**/*.xcodeproj/project.xcworkspace/xcuserdata/
+ios/**/*.xcodeproj/xcuserdata/
+ios/**/*.xcworkspace/xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+ios/.build/
+ios/.swiftpm/
+ios/Packages/
+ios/Package.pins
+ios/Package.resolved
+
+# CocoaPods
+ios/Pods/
+
+# Carthage
+ios/Carthage/Build/

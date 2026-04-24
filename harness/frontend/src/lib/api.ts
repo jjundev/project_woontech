@@ -13,6 +13,19 @@ export type WorktreeStatus = {
   commits_ahead: number;
 };
 
+export type WorktreeBase = "local" | "remote";
+
+type StartOpts = {
+  max_plan_retries?: number;
+  max_impl_retries?: number;
+  worktree_base?: WorktreeBase;
+  resume_from?: "impl_review";
+};
+
+function encodePath(path: string): string {
+  return path.split("/").map(encodeURIComponent).join("/");
+}
+
 export const api = {
   listTasks: () => fetch("/api/tasks").then((r) => j<TaskState[]>(r)),
   getTask: (id: string) =>
@@ -23,18 +36,24 @@ export const api = {
     fetch(`/api/tasks/${id}/files/${encodeURIComponent(name)}`).then((r) =>
       j<{ name: string; content: string }>(r),
     ),
+  getWorktreeFile: (id: string, path: string) =>
+    fetch(`/api/tasks/${id}/worktree-files/${encodePath(path)}`).then((r) =>
+      j<{ path: string; content: string }>(r),
+    ),
   getWorktreeStatus: (id: string) =>
     fetch(`/api/tasks/${id}/worktree-status`).then((r) => j<WorktreeStatus>(r)),
-  startPipeline: (id: string, opts: { max_plan_retries?: number; max_impl_retries?: number }) =>
+  startPipeline: (id: string, opts: StartOpts) =>
     fetch(`/api/tasks/${id}/start`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(opts),
     }).then((r) => j<{ ok: true }>(r)),
-  resumePipeline: (id: string, opts: { max_plan_retries?: number; max_impl_retries?: number }) =>
+  resumePipeline: (id: string, opts: StartOpts) =>
     fetch(`/api/tasks/${id}/resume`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(opts),
     }).then((r) => j<{ ok: true }>(r)),
+  pausePipeline: (id: string) =>
+    fetch(`/api/tasks/${id}/pause`, { method: "POST" }).then((r) => j<{ ok: true }>(r)),
 };

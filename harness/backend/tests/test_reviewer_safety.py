@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from backend import pipeline as P
+from backend.agents.implementor import IMPLEMENTOR
 from backend.agents.implement_reviewer import IMPLEMENT_REVIEWER
 from backend.agents.plan_reviewer import PLAN_REVIEWER
 
@@ -22,6 +23,26 @@ def test_implement_reviewer_prompt_has_patch_guardrails():
     # from prior iterations so the reviewer does not need to read older files.
     assert "## Still outstanding from prior iterations" in prompt
     assert "## Resolved since previous iteration" in prompt
+
+
+def test_pbxproj_membership_prompts_use_grep_tool_not_bash():
+    reviewer_prompt = IMPLEMENT_REVIEWER.system_prompt
+    implementor_prompt = IMPLEMENTOR.system_prompt
+    reviewer_compact = " ".join(reviewer_prompt.split())
+    implementor_compact = " ".join(implementor_prompt.split())
+
+    assert "grep -c" not in reviewer_prompt
+    assert "use the Grep tool on" in reviewer_compact
+    assert "do not use Bash for this check" in reviewer_compact
+    assert "PBXFileReference" in reviewer_prompt
+    assert "PBXBuildFile" in reviewer_prompt
+    assert "<FileName>.swift in Sources" in reviewer_prompt
+
+    assert "use the Grep and Read tools on `Woontech.xcodeproj/project.pbxproj`" in implementor_compact
+    assert "PBXFileReference" in implementor_prompt
+    assert "PBXBuildFile" in implementor_prompt
+    assert "<FileName>.swift in Sources" in implementor_prompt
+    assert "do not use Bash for this check" in implementor_compact
 
 
 def test_plan_reviewer_prompt_prevents_scope_changes():
@@ -96,3 +117,80 @@ def test_feedback_path_formatter_lists_every_file(tmp_path: Path):
     assert str(paths[1]) in formatted
     assert formatted.startswith("- ")
     assert P._format_feedback_paths([]) == "NONE"
+
+
+import pytest
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "PLAN_PASS",
+        "  PLAN_PASS  ",
+        "**PLAN_PASS**",
+        "`PLAN_PASS`",
+        "- PLAN_PASS",
+        "> PLAN_PASS",
+        '"PLAN_PASS"',
+        "PLAN_PASS.",
+        "## PLAN_PASS",
+        "Review complete.\n\n**PLAN_PASS**\n",
+        "Decision: PLAN_PASS",
+        "Final verdict — PLAN_PASS.",
+        "Response: PLAN_PASS",
+        "최종 판정: PLAN_PASS",
+    ],
+)
+def test_has_token_matches_common_markdown_wrappings(text: str):
+    assert P._has_token(text, "PLAN_PASS")
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "",
+        "PLAN_FAIL",                                # different token
+        "PLAN PASS",                                # space instead of underscore
+        "planning",                                 # substring of unrelated word
+        "PLAN_PASSES",                              # superstring should not match
+        "Result: PLAN_PASS achieved",               # token not last word
+        "I may mention PLAN_PASS in passing only",  # prose continues after token
+    ],
+)
+def test_has_token_rejects_non_matching_lines(text: str):
+    assert not P._has_token(text, "PLAN_PASS")
+
+
+def test_has_token_picks_up_token_anywhere_in_text():
+    text = "Some analysis line.\nAnother line.\nPLAN_FAIL\nTrailing commentary."
+    assert P._has_token(text, "PLAN_FAIL")
+    assert not P._has_token(text, "PLAN_PASS")
+
+
+def test_find_terminal_token_picks_last_occurrence():
+    text = (
+        "Initially I considered IMPLEMENT_PASS.\n"
+        "But after reviewing the tests failed.\n"
+        "Decision: IMPLEMENT_REWORK_REQUIRED\n"
+    )
+    candidates = ("IMPLEMENT_PASS", "IMPLEMENT_FAIL", "IMPLEMENT_REWORK_REQUIRED")
+    assert P._find_terminal_token(text, candidates) == "IMPLEMENT_REWORK_REQUIRED"
+
+
+def test_find_terminal_token_returns_none_when_no_candidate_matches():
+    text = "I thought about it but never committed to a decision."
+    assert P._find_terminal_token(text, ("IMPLEMENT_PASS", "IMPLEMENT_FAIL")) is None
+
+
+def test_find_terminal_token_handles_markdown_wrappings():
+    text = "Running tests…\n**IMPLEMENT_FAIL**\nPatch applied."
+    assert (
+        P._find_terminal_token(text, ("IMPLEMENT_PASS", "IMPLEMENT_FAIL"))
+        == "IMPLEMENT_FAIL"
+    )
+
+
+def test_text_tail_truncates_to_limit():
+    text = "x" * 1000
+    assert P._text_tail(text, limit=50) == "x" * 50
+    assert P._text_tail("short") == "short"

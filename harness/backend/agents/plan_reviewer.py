@@ -36,7 +36,9 @@ If PASS:
     ## Tests
     - [ ] T1 (unit): ...
     - [ ] T2 (ui): ...
-- Respond with `PLAN_PASS` on its own line.
+- End your response with PLAN_PASS on its own line — bare token, no backticks,
+  no markdown, no quotes, no prefix. This is the signal the harness parses to
+  advance the pipeline.
 
 If FAIL:
 - Write `plan-feedback-version-{iteration}.md` with:
@@ -58,7 +60,9 @@ If FAIL:
 - If a safe plan edit would require a major direction change, requirements reinterpretation,
   acceptance criteria changes, or scope expansion, write the feedback clearly and leave
   `implement-plan.md` unchanged except for any obviously safe clarifications.
-- Respond with `PLAN_FAIL` on its own line.
+- End your response with PLAN_FAIL on its own line — bare token, no backticks,
+  no markdown, no quotes, no prefix. This is the signal the harness parses to
+  trigger another plan-review iteration.
 
 Never touch code files. Only the plan / feedback / checklist markdown files.
 """,

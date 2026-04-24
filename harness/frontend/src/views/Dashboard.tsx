@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { api } from "../lib/api";
+import { api, type WorktreeBase } from "../lib/api";
 import type { HarnessEvent, TaskState, TaskStateName } from "../lib/types";
 
 const COLUMN_LABELS: Record<string, TaskStateName[]> = {
   "To Do": ["todo", "draft"],
-  Ongoing: ["planning", "plan_review", "implementing", "impl_review", "publishing"],
+  Ongoing: ["planning", "plan_review", "implementing", "impl_review", "publishing", "paused"],
   "Needs Attention": ["needs_attention"],
   Done: ["done"],
 };
@@ -16,7 +16,7 @@ export function Dashboard({
 }: {
   events: HarnessEvent[];
   onSelect: (id: string) => void;
-  onStart?: (task: TaskState) => void;
+  onStart?: (task: TaskState, worktreeBase: WorktreeBase) => void;
 }) {
   const [tasks, setTasks] = useState<TaskState[]>([]);
 
@@ -59,7 +59,7 @@ export function Dashboard({
                   onClick={() => onSelect(t.id)}
                   onStart={
                     onStart && (t.state === "todo" || t.state === "draft")
-                      ? () => onStart(t)
+                      ? () => onStart(t, "local")
                       : undefined
                   }
                 />

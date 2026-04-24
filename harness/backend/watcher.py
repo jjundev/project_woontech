@@ -17,16 +17,37 @@ class _Handler(FileSystemEventHandler):
         self._config = config
 
     def _emit(self, event_type: str, src_path: str) -> None:
+        """Route a filesystem event to a task id if the path is recognizable.
+
+        Sources:
+          - `ios/todo/<id>/spec.md` — user-authored input in the root tree.
+          - `worktrees/<id>/**` — pipeline-managed workspace + code inside the worktree.
+        """
+        resolved = Path(src_path).resolve()
+
+        # 1. Root todo folder (input).
         try:
-            rel = Path(src_path).resolve().relative_to(self._config.ios_root.resolve())
+            rel = resolved.relative_to(self._config.todo_dir.resolve())
+            if rel.parts:
+                task_id = rel.parts[0]
+                self._dispatch(event_type, task_id, f"todo/{rel}")
+                return
+        except ValueError:
+            pass
+
+        # 2. Worktree tree.
+        try:
+            rel = resolved.relative_to(self._config.worktrees_dir.resolve())
         except ValueError:
             return
-        parts = rel.parts
-        if len(parts) < 2 or parts[0] not in ("todo", "ongoing", "done"):
+        if not rel.parts:
             return
-        task_id = parts[1]
+        task_id = rel.parts[0]
+        self._dispatch(event_type, task_id, f"worktrees/{rel}")
+
+    def _dispatch(self, event_type: str, task_id: str, rel: str) -> None:
         asyncio.run_coroutine_threadsafe(
-            emit("file_changed", task_id=task_id, path=str(rel), change=event_type),
+            emit("file_changed", task_id=task_id, path=rel, change=event_type),
             self._loop,
         )
 
@@ -46,8 +67,9 @@ class _Handler(FileSystemEventHandler):
 def start_watcher(config: HarnessConfig, loop: asyncio.AbstractEventLoop) -> Observer:
     observer = Observer()
     handler = _Handler(loop, config)
-    for folder in (config.todo_dir, config.ongoing_dir, config.done_dir):
-        folder.mkdir(parents=True, exist_ok=True)
-        observer.schedule(handler, str(folder), recursive=True)
+    config.todo_dir.mkdir(parents=True, exist_ok=True)
+    config.worktrees_dir.mkdir(parents=True, exist_ok=True)
+    observer.schedule(handler, str(config.todo_dir), recursive=True)
+    observer.schedule(handler, str(config.worktrees_dir), recursive=True)
     observer.start()
     return observer

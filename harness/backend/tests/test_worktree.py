@@ -29,3 +29,24 @@ def test_create_twice_is_idempotent(tmp_config):
     p2 = W.create_worktree(tmp_config, task_id)
     assert p1 == p2
     W.remove_worktree(tmp_config, task_id, delete_branch=True)
+
+
+def test_create_and_remove_worktree_inside_monorepo(monorepo_config):
+    task_id = "mono-task-xyz"
+    path = W.create_worktree(monorepo_config, task_id)
+
+    assert path == W.project_worktree_path(monorepo_config, task_id)
+    assert path.exists()
+    assert monorepo_config.worktree_path(task_id).exists()
+    assert path.parent == monorepo_config.worktree_path(task_id)
+
+    branch = subprocess.run(
+        ["git", "-C", str(path), "rev-parse", "--abbrev-ref", "HEAD"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    assert branch == f"feature/{task_id}"
+
+    W.remove_worktree(monorepo_config, task_id, delete_branch=True)
+    assert not monorepo_config.worktree_path(task_id).exists()

@@ -20,7 +20,9 @@ Rules:
        the implementor)
     7. Risks / open questions
 - Do NOT write code. Do NOT touch any file other than `implement-plan.md`.
-- When done, respond with `PLAN_WRITTEN` on its own line.
+- When done, end your response with PLAN_WRITTEN on its own line — bare token,
+  no backticks, no markdown, no quotes, no prefix. This is the signal the
+  harness parses to advance the pipeline.
 """,
     allowed_tools=["Read", "Write", "Edit", "Glob", "Grep"],
 )

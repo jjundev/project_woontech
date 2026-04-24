@@ -25,7 +25,20 @@ Your task (in order):
    the current code or checklist clearly proves it is resolved.
 2. Inspect the code in the worktree. Verify every checklist item is implemented.
 3. Run the build command. Run the unit tests. Run the UI tests. All must pass.
-4. Decide PASS or FAIL.
+4. Verify target membership in `Woontech.xcodeproj/project.pbxproj`. For every
+   new `.swift` file listed in the runtime prompt, use the Grep tool on
+   `Woontech.xcodeproj/project.pbxproj` and the Read tool for matching
+   sections; do not use Bash for this check. For each listed file, confirm both
+   of the following:
+   - a `PBXFileReference` entry for `<FileName>.swift`
+   - a `PBXBuildFile` entry containing `<FileName>.swift in Sources`
+   If the runtime prompt says `NONE`, skip this step. If either check is
+   missing, the file is on disk but not compiled into the target — BUILD
+   SUCCEEDED is a silent false positive. Treat this as a blocking issue and
+   surface it in the feedback. Prefer IMPLEMENT_FAIL (reviewer patch) when only
+   a handful of pbxproj entries are missing and the fix is mechanical;
+   otherwise IMPLEMENT_REWORK_REQUIRED.
+5. Decide PASS or FAIL.
 
 If PASS:
 - Write `implement-review.md` in the task folder with:
@@ -33,7 +46,9 @@ If PASS:
     ## Checklist status (all ✓)
     ## Build / Test results
     ## Notes
-- Respond with `IMPLEMENT_PASS` on its own line.
+- End your response with IMPLEMENT_PASS on its own line — bare token, no
+  backticks, no markdown, no quotes, no prefix. This is the signal the harness
+  parses to advance to publish.
 
 If FAIL:
 - Write `implement-feedback-version-{iteration}.md` in the task folder. Sections:
@@ -76,21 +91,35 @@ If the patch is eligible:
 - Fill `Patch applied`, `Verification after patch`, and `Remaining risk`.
 - Re-run the relevant build/test commands after the patch.
 - Re-commit the worktree branch.
-- Respond with `IMPLEMENT_FAIL` on its own line so the next fresh reviewer verifies the patch.
+- End your response with IMPLEMENT_FAIL on its own line — bare token, no
+  backticks, no markdown, no quotes, no prefix — so the next fresh reviewer
+  verifies the patch.
 
 If the patch requires implementor rework:
 - Do NOT edit code and do NOT commit.
 - Fill `Patch applied` with `Not applied; requires implementor rework.`
 - Fill `Verification after patch` with `Not run after patch; no reviewer patch was applied.`
-- Respond with `IMPLEMENT_REWORK_REQUIRED` on its own line.
+- End your response with IMPLEMENT_REWORK_REQUIRED on its own line — bare
+  token, no backticks, no markdown, no quotes, no prefix. This is the signal
+  the harness parses to re-invoke the implementor.
 
 Never modify files in the task folder except the feedback / review markdown files.
 
 The harness enforces path restrictions via a PreToolUse hook. Write/Edit calls
-outside the worktree are denied; the only task-folder writes allowed are
-`implement-plan.md`, `implement-checklist.md`, `implement-review.md`, `pr.md`,
-and `implement-feedback-version-*.md` / `plan-feedback-version-*.md`. Do not
-fight the hook.
+outside the worktree are denied.
+
+Bash is restricted to single allowlisted commands from this phase. No `cd`, no
+command chaining, no redirection, no `tee`, no root-checkout absolute paths,
+and no `..` parent traversal. Use only the exact build/test commands provided
+in the prompt plus simple `git status` / `git diff` / `git rev-parse` /
+`git add` / `git commit -m` commands when needed. Run build/test commands as
+provided; do not append `tail`, `grep`, `2>&1`, pipes, or redirects, and do
+not inspect `~/.claude/tool-results`. Do not fight the hook.
+When committing reviewer-applied fixes, use a concise subject under 72
+characters. If a body is useful, add extra `-m "Body paragraph"` arguments.
+Do not include generated-agent attribution, `Co-Authored-By` trailers, email
+addresses, angle brackets, or the full checklist in the commit message.
 """,
     allowed_tools=["Read", "Write", "Edit", "Glob", "Grep", "Bash"],
+    max_turns=80,
 )

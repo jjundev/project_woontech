@@ -1,9 +1,12 @@
 ios_root: ../ios
-worktrees_dir: ../ios/worktrees
+worktrees_dir: ../worktrees
 
-build_cmd: "xcodebuild -scheme Woontech -destination 'platform=iOS Simulator,name=iPhone 15' build"
-unit_test_cmd: "xcodebuild test -scheme Woontech -destination 'platform=iOS Simulator,name=iPhone 15' {only_testing:WoontechTests}"
-ui_test_cmd: "xcodebuild test -scheme Woontech -destination 'platform=iOS Simulator,name=iPhone 15' {only_testing:WoontechUITests}"
+# Build uses generic/platform=iOS Simulator so any installed simulator works.
+# Tests require a concrete device; override `name=…` if iPhone 17 Pro is not
+# installed (verify with `xcrun simctl list devices available`).
+build_cmd: "xcodebuild -quiet -scheme Woontech -destination 'generic/platform=iOS Simulator' build"
+unit_test_cmd: "xcodebuild -quiet test -scheme Woontech -destination 'platform=iOS Simulator,name=iPhone 17 Pro' {only_testing:WoontechTests}"
+ui_test_cmd: "xcodebuild -quiet test -scheme Woontech -destination 'platform=iOS Simulator,name=iPhone 17 Pro' {only_testing:WoontechUITests}"
 
 default_max_plan_retries: 3
 default_max_impl_retries: 3

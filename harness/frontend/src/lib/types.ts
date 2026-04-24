@@ -7,11 +7,13 @@ export type TaskStateName =
   | "impl_review"
   | "publishing"
   | "done"
-  | "needs_attention";
+  | "needs_attention"
+  | "paused";
 
 export interface TaskState {
   id: string;
   state: TaskStateName;
+  paused_from: TaskStateName | null;
   title: string;
   plan_version: number;
   impl_version: number;
@@ -33,4 +35,28 @@ export interface HarnessEvent {
   iteration?: number;
   payload: Record<string, unknown>;
   ts: number;
+}
+
+export interface AgentUsagePayload {
+  model?: string | null;
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_input_tokens: number;
+  cache_read_input_tokens: number;
+  total_cost_usd?: number | null;
+  duration_ms?: number | null;
+  model_usage?: Record<string, unknown> | null;
+}
+
+export interface PlanStep {
+  index: number;
+  title: string;
+}
+
+export interface PlanStepsPayload {
+  steps: PlanStep[];
+}
+
+export interface PlanStepProgressPayload {
+  marker: string;
 }

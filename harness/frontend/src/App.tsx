@@ -2,18 +2,19 @@ import { useState } from "react";
 import { Dashboard } from "./views/Dashboard";
 import { TaskDetail } from "./views/TaskDetail";
 import { useWebSocket } from "./hooks/useWebSocket";
-import { api } from "./lib/api";
+import { api, type WorktreeBase } from "./lib/api";
 import type { TaskState } from "./lib/types";
 
 export function App() {
   const [selected, setSelected] = useState<string | null>(null);
   const { events, connected } = useWebSocket();
 
-  const handleRequestStart = async (task: TaskState) => {
+  const handleRequestStart = async (task: TaskState, worktreeBase: WorktreeBase = "local") => {
     try {
       await api.startPipeline(task.id, {
         max_plan_retries: task.max_plan_retries,
         max_impl_retries: task.max_impl_retries,
+        worktree_base: worktreeBase,
       });
     } catch (err) {
       alert(err instanceof Error ? err.message : String(err));
@@ -32,9 +33,6 @@ export function App() {
             title={connected ? "connected" : "disconnected"}
           />
         </h1>
-        <span className="text-xs text-slate-400">
-          Tasks auto-discovered from ios/todo/&lt;id&gt;/spec.md
-        </span>
       </header>
       <main className="flex-1 overflow-hidden">
         {selected ? (

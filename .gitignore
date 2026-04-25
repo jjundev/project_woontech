@@ -9,6 +9,9 @@ harness/.venv/
 # Harness worktrees
 worktrees/
 
+# Harness per-worktree diagnostics (xcresult mirrors, summaries)
+.harness/
+
 # Xcode
 ios/build/
 ios/DerivedData/

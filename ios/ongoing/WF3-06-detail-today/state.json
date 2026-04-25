@@ -4,14 +4,14 @@
   "paused_from": null,
   "title": "WF3-06 \u2014 \uc624\ub298\uc758 \uc77c\uc9c4 \uc0c1\uc138 (Insights \uc77c\uc9c4 \uce74\ub4dc \ud0ed \ubaa9\uc801\uc9c0)",
   "plan_version": 2,
-  "impl_version": 3,
+  "impl_version": 4,
   "plan_retries": 1,
-  "impl_retries": 2,
+  "impl_retries": 3,
   "max_plan_retries": 3,
   "max_impl_retries": 3,
   "escalation": null,
   "created_at": 1777093892.173453,
-  "updated_at": 1777097928.2927349,
+  "updated_at": 1777099063.281646,
   "branch": "feature/WF3-06-detail-today",
   "pr_url": null
 }

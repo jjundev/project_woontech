@@ -137,7 +137,68 @@ def _result_bundle_path(derived_data_path: Path, test_kind: str) -> Path:
     )
 
 
-def _persist_test_artifacts(test_kind: str, bundle: Path, target_dir: Path) -> None:
+def _capture_ui_failure_environment(
+    out_dir: Path, test_kind: str, simulator_udid: str | None
+) -> None:
+    """On UI test failure, drop a screenshot of the simulator and a snapshot
+    of installed apps so reviewers can tell at a glance what the screen
+    actually looked like (e.g. onboarding vs. home for a launch-arg regression)
+    without having to rerun the test locally.
+    """
+    if not simulator_udid:
+        return
+    screenshot_path = out_dir / f"last-{test_kind}-screenshot.png"
+    env_path = out_dir / f"last-{test_kind}-environment.txt"
+
+    try:
+        result = subprocess.run(
+            ["xcrun", "simctl", "io", simulator_udid, "screenshot", str(screenshot_path)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode != 0:
+            print(
+                f"warning: simctl screenshot exit {result.returncode}: "
+                f"{(result.stderr or result.stdout).strip()}",
+                file=sys.stderr,
+            )
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        print(f"warning: simctl screenshot failed: {exc}", file=sys.stderr)
+
+    try:
+        listapps = subprocess.run(
+            ["xcrun", "simctl", "listapps", simulator_udid],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        env_lines = [
+            f"# UI failure environment for {test_kind}",
+            f"simulator_udid: {simulator_udid}",
+            "",
+            "[xcrun simctl listapps]",
+            f"exit: {listapps.returncode}",
+            listapps.stdout or "",
+            listapps.stderr or "",
+        ]
+        env_path.write_text("\n".join(env_lines))
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        env_path.write_text(
+            f"# UI failure environment for {test_kind}\n"
+            f"simulator_udid: {simulator_udid}\n"
+            f"simctl listapps failed: {exc}\n"
+        )
+
+
+def _persist_test_artifacts(
+    test_kind: str,
+    bundle: Path,
+    target_dir: Path,
+    *,
+    exit_code: int = 0,
+    simulator_udid: str | None = None,
+) -> None:
     """Mirror the current xcresult bundle and human-readable summaries into the worktree.
 
     The harness PreToolUse hook denies absolute paths outside the worktree, so the
@@ -165,6 +226,8 @@ def _persist_test_artifacts(test_kind: str, bundle: Path, target_dir: Path) -> N
         )
         summary_path.write_text(message)
         failures_path.write_text(message)
+        if exit_code != 0 and test_kind == "ui":
+            _capture_ui_failure_environment(out_dir, test_kind, simulator_udid)
         return
 
     summary = _capture_xcresulttool(bundle, "get", "test-results", "summary")
@@ -182,6 +245,9 @@ def _persist_test_artifacts(test_kind: str, bundle: Path, target_dir: Path) -> N
         (out_dir / f"last-{test_kind}-bundle-copy-error.txt").write_text(
             f"failed to copy {bundle} -> {bundle_dest}: {exc}\n"
         )
+
+    if exit_code != 0 and test_kind == "ui":
+        _capture_ui_failure_environment(out_dir, test_kind, simulator_udid)
 
 
 def _run_capture(args: Sequence[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -447,7 +513,13 @@ def run_test(
         derived_data_path=derived_data_path,
         result_bundle_path=result_bundle_path,
     )
-    _persist_test_artifacts(mode, result_bundle_path, worktree_dir(worktree_dir_override))
+    _persist_test_artifacts(
+        mode,
+        result_bundle_path,
+        worktree_dir(worktree_dir_override),
+        exit_code=code,
+        simulator_udid=simulator.udid if ui else None,
+    )
     return code
 
 

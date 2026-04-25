@@ -510,7 +510,16 @@ async def _resolve_test_commands(
 ) -> tuple[str, str]:
     changed = discover_new_test_classes(worktree_dir, config.main_branch)
     unit = inject_only_testing(config.unit_test_cmd, changed.get("WoontechTests", []))
-    ui = inject_only_testing(config.ui_test_cmd, changed.get("WoontechUITests", []))
+    # Always include mandatory UI smoke classes (e.g. AppLaunchContractUITests)
+    # so the launch-arg routing contract is verified on every reviewer pass,
+    # even when no UI test files were touched in the worktree. De-dupe while
+    # preserving order: changed-first, then mandatory entries that aren't
+    # already in the list.
+    ui_classes = list(changed.get("WoontechUITests", []))
+    for cls in config.always_ui_test_classes:
+        if cls not in ui_classes:
+            ui_classes.append(cls)
+    ui = inject_only_testing(config.ui_test_cmd, ui_classes)
     if unit is None:
         await emit(
             "tests_skipped",
@@ -746,7 +755,7 @@ Iteration: {iteration}
 
 Build command: {config.build_cmd}
 Unit test command (scoped to XCTestCase classes in changed test files in this worktree): {unit_cmd}
-UI test command (scoped to XCTestCase classes in changed test files in this worktree; RUN IT): {ui_cmd}
+UI test command (scoped to XCTestCase classes in changed test files in this worktree, plus mandatory launch contract classes; failure in AppLaunchContractUITests blocks publish; RUN IT): {ui_cmd}
 New `.swift` files added in this worktree vs {config.main_branch}:
 {_format_text_list(new_swift_files)}
 

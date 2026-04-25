@@ -25,7 +25,8 @@ final class TodayDetailUITests: XCTestCase {
     func testInsightsTodayCardTap_pushesTodayDetail() {
         app.launchArguments = ["-openHome"]
         app.launch()
-        let card = app.otherElements["HomeInsightsCard_1"]
+        // InsightCardView is a SwiftUI Button — must query via .buttons, not .otherElements.
+        let card = app.buttons["HomeInsightsCard_1"]
         XCTAssertTrue(card.waitForExistence(timeout: 5))
         card.tap()
         let title = app.staticTexts["TodayDetailTitle"]

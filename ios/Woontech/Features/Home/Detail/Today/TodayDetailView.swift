@@ -156,6 +156,10 @@ private struct WuxingDistributionRow: View {
                             .foregroundColor(isZero ? DesignTokens.fireColor : DesignTokens.muted)
                     }
                     .frame(maxWidth: .infinity)
+                    // children: .ignore — collapse the three decorative Text views
+                    // into a single accessibility element so XCUITest can query
+                    // `app.otherElements["WuxingCell_<element>"]` reliably (T15).
+                    .accessibilityElement(children: .ignore)
                     .accessibilityIdentifier("WuxingCell_\(element.rawValue)")
                     .accessibilityLabel("\(element.label) \(element.hanja) \(count)")
                 }
@@ -310,10 +314,15 @@ private struct HapchungRowView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            // 비주얼 검증을 위한 invisible 식별자 (AC-9)
+            // 비주얼 검증을 위한 invisible 식별자 (AC-9). Text marker는 항상 staticText로
+            // 노출되므로 XCUITest의 `app.otherElements["HapchungRow_<i>_NegativeStyle"]`
+            // 또는 어느 query type에서든 안정적으로 찾을 수 있다 (Color.clear는 트리에서
+            // 누락될 수 있음).
             if isNegative {
-                Color.clear
-                    .frame(width: 0, height: 0)
+                Text("negative")
+                    .font(.system(size: 1))
+                    .foregroundColor(.clear)
+                    .frame(width: 1, height: 1)
                     .accessibilityIdentifier("HapchungRow_\(index)_NegativeStyle")
             }
         }

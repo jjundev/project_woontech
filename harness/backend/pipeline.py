@@ -979,7 +979,7 @@ def _resume_phase_index(state: S.TaskState) -> int:
         esc = (state.escalation or "").lower()
         if "plan" in esc:
             return 0
-        if "impl" in esc:
+        if "impl" in esc or esc == "diagnostic_infra_missing":
             return 1
         if "publish" in esc:
             return 2

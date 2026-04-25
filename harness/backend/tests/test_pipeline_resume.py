@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import time
 
 import pytest
 
@@ -286,7 +288,7 @@ async def test_run_pipeline_unknown_needs_attention_restarts_from_plan(tmp_confi
 
     calls: list[tuple[str, str, str | None]] = []
 
-    async def fake_plan(config, task_id, task_dir, worktree_dir, max_retries):
+    async def fake_plan(config, task_id, task_dir, worktree_dir, max_retries, **kwargs):
         state = S.read_state(task_dir)
         calls.append(("plan", state.state, state.escalation))
         return False
@@ -352,7 +354,7 @@ async def test_run_pipeline_handles_stale_worktree_on_fresh_start(tmp_config, mo
 
     calls: list[str] = []
 
-    async def fake_plan(config, task_id, task_dir, worktree_dir, max_retries):
+    async def fake_plan(config, task_id, task_dir, worktree_dir, max_retries, **kwargs):
         calls.append("plan")
         assert S.read_state(task_dir).state == "planning"
         return True
@@ -445,7 +447,7 @@ async def test_run_pipeline_uses_project_subdir_for_monorepo_phases(monorepo_con
     expected = W.project_worktree_path(monorepo_config, task_id)
     calls: list[tuple[str, str]] = []
 
-    async def fake_plan(config, task_id, task_dir, worktree_dir, max_retries):
+    async def fake_plan(config, task_id, task_dir, worktree_dir, max_retries, **kwargs):
         calls.append(("plan", str(worktree_dir)))
         assert worktree_dir == expected
         assert worktree_dir.exists()
@@ -813,7 +815,7 @@ async def test_run_pipeline_resumes_plan_unexpected_error_into_monorepo_project_
     expected = W.project_worktree_path(monorepo_config, task_id)
     plan_calls: list[tuple[str, str | None, str]] = []
 
-    async def fake_plan(config, task_id, task_dir, worktree_dir, max_retries):
+    async def fake_plan(config, task_id, task_dir, worktree_dir, max_retries, **kwargs):
         state = S.read_state(task_dir)
         plan_calls.append((state.state, state.escalation, str(worktree_dir)))
         assert worktree_dir == expected
@@ -894,3 +896,318 @@ def test_publish_bash_policy_allows_push_and_pr_only(tmp_config):
     )
     denied = _bash_result(callback, "git fetch origin main")
     assert denied["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_diagnostic_infra_signal_extracts_path_from_latest_feedback(tmp_path):
+    feedback = tmp_path / "implement-feedback-version-2.md"
+    feedback.write_text(
+        "# Implement Feedback v2\n"
+        "## Required changes\n"
+        "DIAGNOSTIC_INFRASTRUCTURE_MISSING: .harness/test-results/last-ui-failures.txt\n"
+        "## Patch eligibility\n"
+        "Requires implementor rework\n"
+    )
+    older = tmp_path / "implement-feedback-version-1.md"
+    older.write_text("# Implement Feedback v1\nNothing relevant\n")
+
+    assert (
+        P._diagnostic_infra_signal(tmp_path)
+        == ".harness/test-results/last-ui-failures.txt"
+    )
+
+
+def test_diagnostic_infra_signal_returns_none_for_unrelated_feedback(tmp_path):
+    feedback = tmp_path / "implement-feedback-version-1.md"
+    feedback.write_text(
+        "# Implement Feedback v1\n"
+        "## Required changes\n"
+        "Fix the assertion in HomeView.swift line 42.\n"
+    )
+    assert P._diagnostic_infra_signal(tmp_path) is None
+
+
+def test_diagnostic_infra_signal_returns_none_when_no_feedback(tmp_path):
+    assert P._diagnostic_infra_signal(tmp_path) is None
+
+
+def test_path_guard_does_not_intercept_read_tool_inside_worktree(tmp_config):
+    """Reviewer must be able to Read the test artifacts mirror without bash."""
+    worktree_dir = tmp_config.worktree_path("read-guard")
+    worktree_dir.mkdir(parents=True)
+    artifacts = worktree_dir / ".harness" / "test-results"
+    artifacts.mkdir(parents=True)
+    (artifacts / "last-ui-failures.txt").write_text("XCTAssertEqual failed")
+
+    matcher = W.make_path_guard(worktree_dir)["PreToolUse"][0]
+
+    assert "Read" not in matcher.matcher.split("|")
+
+
+def test_reviewer_can_read_test_failure_summary_via_read_tool(monorepo_config):
+    worktree_dir = monorepo_config.worktree_path("read-summary") / "ios"
+    artifacts = worktree_dir / ".harness" / "test-results"
+    artifacts.mkdir(parents=True)
+    (artifacts / "last-ui-failures.txt").write_text("XCTAssertEqual failed")
+
+    matcher = W.make_path_guard(worktree_dir)["PreToolUse"][0]
+
+    assert "Read" not in matcher.matcher.split("|")
+
+
+def _write_test_artifacts(worktree_dir, kind: str, body: str = "diagnostic\n") -> None:
+    artifacts = worktree_dir / ".harness" / "test-results"
+    artifacts.mkdir(parents=True, exist_ok=True)
+    (artifacts / f"last-{kind}-summary.txt").write_text(body)
+    (artifacts / f"last-{kind}-failures.txt").write_text(body)
+
+
+def test_assert_test_artifacts_visible_accepts_fresh_artifacts(tmp_path):
+    _write_test_artifacts(tmp_path, "ui")
+
+    P._assert_test_artifacts_visible(tmp_path, {"ui"}, time.time())
+
+
+@pytest.mark.parametrize("kind", ["unit", "ui"])
+def test_assert_test_artifacts_visible_rejects_missing_empty_or_stale(tmp_path, kind):
+    with pytest.raises(P.DiagnosticInfrastructureError, match="missing"):
+        P._assert_test_artifacts_visible(tmp_path, {kind}, time.time())
+
+    _write_test_artifacts(tmp_path, kind, body="")
+    with pytest.raises(P.DiagnosticInfrastructureError, match="empty"):
+        P._assert_test_artifacts_visible(tmp_path, {kind}, time.time())
+
+    _write_test_artifacts(tmp_path, kind, body="diagnostic\n")
+    stale = time.time() - 20
+    for path in P._test_artifact_paths(tmp_path, kind):
+        path.touch()
+        path.chmod(0o644)
+        os.utime(path, (stale, stale))
+    with pytest.raises(P.DiagnosticInfrastructureError, match="stale"):
+        P._assert_test_artifacts_visible(tmp_path, {kind}, time.time())
+
+
+def test_test_kinds_from_tool_uses_ignores_echo_skip():
+    assert (
+        P._test_kinds_from_tool_uses(
+            [
+                {
+                    "name": "Bash",
+                    "input": {
+                        "command": "echo 'SKIP: no changed ui test files in this worktree'"
+                    },
+                }
+            ]
+        )
+        == set()
+    )
+
+
+@pytest.mark.asyncio
+async def test_reviewer_phase_aborts_when_test_artifacts_missing(tmp_config, monkeypatch):
+    from backend import agents as A
+
+    _make_task(tmp_config, "missing-artifact", "implementing")
+    W.create_worktree(tmp_config, "missing-artifact")
+    task_dir = S.find_task_workspace(tmp_config, "missing-artifact")
+    assert task_dir is not None
+    worktree_dir = W.project_worktree_path(tmp_config, "missing-artifact")
+
+    async def fake_emit(event_type, **payload):
+        pass
+
+    async def fake_run_agent(spec, prompt, *, cwd, task_id=None, iteration=None, hooks=None, **kw):
+        if spec.name == "implementor":
+            (worktree_dir / "Progress.swift").write_text("// progress\n")
+            return A.AgentResult(
+                text="Done.\nIMPLEMENT_DONE\n",
+                tool_uses=[
+                    {
+                        "name": "Bash",
+                        "input": {
+                            "command": (
+                                "python3 tools/xcode_test_runner.py test --target WoontechTests "
+                                "--worktree-dir . -only-testing:WoontechTests/FooTests"
+                            )
+                        },
+                    }
+                ],
+                stop_reason="end_turn",
+            )
+        raise AssertionError("reviewer must not run without fresh test artifacts")
+
+    monkeypatch.setattr(P, "emit", fake_emit)
+    monkeypatch.setattr(P.A, "run_agent", fake_run_agent)
+
+    ok = await P.run_impl_phase(
+        tmp_config,
+        "missing-artifact",
+        task_dir,
+        worktree_dir,
+        3,
+    )
+
+    state = S.read_state(task_dir)
+    assert ok is False
+    assert state.escalation == "diagnostic_infra_missing"
+
+
+@pytest.mark.asyncio
+async def test_reviewer_pass_is_rejected_when_test_artifacts_missing(tmp_config, monkeypatch):
+    from backend import agents as A
+
+    _make_task(tmp_config, "reviewer-pass-missing-artifact", "impl_review")
+    W.create_worktree(tmp_config, "reviewer-pass-missing-artifact")
+    task_dir = S.find_task_workspace(tmp_config, "reviewer-pass-missing-artifact")
+    assert task_dir is not None
+    worktree_dir = W.project_worktree_path(tmp_config, "reviewer-pass-missing-artifact")
+
+    async def fake_emit(event_type, **payload):
+        pass
+
+    async def fake_run_agent(spec, prompt, *, cwd, task_id=None, iteration=None, hooks=None, **kw):
+        assert spec.name == "implement-reviewer"
+        return A.AgentResult(
+            text="All good.\nIMPLEMENT_PASS\n",
+            tool_uses=[
+                {
+                    "name": "Bash",
+                    "input": {
+                        "command": (
+                            "python3 tools/xcode_test_runner.py test --target WoontechUITests "
+                            "--ui --worktree-dir . -only-testing:WoontechUITests/FooUITests"
+                        )
+                    },
+                }
+            ],
+            stop_reason="end_turn",
+        )
+
+    monkeypatch.setattr(P, "emit", fake_emit)
+    monkeypatch.setattr(P.A, "run_agent", fake_run_agent)
+
+    ok = await P.run_impl_phase(
+        tmp_config,
+        "reviewer-pass-missing-artifact",
+        task_dir,
+        worktree_dir,
+        3,
+        skip_implementor=True,
+    )
+
+    state = S.read_state(task_dir)
+    assert ok is False
+    assert state.escalation == "diagnostic_infra_missing"
+
+
+@pytest.mark.asyncio
+async def test_reviewer_echo_skip_does_not_require_test_artifacts(tmp_config, monkeypatch):
+    from backend import agents as A
+
+    _make_task(tmp_config, "reviewer-echo-skip", "impl_review")
+    W.create_worktree(tmp_config, "reviewer-echo-skip")
+    task_dir = S.find_task_workspace(tmp_config, "reviewer-echo-skip")
+    assert task_dir is not None
+    worktree_dir = W.project_worktree_path(tmp_config, "reviewer-echo-skip")
+
+    async def fake_emit(event_type, **payload):
+        pass
+
+    async def fake_resolve_test_commands(config, worktree_dir, task_id):
+        return "echo 'SKIP: no changed unit test files in this worktree'", (
+            "echo 'SKIP: no changed ui test files in this worktree'"
+        )
+
+    async def fake_run_agent(spec, prompt, *, cwd, task_id=None, iteration=None, hooks=None, **kw):
+        assert spec.name == "implement-reviewer"
+        return A.AgentResult(
+            text="Skipped changed-test commands as instructed.\nIMPLEMENT_PASS\n",
+            tool_uses=[
+                {
+                    "name": "Bash",
+                    "input": {
+                        "command": "echo 'SKIP: no changed ui test files in this worktree'"
+                    },
+                }
+            ],
+            stop_reason="end_turn",
+        )
+
+    monkeypatch.setattr(P, "emit", fake_emit)
+    monkeypatch.setattr(P, "_resolve_test_commands", fake_resolve_test_commands)
+    monkeypatch.setattr(P.A, "run_agent", fake_run_agent)
+
+    ok = await P.run_impl_phase(
+        tmp_config,
+        "reviewer-echo-skip",
+        task_dir,
+        worktree_dir,
+        3,
+        skip_implementor=True,
+    )
+
+    assert ok is True
+
+
+@pytest.mark.asyncio
+async def test_run_pipeline_preserves_diagnostic_infra_escalation(tmp_config, monkeypatch):
+    """When run_impl_phase tags a specific escalation reason, the parent
+    pipeline must not overwrite it with the generic impl_review_exhausted."""
+    _make_task(tmp_config, "diag-infra", "implementing")
+    tmp_config.worktree_path("diag-infra").mkdir(parents=True, exist_ok=True)
+
+    async def fake_plan(*args, **kwargs):
+        return True
+
+    async def fake_impl(config, task_id, task_dir, worktree_dir, max_retries, **kwargs):
+        state = S.read_state(task_dir)
+        state.escalation = "diagnostic_infra_missing"
+        S.write_state(task_dir, state)
+        return False
+
+    async def fake_publish(*args, **kwargs):
+        raise AssertionError("publish must not run after impl failure")
+
+    monkeypatch.setattr(P, "run_plan_phase", fake_plan)
+    monkeypatch.setattr(P, "run_impl_phase", fake_impl)
+    monkeypatch.setattr(P, "run_publish_phase", fake_publish)
+    monkeypatch.setattr(P.W, "remove_worktree", lambda *args, **kwargs: None)
+
+    await P.run_pipeline(tmp_config, "diag-infra")
+
+    workspace = S.find_task_workspace(tmp_config, "diag-infra")
+    assert workspace is not None
+    final_state = S.read_state(workspace)
+    assert final_state.state == "needs_attention"
+    assert final_state.escalation == "diagnostic_infra_missing"
+
+
+@pytest.mark.asyncio
+async def test_run_pipeline_defaults_to_impl_review_exhausted_when_unset(
+    tmp_config, monkeypatch
+):
+    """When run_impl_phase returns False without setting escalation, the parent
+    falls back to the generic impl_review_exhausted token."""
+    _make_task(tmp_config, "diag-default", "implementing")
+    tmp_config.worktree_path("diag-default").mkdir(parents=True, exist_ok=True)
+
+    async def fake_plan(*args, **kwargs):
+        return True
+
+    async def fake_impl(*args, **kwargs):
+        return False
+
+    async def fake_publish(*args, **kwargs):
+        raise AssertionError("publish must not run after impl failure")
+
+    monkeypatch.setattr(P, "run_plan_phase", fake_plan)
+    monkeypatch.setattr(P, "run_impl_phase", fake_impl)
+    monkeypatch.setattr(P, "run_publish_phase", fake_publish)
+    monkeypatch.setattr(P.W, "remove_worktree", lambda *args, **kwargs: None)
+
+    await P.run_pipeline(tmp_config, "diag-default")
+
+    workspace = S.find_task_workspace(tmp_config, "diag-default")
+    assert workspace is not None
+    final_state = S.read_state(workspace)
+    assert final_state.state == "needs_attention"
+    assert final_state.escalation == "impl_review_exhausted"

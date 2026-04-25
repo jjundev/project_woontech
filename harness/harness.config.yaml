@@ -4,8 +4,8 @@ worktrees_dir: ../worktrees
 # Route iOS build/test execution through the wrapper so simulator selection,
 # isolated DerivedData, and Xcode/LLDB launch-infra repair are consistent.
 build_cmd: "python3 tools/xcode_test_runner.py build"
-unit_test_cmd: "python3 tools/xcode_test_runner.py test --target WoontechTests {only_testing:WoontechTests}"
-ui_test_cmd: "python3 tools/xcode_test_runner.py test --target WoontechUITests --ui {only_testing:WoontechUITests}"
+unit_test_cmd: "python3 tools/xcode_test_runner.py test --target WoontechTests --worktree-dir . {only_testing:WoontechTests}"
+ui_test_cmd: "python3 tools/xcode_test_runner.py test --target WoontechUITests --ui --worktree-dir . {only_testing:WoontechUITests}"
 
 default_max_plan_retries: 3
 default_max_impl_retries: 3

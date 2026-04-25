@@ -5,6 +5,7 @@ import re
 import shlex
 import subprocess
 import sys
+import time
 import uuid
 from pathlib import Path
 from typing import Optional
@@ -49,6 +50,7 @@ CLASS_RE = re.compile(r"class\s+(\w+)\s*:\s*[^\{]*XCTestCase")
 ONLY_TESTING_TOKEN_RE = re.compile(r"\{only_testing:(\w+)\}")
 PROJECT_SWIFT_ROOTS = ("Woontech", "WoontechTests", "WoontechUITests")
 PHASE_NAMES = ("plan", "impl", "publish")
+TEST_ARTIFACTS_SUBDIR = Path(".harness") / "test-results"
 UNEXPECTED_ESCALATIONS = {
     "plan": "plan_unexpected_error",
     "impl": "impl_unexpected_error",
@@ -86,6 +88,124 @@ def _latest_feedback(paths: list[Path]) -> list[Path]:
     rolling ledger: each new feedback file carries forward the unresolved items
     from prior iterations. Keeps prompt size O(1) instead of O(iterations)."""
     return paths[-1:] if paths else []
+
+
+_DIAG_MISSING_RE = re.compile(
+    r"DIAGNOSTIC_INFRASTRUCTURE_MISSING:\s*(\S[^\r\n]*)",
+)
+
+
+def _diagnostic_infra_signal(task_dir: Path) -> Optional[str]:
+    """Return the path the reviewer flagged as unreadable, or None.
+
+    The reviewer system prompt emits `DIAGNOSTIC_INFRASTRUCTURE_MISSING: <path>`
+    when it cannot read test failure summaries from `.harness/test-results/`.
+    This short-circuits the retry loop so we don't burn iterations on
+    hypothesis-based fixes when the diagnostic infrastructure itself is broken.
+    """
+    feedback = _latest_feedback(_all_impl_feedback(task_dir))
+    if not feedback:
+        return None
+    try:
+        body = feedback[0].read_text()
+    except OSError:
+        return None
+    match = _DIAG_MISSING_RE.search(body)
+    return match.group(1).strip() if match else None
+
+
+class DiagnosticInfrastructureError(RuntimeError):
+    def __init__(self, path: Path, reason: str) -> None:
+        self.path = path
+        self.reason = reason
+        super().__init__(
+            "test artifact persistence broken — refusing to invoke reviewer blind "
+            f"({reason}: {path})"
+        )
+
+
+def _test_artifact_paths(worktree_dir: Path, kind: str) -> tuple[Path, Path]:
+    base = worktree_dir / TEST_ARTIFACTS_SUBDIR
+    return base / f"last-{kind}-summary.txt", base / f"last-{kind}-failures.txt"
+
+
+def _assert_test_artifacts_visible(
+    worktree_dir: Path,
+    kinds: set[str],
+    since: float,
+) -> None:
+    for kind in sorted(kinds):
+        for path in _test_artifact_paths(worktree_dir, kind):
+            if not path.exists():
+                raise DiagnosticInfrastructureError(path, "missing")
+            try:
+                stat = path.stat()
+            except OSError as exc:
+                raise DiagnosticInfrastructureError(path, f"unreadable: {exc}") from exc
+            if stat.st_size == 0:
+                raise DiagnosticInfrastructureError(path, "empty")
+            if stat.st_mtime < since - 2:
+                raise DiagnosticInfrastructureError(path, "stale")
+
+
+def _test_kind_from_bash_command(command: str) -> Optional[str]:
+    try:
+        tokens = _tokenize_command(command)
+    except ValueError:
+        return None
+    if tokens[:3] != ("python3", "tools/xcode_test_runner.py", "test"):
+        return None
+    target: Optional[str] = None
+    for index, token in enumerate(tokens):
+        if token == "--target" and index + 1 < len(tokens):
+            target = tokens[index + 1]
+            break
+    if target == "WoontechUITests" or "--ui" in tokens:
+        return "ui"
+    if target == "WoontechTests":
+        return "unit"
+    return None
+
+
+def _test_kinds_from_tool_uses(tool_uses: list[dict[str, object]]) -> set[str]:
+    kinds: set[str] = set()
+    for use in tool_uses:
+        if use.get("name") != "Bash":
+            continue
+        tool_input = use.get("input")
+        if not isinstance(tool_input, dict):
+            continue
+        command = tool_input.get("command") or tool_input.get("cmd")
+        if not isinstance(command, str):
+            continue
+        kind = _test_kind_from_bash_command(command)
+        if kind is not None:
+            kinds.add(kind)
+    return kinds
+
+
+async def _record_diagnostic_infra_missing(
+    task_dir: Path,
+    task_id: str,
+    phase: str,
+    error: DiagnosticInfrastructureError,
+    *,
+    iteration: Optional[int] = None,
+) -> None:
+    state = S.read_state(task_dir)
+    if iteration is not None:
+        state.impl_retries = iteration
+        state.impl_version = iteration + 1
+    state.escalation = "diagnostic_infra_missing"
+    S.write_state(task_dir, state)
+    await emit(
+        "diagnostic_infra_missing",
+        task_id=task_id,
+        phase=phase,
+        iteration=iteration,
+        missing_path=str(error.path),
+        reason=error.reason,
+    )
 
 
 _TOKEN_DECORATION_RE = re.compile(r"[^\w\s]+")
@@ -507,6 +627,8 @@ async def run_impl_phase(
         task_id=task_id,
         bash_policy=_implementor_bash_policy(config),
     )
+    last_implementor_test_kinds: set[str] = set()
+    last_implementor_started_at = 0.0
     if skip_implementor:
         await emit(
             "impl_skipped",
@@ -541,6 +663,7 @@ Write UI tests but don't run them. Commit.
         # make the iteration look productive even when the implementor did nothing.
         _git_commit_workspace(worktree_dir, "pre-implementor workspace checkpoint")
         pre_impl_sha = _head_sha(worktree_dir)
+        last_implementor_started_at = time.time()
         result = await A.run_agent(
             A.resolve_agent(A.IMPLEMENTOR, config),
             impl_prompt,
@@ -548,6 +671,7 @@ Write UI tests but don't run them. Commit.
             task_id=task_id,
             hooks=implementor_guard,
         )
+        last_implementor_test_kinds = _test_kinds_from_tool_uses(result.tool_uses)
         initial_decision = _find_terminal_token(
             result.text, ("IMPLEMENT_DONE", "IMPLEMENT_BLOCKED")
         )
@@ -587,6 +711,22 @@ Write UI tests but don't run them. Commit.
     for iteration in range(1, max_retries + 1):
         task_dir = await _set_state(config, task_id, "impl_review")
         await emit("phase_started", task_id=task_id, phase="impl_review", iteration=iteration)
+        if last_implementor_test_kinds:
+            try:
+                _assert_test_artifacts_visible(
+                    worktree_dir,
+                    last_implementor_test_kinds,
+                    last_implementor_started_at,
+                )
+            except DiagnosticInfrastructureError as exc:
+                await _record_diagnostic_infra_missing(
+                    task_dir,
+                    task_id,
+                    "impl_review",
+                    exc,
+                    iteration=iteration,
+                )
+                return False
         latest_feedback = _latest_feedback(_all_impl_feedback(task_dir))
         new_swift_files = discover_new_swift_files(worktree_dir, config.main_branch)
         unit_cmd, ui_cmd = await _resolve_test_commands(config, worktree_dir, task_id)
@@ -619,6 +759,7 @@ If PASS, write implement-review.md and respond IMPLEMENT_PASS.
 If FAIL and reviewer patch is eligible, write implement-feedback-version-{iteration}.md, directly fix the code in the worktree, commit, and respond IMPLEMENT_FAIL.
 If FAIL and reviewer patch is not eligible, write implement-feedback-version-{iteration}.md, do not edit code, and respond IMPLEMENT_REWORK_REQUIRED.
 """
+        reviewer_started_at = time.time()
         result = await A.run_agent(
             A.resolve_agent(A.IMPLEMENT_REVIEWER, config),
             reviewer_prompt,
@@ -627,6 +768,23 @@ If FAIL and reviewer patch is not eligible, write implement-feedback-version-{it
             iteration=iteration,
             hooks=reviewer_guard,
         )
+        reviewer_test_kinds = _test_kinds_from_tool_uses(result.tool_uses)
+        if reviewer_test_kinds:
+            try:
+                _assert_test_artifacts_visible(
+                    worktree_dir,
+                    reviewer_test_kinds,
+                    reviewer_started_at,
+                )
+            except DiagnosticInfrastructureError as exc:
+                await _record_diagnostic_infra_missing(
+                    task_dir,
+                    task_id,
+                    "impl_review",
+                    exc,
+                    iteration=iteration,
+                )
+                return False
         review_decision = _find_terminal_token(
             result.text,
             ("IMPLEMENT_PASS", "IMPLEMENT_FAIL", "IMPLEMENT_REWORK_REQUIRED"),
@@ -644,6 +802,18 @@ If FAIL and reviewer patch is not eligible, write implement-feedback-version-{it
             state = S.read_state(task_dir)
             state.impl_retries = iteration
             state.impl_version = iteration + 1
+            missing_artifact = _diagnostic_infra_signal(task_dir)
+            if missing_artifact is not None:
+                state.escalation = "diagnostic_infra_missing"
+                S.write_state(task_dir, state)
+                await emit(
+                    "diagnostic_infra_missing",
+                    task_id=task_id,
+                    phase="impl_review",
+                    iteration=iteration,
+                    missing_path=missing_artifact,
+                )
+                return False
             S.write_state(task_dir, state)
             latest_rework_feedback = _latest_feedback(_all_impl_feedback(task_dir))
             task_dir = await _set_state(config, task_id, "implementing")
@@ -674,6 +844,7 @@ Commit the rework and respond IMPLEMENT_DONE, or respond IMPLEMENT_BLOCKED if yo
                 worktree_dir, f"pre-rework workspace checkpoint iter {iteration}"
             )
             pre_rework_sha = _head_sha(worktree_dir)
+            rework_started_at = time.time()
             rework_result = await A.run_agent(
                 A.resolve_agent(A.IMPLEMENTOR, config),
                 rework_prompt,
@@ -682,6 +853,10 @@ Commit the rework and respond IMPLEMENT_DONE, or respond IMPLEMENT_BLOCKED if yo
                 iteration=iteration,
                 hooks=implementor_guard,
             )
+            last_implementor_test_kinds = _test_kinds_from_tool_uses(
+                rework_result.tool_uses
+            )
+            last_implementor_started_at = rework_started_at
             rework_decision = _find_terminal_token(
                 rework_result.text, ("IMPLEMENT_DONE", "IMPLEMENT_BLOCKED")
             )
@@ -963,10 +1138,16 @@ async def run_pipeline(
                     )
                 if not impl_ok:
                     s = S.read_state(task_dir)
-                    s.escalation = "impl_review_exhausted"
-                    S.write_state(task_dir, s)
+                    if s.escalation is None:
+                        s.escalation = "impl_review_exhausted"
+                        S.write_state(task_dir, s)
                     await _set_state(config, task_id, "needs_attention")
-                    await emit("escalation", task_id=task_id, phase="impl_review")
+                    await emit(
+                        "escalation",
+                        task_id=task_id,
+                        phase="impl_review",
+                        escalation=s.escalation,
+                    )
                     return
 
             # Publish phase

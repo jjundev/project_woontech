@@ -49,17 +49,45 @@ struct WoontechApp: App {
             return args[idx + 1]
         }()
 
+        // Parse Hero mock launch args for UI tests
+        let mockHeroScore: Int? = {
+            guard let idx = args.firstIndex(of: "-mockHeroScore"),
+                  idx + 1 < args.count,
+                  let score = Int(args[idx + 1]) else { return nil }
+            return score
+        }()
+
+        let mockHeroDisplayName: String? = {
+            guard let idx = args.firstIndex(of: "-mockHeroDisplayName"),
+                  idx + 1 < args.count else { return nil }
+            return args[idx + 1]
+        }()
+
+        let mockHeroDate: Date? = {
+            guard let idx = args.firstIndex(of: "-mockHeroDate"),
+                  idx + 1 < args.count else { return nil }
+            // Accept ISO-8601 date-only strings like "2026-01-01"
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = TimeZone(secondsFromGMT: 0)
+            return formatter.date(from: args[idx + 1])
+        }()
+
         _store = StateObject(wrappedValue: OnboardingStore())
         _sajuStore = StateObject(wrappedValue: SajuInputStore(preload: preloadedProfile))
 
         // Build HomeDependencies, applying any mock overrides from launch args
         let resolvedDeps: HomeDependencies
-        if mockUnreadCount != nil || mockAvatarInitial != nil {
+        let hasAnyMockArg = mockUnreadCount != nil || mockAvatarInitial != nil
+            || mockHeroScore != nil || mockHeroDisplayName != nil || mockHeroDate != nil
+        if hasAnyMockArg {
             let userProfile: any UserProfileProviding = {
+                let name = mockHeroDisplayName ?? "홍길동"
                 if let initial = mockAvatarInitial {
-                    return MockUserProfileProvider(displayName: "홍길동", avatarInitial: initial)
+                    return MockUserProfileProvider(displayName: name, avatarInitial: initial)
                 }
-                return MockUserProfileProvider()
+                return MockUserProfileProvider(displayName: name, avatarInitial: String(name.prefix(1)))
             }()
             let notificationCenter: any NotificationCenterProviding = {
                 if let count = mockUnreadCount {
@@ -67,9 +95,21 @@ struct WoontechApp: App {
                 }
                 return MockNotificationCenterProvider()
             }()
+            let heroInvesting: any HeroInvestingProviding = {
+                MockHeroInvestingProvider(
+                    score: mockHeroScore ?? 72,
+                    oneLiner: "공격보다 관찰이 내 성향에 맞아요",
+                    displayDate: mockHeroDate ?? {
+                        var comps = DateComponents()
+                        comps.year = 2026; comps.month = 4; comps.day = 23
+                        return Calendar.current.date(from: comps) ?? Date()
+                    }()
+                )
+            }()
             resolvedDeps = HomeDependencies(
                 userProfile: userProfile,
-                notificationCenter: notificationCenter
+                notificationCenter: notificationCenter,
+                heroInvesting: heroInvesting
             )
         } else {
             resolvedDeps = HomeDependencies.mock

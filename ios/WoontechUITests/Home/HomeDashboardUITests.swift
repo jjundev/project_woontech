@@ -159,4 +159,78 @@ final class HomeDashboardUITests: XCTestCase {
         XCTAssertTrue(bellButton.waitForExistence(timeout: 3))
         XCTAssertEqual(bellButton.label, "알림 2개")
     }
+
+    // MARK: - T26: Hero 날짜 라벨 바인딩 (AC-2)
+    func test_heroDate_jan1_2026_displayedInKorean() {
+        launchWithArgs(["-openHome", "-mockHeroDate", "2026-01-01"])
+        let dateLabel = app.staticTexts["HomeHeroDate"]
+        XCTAssertTrue(dateLabel.waitForExistence(timeout: 3))
+        XCTAssertEqual(dateLabel.label, "2026.01.01 목요일")
+    }
+
+    // MARK: - T27: 인사말 displayName 반영 (AC-3)
+    func test_heroGreeting_displayName_민수() {
+        launchWithArgs(["-openHome", "-mockHeroDisplayName", "민수"])
+        let greeting = app.staticTexts["HomeHeroGreeting"]
+        XCTAssertTrue(greeting.waitForExistence(timeout: 3))
+        XCTAssertEqual(greeting.label, "민수님, 오늘의 투자 태도예요")
+    }
+
+    // MARK: - T28: Hero 카드 탭 → investing 라우트 (AC-6)
+    func test_heroCardTap_pushesInvestingRoute() {
+        launchWithArgs(["-openHome"])
+        let heroCard = app.otherElements["HomeHeroCard"]
+        XCTAssertTrue(heroCard.waitForExistence(timeout: 3))
+        heroCard.tap()
+        XCTAssertTrue(app.staticTexts["HomeRoute_investingDest"].waitForExistence(timeout: 3))
+    }
+
+    // MARK: - T29: 금기 카드 탭 → tabooPlaceholder 라우트 (AC-9)
+    func test_tabooCardTap_pushesTabooRoute() {
+        launchWithArgs(["-openHome"])
+        let tabooCard = app.otherElements["HomeInsightsCard_0"]
+        XCTAssertTrue(tabooCard.waitForExistence(timeout: 3))
+        tabooCard.tap()
+        XCTAssertTrue(app.staticTexts["HomeRoute_tabooDest"].waitForExistence(timeout: 3))
+    }
+
+    // MARK: - T30: 일진 카드 탭 → today 라우트 (AC-10)
+    func test_todayCardTap_pushesTodayRoute() {
+        launchWithArgs(["-openHome"])
+        let todayCard = app.otherElements["HomeInsightsCard_1"]
+        XCTAssertTrue(todayCard.waitForExistence(timeout: 3))
+        todayCard.tap()
+        XCTAssertTrue(app.staticTexts["HomeRoute_todayDest"].waitForExistence(timeout: 3))
+    }
+
+    // MARK: - T31: 실천 카드 탭 → practicePlaceholder 라우트 (AC-11)
+    func test_practiceCardTap_pushesPracticeRoute() {
+        launchWithArgs(["-openHome"])
+        let practiceCard = app.otherElements["HomeInsightsCard_2"]
+        XCTAssertTrue(practiceCard.waitForExistence(timeout: 3))
+        practiceCard.tap()
+        XCTAssertTrue(app.staticTexts["HomeRoute_practiceDest"].waitForExistence(timeout: 3))
+    }
+
+    // MARK: - T32: Dynamic Type XL — Hero score·oneLiner 잘림 없음 (AC-12)
+    func test_dynamicTypeXL_heroScoreAndOneLiner_notTruncated() {
+        app.launchEnvironment["UIContentSizeCategoryOverride"] = "UICTContentSizeCategoryAccessibilityL"
+        launchWithArgs(["-openHome"])
+        let score = app.staticTexts["HomeHeroScore"]
+        let oneLiner = app.staticTexts.matching(identifier: "HomeHeroOneLiner").firstMatch
+        XCTAssertTrue(score.waitForExistence(timeout: 3))
+        XCTAssertTrue(oneLiner.exists)
+        XCTAssertGreaterThan(score.frame.height, 0)
+        XCTAssertGreaterThan(oneLiner.frame.height, 0)
+    }
+
+    // MARK: - T33: Insights 가로 스크롤 — 3번째 카드 접근 가능 (AC-13)
+    func test_insightsHorizontalScroll_thirdCardReachable() {
+        launchWithArgs(["-openHome"])
+        XCTAssertTrue(app.otherElements["HomeInsightsCard_0"].waitForExistence(timeout: 3))
+        let scrollView = app.scrollViews.firstMatch
+        scrollView.swipeLeft()
+        XCTAssertTrue(app.otherElements["HomeInsightsCard_2"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["오늘의 실천"].exists)
+    }
 }

@@ -21,8 +21,21 @@ struct HomeDashboardView: View {
 
             NavigationStack(path: $navigationPath) {
                 ScrollView {
-                    Text("준비중")
-                        .accessibilityIdentifier("HomeDashboardContentPlaceholder")
+                    VStack(spacing: 0) {
+                        HeroInvestingCardView(
+                            provider: homeDeps.heroInvesting,
+                            userProfile: homeDeps.userProfile,
+                            onTap: { navigationPath.append(.investing) }
+                        )
+
+                        InsightsScrollView(
+                            provider: homeDeps.insights,
+                            onTabooTap: { navigationPath.append(.tabooPlaceholder) },
+                            onTodayTap: { navigationPath.append(.today) },
+                            onPracticeTap: { navigationPath.append(.practicePlaceholder) }
+                        )
+                    }
+                    .accessibilityIdentifier("HomeDashboardContent")
                 }
                 .toolbar(.hidden, for: .navigationBar)
                 .navigationDestination(for: HomeRoute.self) { route in

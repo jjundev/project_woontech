@@ -1,0 +1,17 @@
+{
+  "id": "WF3-06-detail-today",
+  "state": "planning",
+  "paused_from": null,
+  "title": "WF3-06 \u2014 \uc624\ub298\uc758 \uc77c\uc9c4 \uc0c1\uc138 (Insights \uc77c\uc9c4 \uce74\ub4dc \ud0ed \ubaa9\uc801\uc9c0)",
+  "plan_version": 0,
+  "impl_version": 0,
+  "plan_retries": 0,
+  "impl_retries": 0,
+  "max_plan_retries": 3,
+  "max_impl_retries": 3,
+  "escalation": null,
+  "created_at": 1777093892.173453,
+  "updated_at": 1777093892.174381,
+  "branch": "feature/WF3-06-detail-today",
+  "pr_url": null
+}

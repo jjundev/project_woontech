@@ -1,5 +1,7 @@
 import SwiftUI
 
+// Deprecated - replaced with actual InvestingAttitudeDetailView
+@available(*, deprecated, message: "Use InvestingAttitudeDetailView instead")
 struct InvestingPlaceholderView: View {
     var body: some View {
         Text("준비중")

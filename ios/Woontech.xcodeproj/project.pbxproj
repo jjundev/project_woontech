@@ -89,6 +89,10 @@
 		B0010203000000000000A203 /* SajuSignUpUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010203000000000000A203 /* SajuSignUpUITests.swift */; };
 		B0010204000000000000A204 /* SajuReferralUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010204000000000000A204 /* SajuReferralUITests.swift */; };
 		B0010205000000000000A205 /* SajuAccessibilityUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010205000000000000A205 /* SajuAccessibilityUITests.swift */; };
+		B0010300000000000000B300 /* InvestingAttitudeDetailProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010300000000000000A300 /* InvestingAttitudeDetailProviding.swift */; };
+		B0010301000000000000B301 /* InvestingAttitudeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010301000000000000A301 /* InvestingAttitudeDetailView.swift */; };
+		B0010302000000000000B302 /* InvestingAttitudeDetailViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010302000000000000A302 /* InvestingAttitudeDetailViewTests.swift */; };
+		B0010303000000000000B303 /* InvestingAttitudeDetailUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010303000000000000A303 /* InvestingAttitudeDetailUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -194,6 +198,10 @@
 		A0010203000000000000A203 /* SajuSignUpUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuSignUpUITests.swift; sourceTree = "<group>"; };
 		A0010204000000000000A204 /* SajuReferralUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuReferralUITests.swift; sourceTree = "<group>"; };
 		A0010205000000000000A205 /* SajuAccessibilityUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuAccessibilityUITests.swift; sourceTree = "<group>"; };
+		A0010300000000000000A300 /* InvestingAttitudeDetailProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvestingAttitudeDetailProviding.swift; sourceTree = "<group>"; };
+		A0010301000000000000A301 /* InvestingAttitudeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvestingAttitudeDetailView.swift; sourceTree = "<group>"; };
+		A0010302000000000000A302 /* InvestingAttitudeDetailViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvestingAttitudeDetailViewTests.swift; sourceTree = "<group>"; };
+		A0010303000000000000A303 /* InvestingAttitudeDetailUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvestingAttitudeDetailUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -319,6 +327,7 @@
 			isa = PBXGroup;
 			children = (
 				A001006C000000000000A06C /* HomeDashboardUITests.swift */,
+				A0010303000000000000A303 /* InvestingAttitudeDetailUITests.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -364,6 +373,7 @@
 			children = (
 				A001006B000000000000A06B /* HomeDashboardTests.swift */,
 				A0010076000000000000A076 /* WeeklyEventsTests.swift */,
+				A0010302000000000000A302 /* InvestingAttitudeDetailViewTests.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -436,6 +446,7 @@
 			isa = PBXGroup;
 			children = (
 				A0010907000000000000A907 /* Providers */,
+				A0010912000000000000A912 /* Detail */,
 				A0010911000000000000A911 /* Views */,
 				A0010061000000000000A061 /* HomeRoute.swift */,
 				A0010062000000000000A062 /* HomeDependencies.swift */,
@@ -450,6 +461,23 @@
 				A001006F000000000000A06F /* InsightCardView.swift */,
 			);
 			path = Home;
+			sourceTree = "<group>";
+		};
+		A0010912000000000000A912 /* Detail */ = {
+			isa = PBXGroup;
+			children = (
+				A0010913000000000000A913 /* Investing */,
+			);
+			path = Detail;
+			sourceTree = "<group>";
+		};
+		A0010913000000000000A913 /* Investing */ = {
+			isa = PBXGroup;
+			children = (
+				A0010300000000000000A300 /* InvestingAttitudeDetailProviding.swift */,
+				A0010301000000000000A301 /* InvestingAttitudeDetailView.swift */,
+			);
+			path = Investing;
 			sourceTree = "<group>";
 		};
 		A0010907000000000000A907 /* Providers */ = {
@@ -595,6 +623,7 @@
 				B0010107000000000000A107 /* SajuResultAccuracyTests.swift in Sources */,
 				B001006B000000000000A06B /* HomeDashboardTests.swift in Sources */,
 				B0010076000000000000A076 /* WeeklyEventsTests.swift in Sources */,
+				B0010302000000000000B302 /* InvestingAttitudeDetailViewTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -664,6 +693,8 @@
 				B0010073000000000000A073 /* WeeklyEventsSection.swift in Sources */,
 				B0010074000000000000A074 /* ShareHookCard.swift in Sources */,
 				B0010075000000000000A075 /* ProTeaserCard.swift in Sources */,
+				B0010300000000000000B300 /* InvestingAttitudeDetailProviding.swift in Sources */,
+				B0010301000000000000B301 /* InvestingAttitudeDetailView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -678,6 +709,7 @@
 				B0010204000000000000A204 /* SajuReferralUITests.swift in Sources */,
 				B0010205000000000000A205 /* SajuAccessibilityUITests.swift in Sources */,
 				B001006C000000000000A06C /* HomeDashboardUITests.swift in Sources */,
+				B0010303000000000000B303 /* InvestingAttitudeDetailUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

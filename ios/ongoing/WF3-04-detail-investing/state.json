@@ -1,0 +1,17 @@
+{
+  "id": "WF3-04-detail-investing",
+  "state": "implementing",
+  "paused_from": null,
+  "title": "WF3-04 \u2014 \ud22c\uc790 \ud0dc\ub3c4 \uc0c1\uc138 (Hero \ud0ed \ubaa9\uc801\uc9c0)",
+  "plan_version": 0,
+  "impl_version": 0,
+  "plan_retries": 0,
+  "impl_retries": 0,
+  "max_plan_retries": 3,
+  "max_impl_retries": 3,
+  "escalation": null,
+  "created_at": 1777090564.342298,
+  "updated_at": 1777090758.0321898,
+  "branch": "feature/WF3-04-detail-investing",
+  "pr_url": null
+}

@@ -429,3 +429,30 @@ def test_worktree_dir_defaults_to_ios_root(monkeypatch):
     monkeypatch.delenv(runner.ENV_WORKTREE_DIR, raising=False)
     monkeypatch.delenv(runner.ENV_CLAUDE_PROJECT_DIR, raising=False)
     assert runner.worktree_dir() == runner.ios_root()
+
+
+def test_run_test_persists_placeholder_when_resolve_simulator_raises(monkeypatch, tmp_path):
+    """run_test() must always leave a last-{mode}-summary.txt behind.
+
+    If `resolve_simulator` raises before xcodebuild starts (UI sim missing,
+    simctl crash, etc.), the harness would otherwise see no summary file and
+    escalate as `diagnostic_infra_missing`, masking the real failure. The
+    finally-block placeholder keeps the diagnostic visible.
+    """
+    monkeypatch.setattr(runner, "DERIVED_DATA_ROOT", tmp_path / "derived")
+    monkeypatch.setenv(runner.ENV_WORKTREE_DIR, str(tmp_path / "worktree"))
+
+    def boom(*, ui):
+        raise runner.RunnerError("no UI simulator available")
+
+    monkeypatch.setattr(runner, "resolve_simulator", boom)
+
+    with pytest.raises(runner.RunnerError):
+        runner.run_test("WoontechUITests", ui=True, xcodebuild_args=[])
+
+    out_dir = tmp_path / "worktree" / runner.TEST_ARTIFACTS_SUBDIR
+    summary = out_dir / "last-ui-summary.txt"
+    failures = out_dir / "last-ui-failures.txt"
+    assert summary.exists(), "summary placeholder must be written even on early failure"
+    assert failures.exists()
+    assert "no xcresult bundle found" in summary.read_text()

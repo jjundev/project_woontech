@@ -24,6 +24,8 @@ ENV_SIMULATOR_UDID = "WOONTECH_SIMULATOR_UDID"
 ENV_DEEP_REPAIR = "WOONTECH_XCODE_DEEP_REPAIR"
 ENV_WORKTREE_DIR = "WOONTECH_WORKTREE_DIR"
 ENV_CLAUDE_PROJECT_DIR = "CLAUDE_PROJECT_DIR"
+ENV_PREFLIGHT_SKIP = "WOONTECH_PREFLIGHT_SKIP"
+PREFLIGHT_LOCK_PATH = DERIVED_DATA_ROOT / ".preflight.lock"
 TEST_ARTIFACTS_SUBDIR = Path(".harness") / "test-results"
 LLDB_ENV_FAILURE_SIGNATURES = (
     "DebuggerVersionStore",
@@ -43,6 +45,19 @@ CORESIM_ENV_FAILURE_SIGNATURES = (
 
 class RunnerError(RuntimeError):
     pass
+
+
+@dataclass(frozen=True)
+class PreflightFailure:
+    check: str
+    detail: str
+    remediation: str
+
+
+class PreflightError(RunnerError):
+    def __init__(self, failure: PreflightFailure):
+        self.failure = failure
+        super().__init__(f"preflight {failure.check} failed: {failure.detail}")
 
 
 @dataclass(frozen=True)
@@ -198,6 +213,7 @@ def _persist_test_artifacts(
     *,
     exit_code: int = 0,
     simulator_udid: str | None = None,
+    preflight_failure: PreflightFailure | None = None,
 ) -> None:
     """Mirror the current xcresult bundle and human-readable summaries into the worktree.
 
@@ -205,6 +221,10 @@ def _persist_test_artifacts(
     Reviewer agent cannot read xcresult bundles directly under DERIVED_DATA_ROOT.
     Persisting summaries inside the worktree keeps failure diagnostics visible via
     the Read tool without weakening the bash policy.
+
+    When `preflight_failure` is provided, the placeholder body is prepended with a
+    structured `preflight_failed:` line so the reviewer agent can key off that prefix
+    instead of seeing an opaque "no xcresult bundle found" message.
     """
     out_dir = target_dir / TEST_ARTIFACTS_SUBDIR
     try:
@@ -218,7 +238,14 @@ def _persist_test_artifacts(
     bundle_dest = out_dir / f"last-{test_kind}.xcresult"
 
     if not bundle.is_dir():
-        message = (
+        prefix = ""
+        if preflight_failure is not None:
+            prefix = (
+                f"preflight_failed: {preflight_failure.check}: "
+                f"{preflight_failure.detail} "
+                f"(remediation: {preflight_failure.remediation})\n"
+            )
+        message = prefix + (
             f"[no xcresult bundle found]\n"
             f"expected_bundle: {bundle}\n"
             f"This usually means xcodebuild failed before producing a result bundle "
@@ -413,7 +440,16 @@ def repair_environment(*, simulator_udid: str | None, derived_data_path: Path) -
     if simulator_udid:
         _run_quiet(["xcrun", "simctl", "shutdown", simulator_udid])
     _run_quiet(["killall", "-9", "com.apple.CoreSimulator.CoreSimulatorService"])
+    # simdiskimaged is a separate launchd-managed daemon that frequently crashes
+    # alongside (or independently of) CoreSimulatorService. launchd will revive
+    # it, but only after the corrupt state goes away.
+    _run_quiet(["killall", "-9", "simdiskimaged"])
     time.sleep(2)
+    # The CoreSimulator caches (disk images, runtime metadata) commonly carry
+    # the corruption forward across daemon restarts; clear them every repair.
+    # The heavier Xcode/DerivedData caches stay behind WOONTECH_XCODE_DEEP_REPAIR
+    # because wiping them triples cold-build time.
+    _remove_path(Path.home() / "Library/Developer/CoreSimulator/Caches")
     if simulator_udid:
         _run_quiet(["xcrun", "simctl", "erase", simulator_udid])
     _remove_path(derived_data_path)
@@ -450,6 +486,386 @@ def _xcodebuild_base(derived_data_path: Path) -> list[str]:
         "-derivedDataPath",
         str(derived_data_path),
     ]
+
+
+def _preflight_log(message: str) -> None:
+    print(f"[preflight] {message}", flush=True)
+
+
+_PREFLIGHT_LOCK_UNAVAILABLE = object()
+
+
+def _try_acquire_preflight_lock() -> Any:
+    """Best-effort exclusive lock so concurrent test runs don't kill each other's
+    CoreSimulatorService during remediation.
+
+    Returns:
+        - a locked file handle when the lock was acquired
+        - None when another process currently holds the lock (skip remediation)
+        - `_PREFLIGHT_LOCK_UNAVAILABLE` when the lock file path is unwritable in
+          the current sandbox (proceed with remediation; locking is unavailable
+          here and we'd rather repair than refuse).
+    """
+    import fcntl
+
+    try:
+        PREFLIGHT_LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
+        handle = open(PREFLIGHT_LOCK_PATH, "w")
+    except OSError:
+        return _PREFLIGHT_LOCK_UNAVAILABLE
+    try:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return handle
+    except BlockingIOError:
+        try:
+            handle.close()
+        except Exception:
+            pass
+        return None
+    except OSError:
+        try:
+            handle.close()
+        except Exception:
+            pass
+        return _PREFLIGHT_LOCK_UNAVAILABLE
+
+
+def _shorten_detail(text: str, *, limit: int = 200) -> str:
+    """Collapse multi-line subprocess output to a single short line so log lines
+    and placeholder summaries stay scannable. Long stderr from `simctl` etc. is
+    informative as a stream but useless in a one-line failure detail.
+    """
+    first = ""
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped:
+            first = stripped
+            break
+    if not first:
+        first = text.strip()
+    if len(first) > limit:
+        first = first[: limit - 1] + "…"
+    return first
+
+
+def preflight_check(*, ui: bool, derived_data_path: Path) -> None:
+    """Verify Xcode toolchain, simctl responsiveness, target simulator availability,
+    and writable derived-data path before xcodebuild is invoked. Each check has its
+    own remediation policy (one retry max). Raises `PreflightError` on terminal
+    failure so `run_test()`'s `finally` block can write a placeholder summary file
+    visible to the harness reviewer.
+
+    Honors `WOONTECH_PREFLIGHT_SKIP=1` for CI/headless escape and
+    `WOONTECH_SIMULATOR_UDID` via the existing `resolve_simulator()` path.
+    """
+    if os.environ.get(ENV_PREFLIGHT_SKIP) == "1":
+        _preflight_log("skipped (WOONTECH_PREFLIGHT_SKIP=1)")
+        return
+
+    started = time.monotonic()
+
+    def _check_xcode_select() -> None:
+        try:
+            result = subprocess.run(
+                ["xcode-select", "-p"],
+                capture_output=True,
+                text=True,
+                timeout=4,
+            )
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            raise PreflightError(
+                PreflightFailure("xcode_select", f"xcode-select -p failed: {exc}", "none")
+            )
+        if result.returncode != 0:
+            raise PreflightError(
+                PreflightFailure(
+                    "xcode_select",
+                    _shorten_detail(
+                        f"xcode-select -p exit {result.returncode}: "
+                        f"{result.stderr or result.stdout}"
+                    ),
+                    "none — run: sudo xcode-select -s /Applications/Xcode.app",
+                )
+            )
+        path = (result.stdout or "").strip()
+        if not path or "/Contents/Developer" not in path:
+            raise PreflightError(
+                PreflightFailure(
+                    "xcode_select",
+                    f"unexpected developer dir: {path!r}",
+                    "none — run: sudo xcode-select -s /Applications/Xcode.app",
+                )
+            )
+
+    def _check_simctl_responsive() -> dict[str, Any]:
+        try:
+            result = subprocess.run(
+                ["xcrun", "simctl", "list", "devices", "available", "--json"],
+                capture_output=True,
+                text=True,
+                timeout=4,
+            )
+        except subprocess.TimeoutExpired:
+            raise PreflightError(
+                PreflightFailure(
+                    "simctl_responsive",
+                    "xcrun simctl list devices timed out after 4s",
+                    "none",
+                )
+            )
+        except OSError as exc:
+            raise PreflightError(
+                PreflightFailure("simctl_responsive", f"xcrun invocation failed: {exc}", "none")
+            )
+        if result.returncode != 0:
+            raise PreflightError(
+                PreflightFailure(
+                    "simctl_responsive",
+                    _shorten_detail(
+                        f"xcrun simctl exit {result.returncode}: "
+                        f"{result.stderr or result.stdout}"
+                    ),
+                    "none",
+                )
+            )
+        try:
+            return json.loads(result.stdout)
+        except json.JSONDecodeError as exc:
+            raise PreflightError(
+                PreflightFailure("simctl_responsive", f"simctl output not JSON: {exc}", "none")
+            )
+
+    def _check_simdiskimaged_responsive() -> None:
+        # simdiskimaged is a separate launchd daemon. simctl can answer
+        # `list devices` even when simdiskimaged is dead, so we look for the
+        # specific failure signatures that show up in stderr/stdout when the
+        # daemon is unresponsive. `pgrep simdiskimaged` is unreliable because
+        # launchd revives a zombie shell process even when the service XPC is
+        # dead.
+        try:
+            result = subprocess.run(
+                ["xcrun", "simctl", "list", "runtimes", "--json"],
+                capture_output=True,
+                text=True,
+                timeout=4,
+            )
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            raise PreflightError(
+                PreflightFailure(
+                    "simdiskimaged_responsive",
+                    f"xcrun simctl list runtimes failed: {exc}",
+                    "none",
+                )
+            )
+        combined = (result.stderr or "") + "\n" + (result.stdout or "")
+        bad_signatures = (
+            "simdiskimaged crashed",
+            "simdiskimaged returned error",
+            "Could not kickstart simdiskimaged",
+            "service used to manage runtime disk images",
+        )
+        for sig in bad_signatures:
+            if sig in combined:
+                raise PreflightError(
+                    PreflightFailure(
+                        "simdiskimaged_responsive",
+                        _shorten_detail(f"simdiskimaged unhealthy: {combined}"),
+                        "none",
+                    )
+                )
+
+    def _check_runtimes_available() -> None:
+        try:
+            result = subprocess.run(
+                ["xcrun", "simctl", "list", "runtimes", "--json"],
+                capture_output=True,
+                text=True,
+                timeout=4,
+            )
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            raise PreflightError(
+                PreflightFailure(
+                    "coresim_runtime_available",
+                    f"xcrun simctl list runtimes failed: {exc}",
+                    "none",
+                )
+            )
+        if result.returncode != 0:
+            raise PreflightError(
+                PreflightFailure(
+                    "coresim_runtime_available",
+                    _shorten_detail(
+                        f"exit {result.returncode}: {result.stderr or result.stdout}"
+                    ),
+                    "none",
+                )
+            )
+        try:
+            payload = json.loads(result.stdout)
+        except json.JSONDecodeError as exc:
+            raise PreflightError(
+                PreflightFailure(
+                    "coresim_runtime_available", f"runtimes output not JSON: {exc}", "none"
+                )
+            )
+        if not payload.get("runtimes"):
+            raise PreflightError(
+                PreflightFailure(
+                    "coresim_runtime_available", "no runtimes returned by simctl", "none"
+                )
+            )
+
+    def _check_target_simulator(devices_json: dict[str, Any]) -> SimulatorDevice:
+        if not flatten_available_devices(devices_json):
+            raise PreflightError(
+                PreflightFailure(
+                    "no_simulators_installed",
+                    "no available iOS simulators on this host",
+                    "none — install simulator runtimes via Xcode",
+                )
+            )
+        try:
+            return resolve_simulator(ui=ui)
+        except RunnerError as exc:
+            raise PreflightError(
+                PreflightFailure("target_simulator_resolvable", str(exc), "none")
+            )
+
+    def _check_simulator_bootable(udid: str) -> None:
+        try:
+            result = subprocess.run(
+                ["xcrun", "simctl", "listapps", udid],
+                capture_output=True,
+                text=True,
+                timeout=4,
+            )
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            raise PreflightError(
+                PreflightFailure(
+                    "simulator_bootable", f"simctl listapps {udid} failed: {exc}", "none"
+                )
+            )
+        if result.returncode != 0:
+            raise PreflightError(
+                PreflightFailure(
+                    "simulator_bootable",
+                    _shorten_detail(
+                        f"simctl listapps exit {result.returncode}: "
+                        f"{result.stderr or result.stdout}"
+                    ),
+                    "none",
+                )
+            )
+
+    def _check_derived_data_writable() -> None:
+        try:
+            derived_data_path.mkdir(parents=True, exist_ok=True)
+            probe = derived_data_path / ".preflight"
+            probe.write_text("ok")
+            probe.unlink()
+        except OSError as exc:
+            raise PreflightError(
+                PreflightFailure(
+                    "derived_data_writable",
+                    f"cannot write {derived_data_path}: {exc}",
+                    "none",
+                )
+            )
+
+    def _remediate_with_repair(reason: str) -> str:
+        lock = _try_acquire_preflight_lock()
+        if lock is None:
+            return "skipped (lock held by concurrent test run)"
+        held = lock is not _PREFLIGHT_LOCK_UNAVAILABLE
+        try:
+            note = "" if held else " (lock unavailable in sandbox)"
+            _preflight_log(
+                f"remediating ({reason}): repair_environment (kill CoreSim + erase){note}"
+            )
+            repair_environment(simulator_udid=None, derived_data_path=derived_data_path)
+            return "repair_environment" if held else "repair_environment (no lock)"
+        finally:
+            if held:
+                try:
+                    lock.close()
+                except Exception:
+                    pass
+
+    def _run_with_remediation(
+        name: str, fn, remediation_fn=None
+    ) -> Any:
+        check_started = time.monotonic()
+        try:
+            value = fn()
+            elapsed_ms = int((time.monotonic() - check_started) * 1000)
+            _preflight_log(f"{name} ... ok ({elapsed_ms}ms)")
+            return value
+        except PreflightError as exc:
+            _preflight_log(f"{name} ... FAIL: {exc.failure.detail}")
+            if remediation_fn is None:
+                raise
+            remediation = remediation_fn(name)
+            try:
+                value = fn()
+            except PreflightError as retry_exc:
+                _preflight_log(
+                    f"{name} (retry) ... FAIL: {retry_exc.failure.detail}"
+                )
+                raise PreflightError(
+                    PreflightFailure(
+                        retry_exc.failure.check,
+                        retry_exc.failure.detail,
+                        remediation,
+                    )
+                )
+            elapsed_ms = int((time.monotonic() - check_started) * 1000)
+            _preflight_log(f"{name} (retry) ... ok ({elapsed_ms}ms)")
+            return value
+
+    try:
+        _run_with_remediation("xcode_select", _check_xcode_select)
+        devices_json = _run_with_remediation(
+            "simctl_responsive",
+            _check_simctl_responsive,
+            remediation_fn=lambda _name: _remediate_with_repair("simctl_responsive"),
+        )
+        _run_with_remediation(
+            "simdiskimaged_responsive",
+            _check_simdiskimaged_responsive,
+            remediation_fn=lambda _name: _remediate_with_repair("simdiskimaged_responsive"),
+        )
+        _run_with_remediation(
+            "coresim_runtime_available",
+            _check_runtimes_available,
+            remediation_fn=lambda _name: _remediate_with_repair("coresim_runtime_available"),
+        )
+        simulator = _run_with_remediation(
+            "target_simulator_resolvable",
+            lambda: _check_target_simulator(devices_json),
+            remediation_fn=lambda _name: _remediate_with_repair("target_simulator_resolvable"),
+        )
+        if ui and simulator.state == "Booted":
+            _run_with_remediation(
+                "simulator_bootable",
+                lambda: _check_simulator_bootable(simulator.udid),
+                remediation_fn=lambda _name: (
+                    reset_simulator(simulator.udid) or "reset_simulator"
+                ),
+            )
+        _run_with_remediation(
+            "derived_data_writable",
+            _check_derived_data_writable,
+            remediation_fn=lambda _name: (_remove_path(derived_data_path) or "remove_derived_data"),
+        )
+    except PreflightError as exc:
+        _preflight_log(
+            f"ABORT check={exc.failure.check} detail={exc.failure.detail!r} "
+            f"remediation_attempted={exc.failure.remediation!r}"
+        )
+        raise
+
+    elapsed = time.monotonic() - started
+    _preflight_log(f"passed in {elapsed:.1f}s")
 
 
 def run_with_optional_repair(
@@ -500,8 +916,14 @@ def run_test(
     result_bundle_path = _result_bundle_path(derived_data_path, mode)
     target_worktree = worktree_dir(worktree_dir_override)
     simulator_udid: str | None = None
+    pre_failure: PreflightFailure | None = None
     code = 1
     try:
+        try:
+            preflight_check(ui=ui, derived_data_path=derived_data_path)
+        except PreflightError as exc:
+            pre_failure = exc.failure
+            raise
         simulator = resolve_simulator(ui=ui)
         simulator_udid = simulator.udid
         if ui:
@@ -532,6 +954,7 @@ def run_test(
                 target_worktree,
                 exit_code=code,
                 simulator_udid=simulator_udid if ui else None,
+                preflight_failure=pre_failure,
             )
         except Exception as exc:  # noqa: BLE001 — never let persist break the runner
             print(

@@ -39,7 +39,6 @@ struct TodayDetailView: View {
 
                     if !provider.hapchungEvents.isEmpty {
                         HapchungCard(events: provider.hapchungEvents)
-                            .accessibilityIdentifier("HapchungSection")
                     }
 
                     if let motto = provider.dailyMotto {
@@ -264,6 +263,8 @@ private struct HapchungCard: View {
             RoundedRectangle(cornerRadius: 6)
                 .stroke(DesignTokens.line3, lineWidth: 1)
         )
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("HapchungSection")
     }
 }
 
@@ -327,7 +328,9 @@ private struct HapchungRowView: View {
                         : StrokeStyle(lineWidth: 1)
                 )
         )
-        .accessibilityElement(children: .ignore)
+        // children: .contain — 컨테이너로 노출하면서 내부 식별자(`HapchungRow_<index>_Score`,
+        // `HapchungRow_<index>_NegativeStyle`)도 XCUITest 쿼리 가능 (.ignore는 children을 collapse).
+        .accessibilityElement(children: .contain)
         .accessibilityLabel("\(event.branch1.hanja) \(symbol) \(event.branch2.hanja), \(event.kind), \(event.score)점")
         .accessibilityIdentifier("HapchungRow_\(index)")
     }

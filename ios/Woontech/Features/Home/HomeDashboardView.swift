@@ -5,6 +5,10 @@ struct HomeDashboardView: View {
     @State private var navigationPath: [HomeRoute] = []
     @State private var bellTapCount = 0
     @State private var avatarTapCount = 0
+    @State private var calendarTapCount = 0
+    @State private var sharePreviewTapCount = 0
+    @State private var shareTapCount = 0
+    @State private var proTrialTapCount = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -34,6 +38,26 @@ struct HomeDashboardView: View {
                             onTodayTap: { navigationPath.append(.today) },
                             onPracticeTap: { navigationPath.append(.practicePlaceholder) }
                         )
+
+                        WeeklyEventsSection(
+                            provider: homeDeps.weeklyEvents,
+                            onCalendarTap: { calendarTapCount += 1 },
+                            onEventTap: { event in navigationPath.append(.event(event)) }
+                        )
+
+                        ShareHookCard(
+                            onSharePreviewTap: { sharePreviewTapCount += 1 },
+                            onShareTap: { shareTapCount += 1 }
+                        )
+
+                        ProTeaserCard(
+                            provider: homeDeps.weeklyEvents,
+                            onProTrialTap: { proTrialTapCount += 1 }
+                        )
+
+                        DisclaimerView()
+                            .padding(.top, 12)
+                            .padding(.bottom, 65)
                     }
                     .accessibilityIdentifier("HomeDashboardContent")
                 }
@@ -65,6 +89,14 @@ struct HomeDashboardView: View {
                     .accessibilityIdentifier("HomeBellTapCount")
                 Text("\(avatarTapCount)")
                     .accessibilityIdentifier("HomeAvatarTapCount")
+                Text("\(calendarTapCount)")
+                    .accessibilityIdentifier("HomeCalendarTapCount")
+                Text("\(sharePreviewTapCount)")
+                    .accessibilityIdentifier("HomeSharePreviewTapCount")
+                Text("\(shareTapCount)")
+                    .accessibilityIdentifier("HomeShareTapCount")
+                Text("\(proTrialTapCount)")
+                    .accessibilityIdentifier("HomeProTrialTapCount")
             }
             .opacity(0)
             .allowsHitTesting(false)
@@ -81,7 +113,7 @@ struct HomeDashboardView: View {
                 .opacity(0)
 
                 Button {
-                    navigationPath.append(.event(WeeklyEvent()))
+                    navigationPath.append(.event(MockWeeklyEventsProvider().events()[0]))
                 } label: {
                     Rectangle().fill(Color.clear).frame(width: 1, height: 1)
                 }

@@ -25,10 +25,17 @@ Your task (in order):
    the current code or checklist clearly proves it is resolved.
 2. Inspect the code in the worktree. Verify every checklist item is implemented.
 3. Run the build command. Run the unit tests. Run the UI tests. All must pass.
+   The UI test command always includes the mandatory launch-arg contract class
+   (`AppLaunchContractUITests`). A failure in that class is a blocking
+   source-level regression in the app's launch / routing code, not an
+   infrastructure flake — never advance to publish on such a failure, and do
+   not retry the UI command in hopes of a different result.
    If a test command exits non-zero, **before forming any hypothesis**, Read
    the diagnostic files the runner mirrors into the worktree:
    - `.harness/test-results/last-unit-summary.txt`, `.harness/test-results/last-unit-failures.txt`
    - `.harness/test-results/last-ui-summary.txt`, `.harness/test-results/last-ui-failures.txt`
+   - On UI failure, additionally Read `.harness/test-results/last-ui-screenshot.png`
+     (what the simulator actually showed) and `.harness/test-results/last-ui-environment.txt`.
    Quote the actual failing assertion / error message in the feedback's
    `Build / Test failures` section. Do not propose a fix from the streamed
    xcodebuild stdout alone — that output lacks the structured per-test failure

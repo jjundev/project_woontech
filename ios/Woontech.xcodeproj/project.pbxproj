@@ -89,6 +89,7 @@
 		B0010203000000000000A203 /* SajuSignUpUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010203000000000000A203 /* SajuSignUpUITests.swift */; };
 		B0010204000000000000A204 /* SajuReferralUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010204000000000000A204 /* SajuReferralUITests.swift */; };
 		B0010205000000000000A205 /* SajuAccessibilityUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010205000000000000A205 /* SajuAccessibilityUITests.swift */; };
+		B0010206000000000000A206 /* AppLaunchContractUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010206000000000000A206 /* AppLaunchContractUITests.swift */; };
 		B0010300000000000000B300 /* InvestingAttitudeDetailProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010300000000000000A300 /* InvestingAttitudeDetailProviding.swift */; };
 		B0010301000000000000B301 /* InvestingAttitudeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010301000000000000A301 /* InvestingAttitudeDetailView.swift */; };
 		B0010302000000000000B302 /* InvestingAttitudeDetailViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010302000000000000A302 /* InvestingAttitudeDetailViewTests.swift */; };
@@ -198,6 +199,7 @@
 		A0010203000000000000A203 /* SajuSignUpUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuSignUpUITests.swift; sourceTree = "<group>"; };
 		A0010204000000000000A204 /* SajuReferralUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuReferralUITests.swift; sourceTree = "<group>"; };
 		A0010205000000000000A205 /* SajuAccessibilityUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuAccessibilityUITests.swift; sourceTree = "<group>"; };
+		A0010206000000000000A206 /* AppLaunchContractUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLaunchContractUITests.swift; sourceTree = "<group>"; };
 		A0010300000000000000A300 /* InvestingAttitudeDetailProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvestingAttitudeDetailProviding.swift; sourceTree = "<group>"; };
 		A0010301000000000000A301 /* InvestingAttitudeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvestingAttitudeDetailView.swift; sourceTree = "<group>"; };
 		A0010302000000000000A302 /* InvestingAttitudeDetailViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvestingAttitudeDetailViewTests.swift; sourceTree = "<group>"; };
@@ -319,6 +321,7 @@
 				A0010203000000000000A203 /* SajuSignUpUITests.swift */,
 				A0010204000000000000A204 /* SajuReferralUITests.swift */,
 				A0010205000000000000A205 /* SajuAccessibilityUITests.swift */,
+				A0010206000000000000A206 /* AppLaunchContractUITests.swift */,
 			);
 			path = WoontechUITests;
 			sourceTree = "<group>";
@@ -708,6 +711,7 @@
 				B0010203000000000000A203 /* SajuSignUpUITests.swift in Sources */,
 				B0010204000000000000A204 /* SajuReferralUITests.swift in Sources */,
 				B0010205000000000000A205 /* SajuAccessibilityUITests.swift in Sources */,
+				B0010206000000000000A206 /* AppLaunchContractUITests.swift in Sources */,
 				B001006C000000000000A06C /* HomeDashboardUITests.swift in Sources */,
 				B0010303000000000000B303 /* InvestingAttitudeDetailUITests.swift in Sources */,
 			);

@@ -25,6 +25,7 @@ class HarnessConfig:
     host: str = "127.0.0.1"
     port: int = 8765
     agent_models: dict[str, Optional[str]] = field(default_factory=dict)
+    always_ui_test_classes: list[str] = field(default_factory=list)
 
     @property
     def todo_dir(self) -> Path:
@@ -72,6 +73,11 @@ def load_config(path: Optional[Path] = None) -> HarnessConfig:
         else:
             raise ValueError(f"agents.{name} must be a mapping, got {type(entry).__name__}")
 
+    always_ui_raw = data.get("always_ui_test_classes") or []
+    if not isinstance(always_ui_raw, list) or not all(isinstance(item, str) for item in always_ui_raw):
+        raise ValueError("always_ui_test_classes must be a list of strings")
+    always_ui_test_classes = list(always_ui_raw)
+
     return HarnessConfig(
         ios_root=ios_root,
         worktrees_dir=worktrees_dir,
@@ -85,4 +91,5 @@ def load_config(path: Optional[Path] = None) -> HarnessConfig:
         host=data.get("host", "127.0.0.1"),
         port=data.get("port", 8765),
         agent_models=agent_models,
+        always_ui_test_classes=always_ui_test_classes,
     )

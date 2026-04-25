@@ -147,6 +147,7 @@ async def test_resolve_test_commands_reports_changed_test_file_skip_reason(tmp_p
         main_branch="main",
         unit_test_cmd="xcodebuild test {only_testing:WoontechTests}",
         ui_test_cmd="xcodebuild test {only_testing:WoontechUITests}",
+        always_ui_test_classes=[],
     )
 
     unit_cmd, ui_cmd = await P._resolve_test_commands(config, repo, "WF1")
@@ -171,6 +172,98 @@ async def test_resolve_test_commands_reports_changed_test_file_skip_reason(tmp_p
             },
         ),
     ]
+
+
+@pytest.mark.asyncio
+async def test_resolve_test_commands_injects_mandatory_ui_classes_when_no_changes(
+    tmp_path: Path, monkeypatch
+):
+    repo = _init_ios_repo(tmp_path)
+    events: list[tuple[str, dict[str, object]]] = []
+
+    async def fake_emit(event_type: str, **payload):
+        events.append((event_type, payload))
+
+    monkeypatch.setattr(P, "emit", fake_emit)
+    config = SimpleNamespace(
+        main_branch="main",
+        unit_test_cmd="xcodebuild test {only_testing:WoontechTests}",
+        ui_test_cmd="xcodebuild test {only_testing:WoontechUITests}",
+        always_ui_test_classes=["AppLaunchContractUITests"],
+    )
+
+    unit_cmd, ui_cmd = await P._resolve_test_commands(config, repo, "WF1")
+
+    assert unit_cmd == "echo 'SKIP: no changed unit test files in this worktree'"
+    assert ui_cmd == (
+        "xcodebuild test -only-testing:WoontechUITests/AppLaunchContractUITests"
+    )
+    skipped_targets = [
+        payload["target"] for kind, payload in events if kind == "tests_skipped"
+    ]
+    assert "WoontechUITests" not in skipped_targets
+
+
+@pytest.mark.asyncio
+async def test_resolve_test_commands_dedupes_mandatory_ui_classes(
+    tmp_path: Path, monkeypatch
+):
+    repo = _init_ios_repo(tmp_path)
+    new_file = repo / "WoontechUITests" / "AppLaunchContractUITests.swift"
+    new_file.write_text(
+        "import XCTest\nclass AppLaunchContractUITests: XCTestCase {}\n"
+    )
+    subprocess.run(["git", "-C", str(repo), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(repo), "commit", "-qm", "add contract"], check=True)
+
+    async def fake_emit(event_type: str, **payload):  # noqa: D401
+        return None
+
+    monkeypatch.setattr(P, "emit", fake_emit)
+    config = SimpleNamespace(
+        main_branch="main",
+        unit_test_cmd="xcodebuild test {only_testing:WoontechTests}",
+        ui_test_cmd="xcodebuild test {only_testing:WoontechUITests}",
+        always_ui_test_classes=["AppLaunchContractUITests"],
+    )
+
+    _, ui_cmd = await P._resolve_test_commands(config, repo, "WF1")
+
+    # Mandatory class should appear exactly once, even though it was also
+    # discovered as a changed test class.
+    assert ui_cmd.count("-only-testing:WoontechUITests/AppLaunchContractUITests") == 1
+
+
+@pytest.mark.asyncio
+async def test_resolve_test_commands_appends_mandatory_after_changed_classes(
+    tmp_path: Path, monkeypatch
+):
+    repo = _init_ios_repo(tmp_path)
+    new_file = repo / "WoontechUITests" / "FeatureUITests.swift"
+    new_file.write_text(
+        "import XCTest\nclass FeatureUITests: XCTestCase {}\n"
+    )
+    subprocess.run(["git", "-C", str(repo), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(repo), "commit", "-qm", "add feature"], check=True)
+
+    async def fake_emit(event_type: str, **payload):  # noqa: D401
+        return None
+
+    monkeypatch.setattr(P, "emit", fake_emit)
+    config = SimpleNamespace(
+        main_branch="main",
+        unit_test_cmd="xcodebuild test {only_testing:WoontechTests}",
+        ui_test_cmd="xcodebuild test {only_testing:WoontechUITests}",
+        always_ui_test_classes=["AppLaunchContractUITests"],
+    )
+
+    _, ui_cmd = await P._resolve_test_commands(config, repo, "WF1")
+
+    # Changed-test scoping is preserved; mandatory class is appended after.
+    feature_idx = ui_cmd.find("-only-testing:WoontechUITests/FeatureUITests")
+    contract_idx = ui_cmd.find("-only-testing:WoontechUITests/AppLaunchContractUITests")
+    assert feature_idx != -1 and contract_idx != -1
+    assert feature_idx < contract_idx
 
 
 def test_discover_finds_committed_new_test_classes_in_monorepo(tmp_path: Path):

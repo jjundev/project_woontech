@@ -143,6 +143,57 @@ def test_packaged_config_yaml_uses_only_testing_tokens():
     assert "{only_testing:WoontechUITests}" in data["ui_test_cmd"]
 
 
+def test_load_config_parses_always_ui_test_classes(tmp_path: Path):
+    path = _write_config(
+        tmp_path,
+        dedent(
+            """\
+            always_ui_test_classes:
+              - AppLaunchContractUITests
+              - AnotherSmokeUITests
+            """
+        ),
+    )
+
+    config = load_config(path)
+
+    assert config.always_ui_test_classes == [
+        "AppLaunchContractUITests",
+        "AnotherSmokeUITests",
+    ]
+
+
+def test_load_config_missing_always_ui_yields_empty_list(tmp_path: Path):
+    path = _write_config(tmp_path, "")
+
+    config = load_config(path)
+
+    assert config.always_ui_test_classes == []
+
+
+def test_load_config_rejects_non_string_always_ui_entries(tmp_path: Path):
+    path = _write_config(
+        tmp_path,
+        dedent(
+            """\
+            always_ui_test_classes:
+              - 42
+            """
+        ),
+    )
+
+    with pytest.raises(ValueError, match="always_ui_test_classes"):
+        load_config(path)
+
+
+def test_packaged_config_yaml_includes_launch_contract_smoke():
+    """The shipped config must keep AppLaunchContractUITests in the always-run set."""
+    root = Path(__file__).resolve().parents[2] / "harness.config.yaml"
+    data = yaml.safe_load(root.read_text())
+
+    assert "AppLaunchContractUITests" in (data.get("always_ui_test_classes") or [])
+
+
 def test_packaged_config_yaml_uses_xcode_test_runner_wrapper():
     """Build/test commands should use the local wrapper, not raw xcodebuild."""
     root = Path(__file__).resolve().parents[2] / "harness.config.yaml"

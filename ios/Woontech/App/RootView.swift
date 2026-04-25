@@ -51,6 +51,9 @@ struct RootView: View {
     }
 
     private func handleSplashFinish() {
+        // Launch arguments may have routed us elsewhere before the splash timer
+        // fires; only apply default routing if we are still on splash.
+        guard route == .splash else { return }
         withAnimation(.easeInOut(duration: 0.25)) {
             route = store.hasSeenOnboarding ? .sajuInput : .onboarding
         }
@@ -65,6 +68,9 @@ struct RootView: View {
 
     private func applyLaunchArgs() {
         let args = ProcessInfo.processInfo.arguments
+        if args.contains("-resetOnboarding") {
+            store.reset()
+        }
         if args.contains("-openReferral") {
             // Allow UI tests to land directly on referral.
             route = .referral

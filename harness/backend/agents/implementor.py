@@ -28,6 +28,11 @@ Your job:
 4. Write unit tests. RUN the unit tests with the provided command. Iterate until they pass.
 5. Write UI tests corresponding to the checklist's T*-ui items. DO NOT run UI tests — that
    is the reviewer's job.
+   - If you modify RootView, SplashView, OnboardingStore, WoontechApp launch-arg
+     handling, or any other code that owns the root route or splash transition,
+     you MUST update or extend AppLaunchContractUITests so the launch-arg
+     routing contract (`-openHome` / `-openReferral` / `-sajuStartStep`) is
+     preserved. The harness runs that class on every reviewer pass.
 6. Run the build command at least once at the end and guarantee it succeeds.
 7. Commit all changes to the worktree branch with a descriptive message.
 

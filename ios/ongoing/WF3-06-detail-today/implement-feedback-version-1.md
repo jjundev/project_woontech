@@ -2,127 +2,82 @@
 
 ## Checklist items not met
 
-- **R3 / R4 / R6 / R7 / R8 / R9 / R10 / R11 / R12 / R14 / R15 / T12–T27 (UI tests)**:
-  The full UI test target is failing. According to
-  `/tmp/woontech-derived-data/ui/Logs/Test/LogStoreManifest.plist`,
-  `totalNumberOfTestFailures = 16` while only 17 UI tests exist in
-  `TodayDetailUITests`. That means essentially the entire UI test suite added in
-  this iteration is red. The build is green and the WoontechTests unit suite
-  (`TodayDetailViewTests`, T1–T11) passes, so the failure is specific to the
-  UI / accessibility / navigation surface of `TodayDetailView`.
-
-  At least one concrete cause is identifiable from inspection (see "Required
-  changes" below); the remaining failures cannot be diagnosed from the
-  truncated runner output, so the implementor must reproduce locally with full
-  xcresult output (e.g. `xcrun xcresulttool get --legacy --path …`) and trace
-  the root cause(s).
+- **All UI test items (T12–T27, R1–R15 mapping)**: Cannot be evaluated.
+  The unit test command in this iteration aborted before any test ran due
+  to a runner-side argument plumbing failure (see `Build / Test failures`),
+  and the `.harness/test-results/` mirror directory does not exist in this
+  worktree, so no per-test diagnostic file is available.
+- **All unit test items (T1–T11)**: Cannot be evaluated this iteration —
+  same root cause as above. (Prior iteration's feedback v3 reported
+  T1–T11 green at that time; that result is stale because the runner
+  failed before re-execution here.)
 
 ## Build / Test failures
 
-- `python3 tools/xcode_test_runner.py build` — succeeded (no errors emitted).
-- `python3 tools/xcode_test_runner.py test --target WoontechTests -only-testing:WoontechTests/TodayDetailViewTests` — succeeded
-  (no failures observed; "Testing started completed" terminated cleanly).
-- `python3 tools/xcode_test_runner.py test --target WoontechUITests --ui -only-testing:WoontechUITests/TodayDetailUITests` — **FAILED**
-  - Exit code 65, "** TEST FAILED **".
-  - Manifest at
-    `/tmp/woontech-derived-data/ui/Logs/Test/Test-Woontech-2026.04.25_14-41-52-+0900.xcresult`
-    reports `totalNumberOfTestFailures = 16`.
-  - The runner's environment-failure repair triggered on the first attempt
-    (DebuggerVersionStore / "no debugger version") and then re-ran; the second
-    attempt also ended in TEST FAILED, so this is not a transient simulator
-    environment issue.
-  - Per-test failure messages were truncated by the harness, so individual
-    XCTAssert messages are not available in this review. The implementor
-    must run the suite locally and read the xcresult.
+- `python3 tools/xcode_test_runner.py build` — completed with exit 0 and
+  no stdout. Treated as success.
+- `python3 tools/xcode_test_runner.py test --target WoontechTests --worktree-dir . -only-testing:WoontechTests/TodayDetailViewTests`
+  — **FAILED** with exit 64. Quoting the actual stderr verbatim:
+
+  ```
+  2026-04-25 17:31:27.085 xcodebuild[74442:5518346] Writing error result bundle to /var/folders/cp/whkt9h5d49d1tmfm_0zqrxy80000gn/T/ResultBundle_2026-25-04_17-31-0027.xcresult
+  xcodebuild: error: invalid option '--worktree-dir'
+  ```
+
+  The runner script (`tools/xcode_test_runner.py`) is forwarding the
+  `--worktree-dir .` flag — supplied verbatim by the harness in this
+  iteration's prompt — directly to `xcodebuild`, which has no such
+  option. xcodebuild aborts before any test executes, so no xcresult
+  bundle (other than the auto-generated error result bundle in
+  `/var/folders/...`, which is outside the worktree path scope) is
+  produced.
+
+- UI test command (`python3 tools/xcode_test_runner.py test --target WoontechUITests --ui --worktree-dir . -only-testing:WoontechUITests/TodayDetailUITests`)
+  — not executed in this iteration. With the unit-test runner already
+  failing at flag-parsing time on the same `--worktree-dir` argument,
+  the UI invocation will fail identically before any test executes;
+  running it would produce no additional diagnostic value.
+
+- `.harness/test-results/last-unit-summary.txt`,
+  `.harness/test-results/last-unit-failures.txt`,
+  `.harness/test-results/last-ui-summary.txt`,
+  `.harness/test-results/last-ui-failures.txt` — none of these exist.
+  The entire `.harness/` directory is absent from the worktree
+  (`ls .harness/` returns "No such file or directory"). This is the
+  mirror channel the reviewer policy requires for hypothesis-free root
+  cause diagnosis, and it is empty.
 
 ## Required changes
 
-### C1 — Fix the accessibility hierarchy of `HapchungRowView` (definite bug)
-
-`Woontech/Features/Home/Detail/Today/TodayDetailView.swift`, `HapchungRowView`
-applies:
-
-```swift
-.accessibilityElement(children: .ignore)
-.accessibilityLabel("\(event.branch1.hanja) \(symbol) \(event.branch2.hanja), \(event.kind), \(event.score)점")
-.accessibilityIdentifier("HapchungRow_\(index)")
-```
-
-`children: .ignore` collapses the row into a single accessibility element, so
-the child identifiers placed inside the same `VStack`
-(`HapchungRow_\(index)_Score` on the score `Text`, and the
-`HapchungRow_\(index)_NegativeStyle` invisible `Color.clear`) are **not** exposed
-to XCUITest. This directly breaks at minimum these tests:
-
-- T21 / UI10 `testHapchungNegativeRowStyling` — looks up
-  `app.otherElements["HapchungRow_1_NegativeStyle"]`.
-- T22 / UI11 `testHapchungScoreFormatting` — looks up
-  `app.staticTexts["HapchungRow_0_Score"]` / `HapchungRow_1_Score`.
-- T26 / UI16 `testDynamicTypeXL_hapchungWrapsScoreVisible` — looks up
-  `app.staticTexts["HapchungRow_0_Score"]`.
-
-Fix options (pick one and apply consistently to all rows):
-
-1. Replace `.accessibilityElement(children: .ignore)` with
-   `.accessibilityElement(children: .contain)` (children remain queryable; the
-   row itself stays addressable via `HapchungRow_\(index)` and the explicit
-   `accessibilityLabel`).
-2. Or drop `.accessibilityElement(...)` entirely and instead attach the
-   container identifier and label via a sibling background/overlay that
-   doesn't suppress children.
-
-Either way, after the fix XCUITest must be able to resolve
-`app.staticTexts["HapchungRow_0_Score"].label == "+12"` and
-`app.otherElements["HapchungRow_1_NegativeStyle"].exists`.
-
-### C2 — Investigate the remaining UI test failures
-
-With 16 failures across independent tests (NavBar back, pillar IDs, wuxing
-cells, sipseong stamp, motto/taboo, Disclaimer, etc.), the cause is almost
-certainly *not* limited to C1. Probable categories:
-
-- App crashes on `TodayDetailView.appear` (e.g. SwiftUI runtime trap inside
-  `SajuMiniChartView` when re-used with this caller's parameters — the data
-  shape passed by `SajuOriginCard.makeWuxingBars` etc. is new).
-- `HomeNavPushToday` button tap not actually pushing `.today`, or
-  `TodayDetailTitle` not appearing for some other reason (e.g. parent
-  `.toolbar(.hidden, for: .navigationBar)` / `NavigationStack` interaction
-  pattern differs from `InvestingAttitudeDetailView`).
-- A SwiftUI layout error in `HapchungCard` / `WuxingDistributionRow` causing
-  the whole detail view to fail to render.
-
-Required: the implementor must reproduce the suite locally, retrieve the
-per-test failure messages from the xcresult bundle (`xcrun xcresulttool get
---legacy --path /tmp/woontech-derived-data/ui/Logs/Test/Test-Woontech-*.xcresult`
-or open it in Xcode), and address each root cause until the suite is green.
-
-### C3 — Verify `accessibilityIdentifier("HapchungSection")` actually registers
-
-`HapchungCard(events: provider.hapchungEvents).accessibilityIdentifier("HapchungSection")`
-attaches the identifier to the wrapping struct. The internal `VStack` already
-has padding/overlay; verify in the XCUITest debugger
-(`po app.debugDescription`) that an `XCUIElementType` actually exposes
-`HapchungSection`. If not, push the identifier onto the inner `VStack` so
-T20 (`testHapchungCardHiddenWhenEmpty`) can rely on it.
-
-### C4 — Confirm `WuxingCell_*` cell labels include the hanja and count
-
-T15 / UI4 asserts `woodCell.label.contains("木")` and `woodCell.label.contains("1")`.
-Current implementation sets `accessibilityLabel("\(element.label) \(element.hanja) \(count)")`
-on each cell, which should satisfy that — but verify after fixing the broader
-crash/render issue.
+DIAGNOSTIC_INFRASTRUCTURE_MISSING: .harness/test-results/last-unit-failures.txt
 
 ## Patch eligibility
 
 Requires implementor rework.
 
-C1 alone is a small localized fix and would be patch-eligible, but C2 — the
-bulk of the failing tests — requires running the suite locally with full
-xcresult inspection to determine root causes. That goes beyond a "small,
-localized" reviewer patch. Patching C1 in isolation would still leave the
-suite red and would obscure the real problem from the next iteration.
-The fix set must be developed and verified by the implementor against actual
-per-test failure output.
+The harness-supplied test commands include a `--worktree-dir .` flag that
+the local `tools/xcode_test_runner.py` does not parse. Because the runner
+forwards unknown args to `xcodebuild`, xcodebuild errors out before any
+test runs and no `.harness/test-results/last-*-{summary,failures}.txt`
+diagnostic files are produced. The reviewer cannot:
+1. Verify whether the unit / UI tests in this iteration actually pass or
+   fail (the v3 reviewer's claim that unit tests were green is stale —
+   it was made before the current `--worktree-dir` plumbing change in
+   the harness).
+2. Read per-test failure messages required by the no-hypothesis-fix
+   policy.
+
+This is infrastructure breakage on the harness ↔ runner boundary, not a
+code defect that a localized reviewer patch can repair within the
+worktree path scope. Proper resolution requires either:
+- The harness emitting the previously-working test command shape
+  (without `--worktree-dir`), or
+- The implementor extending `tools/xcode_test_runner.py` to consume the
+  `--worktree-dir` argument (and probably emit the
+  `.harness/test-results/last-*-{summary,failures}.txt` mirror files
+  the reviewer policy depends on).
+
+Either path is outside the scope of a localized reviewer patch.
 
 ## Patch applied
 
@@ -134,22 +89,68 @@ Not run after patch; no reviewer patch was applied.
 
 ## Remaining risk
 
-- Until the implementor sees the per-test failure messages, the actual cause
-  of most of the 16 failures is unknown. The fix set listed above (C1, C3,
-  C4) addresses inspection-level findings only; C2 may require non-trivial
-  changes (e.g. how `SajuMiniChartView` is called, navigation pattern, or
-  view hierarchy).
-- pbxproj target membership for all four new `.swift` files
-  (`TodayDetailProviding.swift`, `TodayDetailView.swift`,
-  `TodayDetailViewTests.swift`, `TodayDetailUITests.swift`) is already
-  correct — confirmed both `PBXFileReference` and `PBXBuildFile … in Sources`
-  entries exist (lines 96–99, 209–212, 339, 386, 497–498, 647, 719–720, 736
-  of `Woontech.xcodeproj/project.pbxproj`). No false positive there.
+- **Diagnostic mirror channel is dead this iteration.** No
+  `.harness/test-results/` directory exists, so even if the runner had
+  produced an xcresult bundle, the policy-mandated mirror files would
+  still be missing. Until the runner is taught to write those files
+  (and accept `--worktree-dir`), every reviewer iteration will hit the
+  same wall.
+- **pbxproj target membership** for all four new `.swift` files is
+  correct (verified by Grep on `Woontech.xcodeproj/project.pbxproj`):
+  - `PBXFileReference` entries at lines 209–212 for
+    `TodayDetailProviding.swift`, `TodayDetailView.swift`,
+    `TodayDetailViewTests.swift`, `TodayDetailUITests.swift`.
+  - `PBXBuildFile … in Sources` declarations at lines 96–99 and
+    Sources-phase entries at line 647 (WoontechTests),
+    719–720 (Woontech main), 736 (WoontechUITests).
+  - No silent BUILD-SUCCEEDED-but-not-compiled false positive.
+- **Code-side state at HEAD** appears intact from a static-read
+  perspective — `TodayDetailProviding.swift` exposes the spec'd
+  protocol/models/mock with the wireframe defaults
+  (庚午 / counts {木1,火3,土1,金3,水0} / weakElement=.water /
+  편관 / [申·巳 +12 positive, 卯·酉 −18 negative]); `TodayDetailView.swift`
+  composes `SajuOriginCard`, `WuxingDistributionRow`, `SipseongCard`,
+  `HapchungCard`, `HapchungRowView`, `MottoCard`, `TabooCard`,
+  `DisclaimerView` in the spec'd order with all promised
+  `accessibilityIdentifier`s (including the v3-reviewer's recommended
+  `.accessibilityElement(children: .ignore)` on `WuxingCell_*`). No
+  static read flagged a new regression vs. the v3 snapshot. But this
+  is *static* review only — runtime correctness cannot be verified
+  this iteration.
 
 ## Resolved since previous iteration
 
-(Iteration 1 — no prior feedback.)
+(None visibly resolved — no test execution occurred this iteration to
+verify v3's outstanding UI failures.)
 
 ## Still outstanding from prior iterations
 
-(Iteration 1 — no prior feedback.)
+Carried forward verbatim from `implement-feedback-version-3.md`:
+
+- **C1 from v3 (root-cause investigation of UI failures by reading the
+  xcresult bundle)**: Still outstanding. v3 reviewer hit a PreToolUse
+  hook restriction blocking `xcrun xcresulttool` against `/tmp/...`
+  bundles; this iteration's reviewer cannot even reach that step
+  because the runner now aborts on `--worktree-dir`.
+- **C2 from v3 (HapchungSection Group-wrap + WuxingCell
+  `.accessibilityElement(children: .ignore)`)**: Already applied at
+  `TodayDetailView.swift:162–164` (WuxingCell) and `:252–278`
+  (HapchungSection Group + `.contain`). Verification pending UI test
+  evidence.
+- **C3 from v3 (verify `HapchungSection` identifier registers under
+  `children: .contain`)**: Still outstanding — no runtime verification
+  this iteration.
+- **C4 from v3 (confirm header push pattern under
+  `.toolbar(.hidden, for: .navigationBar)` parent)**: Still
+  outstanding — verify-only item, implementation mirrors
+  `InvestingAttitudeDetailView` line-for-line.
+- **C5 from v3 (simulator/LLDB launch-noise mitigation)**: Still
+  outstanding — environmental, not a code bug.
+- **C2 from v1 (broader root-cause investigation beyond
+  HapchungRowView)**: Still outstanding — supplanted by v2/v3 C1; same
+  diagnostic step.
+- **C3 from v1 (verify `HapchungSection` queryability)**: Still
+  outstanding (same as v3 C3 above).
+- **C4 from v1 (confirm `WuxingCell_*` label coalesces correctly)**:
+  Code-side fix in place at `TodayDetailView.swift:162–164`; runtime
+  verification still pending.

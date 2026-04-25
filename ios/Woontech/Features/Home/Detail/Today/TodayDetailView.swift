@@ -55,6 +55,7 @@ struct TodayDetailView: View {
                 .padding(.vertical, 16)
             }
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("TodayDetailView")
     }
 }
@@ -107,6 +108,7 @@ private struct SajuOriginCard: View {
             RoundedRectangle(cornerRadius: 6)
                 .stroke(DesignTokens.line3, lineWidth: 1)
         )
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("SajuOriginCard")
     }
 
@@ -234,6 +236,7 @@ private struct SipseongCard: View {
             RoundedRectangle(cornerRadius: 6)
                 .stroke(DesignTokens.line3, lineWidth: 1)
         )
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("SipseongCard")
     }
 }
@@ -406,6 +409,7 @@ private struct MottoCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(DesignTokens.gray)
         .cornerRadius(6)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("DailyMottoCard")
     }
 }
@@ -430,6 +434,7 @@ private struct TabooCard: View {
             RoundedRectangle(cornerRadius: 6)
                 .stroke(DesignTokens.fireColor, lineWidth: 1)
         )
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("DailyTabooCard")
     }
 }

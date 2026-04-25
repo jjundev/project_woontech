@@ -46,7 +46,12 @@ struct SplashView: View {
         .background(DesignTokens.bg)
         .accessibilityIdentifier("SplashRoot")
         .task {
-            try? await Task.sleep(for: SplashView.duration)
+            do {
+                try await Task.sleep(for: SplashView.duration)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
             onFinish()
         }
     }

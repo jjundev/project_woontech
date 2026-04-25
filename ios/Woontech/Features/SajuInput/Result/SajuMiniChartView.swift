@@ -43,6 +43,7 @@ struct SajuMiniChartView: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(DesignTokens.line3, lineWidth: 1)
         )
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("SajuOriginChart")
     }
 
@@ -124,6 +125,7 @@ struct SajuMiniChartView: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
+                .accessibilityElement(children: .contain)
                 .accessibilityIdentifier(item.id)
             }
         }

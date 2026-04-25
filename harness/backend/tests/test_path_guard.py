@@ -122,6 +122,61 @@ def test_bash_allows_git_commit_prefix(worktree_dir: Path, bash_policy: W.BashPo
     assert _call_bash(cb, command='git commit -m "checkpoint"') == {}
 
 
+def test_bash_with_run_in_background_is_denied(worktree_dir: Path, bash_policy: W.BashPolicy):
+    """Background test runs race with the harness's post-reviewer artifact check.
+
+    The reviewer once offloaded a UI test command with run_in_background=true and
+    polled `tail -f` via Monitor while answering "tests are running"; agent
+    finished before xcode_test_runner.py wrote `last-ui-summary.txt`, so the
+    harness escalated as `diagnostic_infra_missing`. The hook now denies this
+    even when the underlying command is otherwise allowlisted.
+    """
+    cb = _callback(W.make_path_guard(worktree_dir, bash_policy=bash_policy))
+    result = asyncio.run(
+        cb(
+            {
+                "tool_name": "Bash",
+                "tool_input": {
+                    "command": "xcodebuild build -scheme Woontech",
+                    "run_in_background": True,
+                },
+            },
+            None,
+            None,
+        )
+    )
+    assert result["hookSpecificOutput"]["permissionDecision"] == "deny"
+    assert "run_in_background" in result["hookSpecificOutput"]["permissionDecisionReason"]
+
+
+def test_bash_with_run_in_background_false_still_validates(worktree_dir: Path, bash_policy: W.BashPolicy):
+    cb = _callback(W.make_path_guard(worktree_dir, bash_policy=bash_policy))
+    result = asyncio.run(
+        cb(
+            {
+                "tool_name": "Bash",
+                "tool_input": {
+                    "command": "xcodebuild build -scheme Woontech",
+                    "run_in_background": False,
+                },
+            },
+            None,
+            None,
+        )
+    )
+    assert result == {}
+
+
+@pytest.mark.parametrize("tool", ["Monitor", "BashOutput", "KillShell"])
+def test_background_tools_are_denied(worktree_dir: Path, bash_policy: W.BashPolicy, tool: str):
+    cb = _callback(W.make_path_guard(worktree_dir, bash_policy=bash_policy))
+    result = asyncio.run(
+        cb({"tool_name": tool, "tool_input": {}}, None, None)
+    )
+    assert result["hookSpecificOutput"]["permissionDecision"] == "deny"
+    assert tool in result["hookSpecificOutput"]["permissionDecisionReason"]
+
+
 def test_bash_allows_git_commit_multiple_message_parts(worktree_dir: Path, bash_policy: W.BashPolicy):
     cb = _callback(W.make_path_guard(worktree_dir, bash_policy=bash_policy))
     assert (

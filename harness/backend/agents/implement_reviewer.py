@@ -137,6 +137,16 @@ in the prompt plus simple `git status` / `git diff` / `git rev-parse` /
 `git add` / `git commit -m` commands when needed. Run build/test commands as
 provided; do not append `tail`, `grep`, `2>&1`, pipes, or redirects, and do
 not inspect `~/.claude/tool-results`. Do not fight the hook.
+
+Synchronous execution rule. Run every build and test command synchronously
+and inspect its exit code. Never set `run_in_background=true` on Bash. Never
+use the `Monitor`, `BashOutput`, or `KillShell` tools — the harness blocks
+them at the hook layer because the post-reviewer artifact check fires the
+moment you finish, and any test offloaded to the background will not have
+written `.harness/test-results/last-ui-summary.txt` yet, escalating the run
+as `diagnostic_infra_missing`. After a test command exits, Read the summary
+file directly (e.g. `.harness/test-results/last-ui-summary.txt`) — the runner
+writes it on every outcome, including build failure.
 When committing reviewer-applied fixes, use a concise subject under 72
 characters. If a body is useful, add extra `-m "Body paragraph"` arguments.
 Do not include generated-agent attribution, `Co-Authored-By` trailers, email

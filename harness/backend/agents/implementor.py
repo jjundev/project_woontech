@@ -61,6 +61,10 @@ Hard rules:
   shape, and simple `git status` / `git diff` / `git rev-parse` / `git add` / `git commit -m`
   commands only. Run build/test commands as provided; do not append `tail`, `grep`,
   `2>&1`, pipes, or redirects, and do not inspect `~/.claude/tool-results`.
+- Synchronous execution rule. Run every build and test command synchronously and
+  inspect its exit code. Never set `run_in_background=true` on Bash. Never use
+  the `Monitor`, `BashOutput`, or `KillShell` tools — the harness blocks them
+  at the hook layer.
 - For commits, use `git add -A`, then `git commit -m "Short subject"`. If a body is
   useful, add extra `-m "Body paragraph"` arguments. Keep the subject under 72
   characters, and do not include generated-agent attribution, `Co-Authored-By`

@@ -65,7 +65,7 @@ struct HomeDashboardView: View {
                 .navigationDestination(for: HomeRoute.self) { route in
                     switch route {
                     case .investing:
-                        InvestingPlaceholderView()
+                        InvestingAttitudeDetailView(provider: homeDeps.investingAttitudeDetail)
                     case .event:
                         EventPlaceholderView()
                     case .today:

@@ -35,6 +35,7 @@ def _make_task(tmp_config, task_id: str, state_name: S.StateName, escalation: st
         ("publishing", None, 2),
         ("needs_attention", "plan_review_exhausted", 0),
         ("needs_attention", "impl_review_exhausted", 1),
+        ("needs_attention", "diagnostic_infra_missing", 1),
         ("needs_attention", "publish_failed", 2),
         ("needs_attention", None, 0),
         ("needs_attention", "something_new", 0),

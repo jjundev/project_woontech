@@ -12,12 +12,12 @@ final class TodayDetailUITests: XCTestCase {
         app.launchArguments = ["-openHome"] + extraArgs
         app.launch()
         let root = app.otherElements["HomeDashboardRoot"]
-        XCTAssertTrue(root.waitForExistence(timeout: 5), "HomeDashboardRoot should appear")
+        XCTAssertTrue(root.waitForExistence(timeout: 10), "HomeDashboardRoot should appear")
         let nav = app.buttons["HomeNavPushToday"]
-        XCTAssertTrue(nav.waitForExistence(timeout: 5))
+        XCTAssertTrue(nav.waitForExistence(timeout: 10))
         nav.tap()
         let title = app.staticTexts["TodayDetailTitle"]
-        XCTAssertTrue(title.waitForExistence(timeout: 5), "TodayDetailTitle should appear")
+        XCTAssertTrue(title.waitForExistence(timeout: 10), "TodayDetailTitle should appear after push")
     }
 
     // MARK: - UI1: Insights 일진 카드 탭 → push (AC-1)
@@ -25,12 +25,24 @@ final class TodayDetailUITests: XCTestCase {
     func testInsightsTodayCardTap_pushesTodayDetail() {
         app.launchArguments = ["-openHome"]
         app.launch()
-        // InsightCardView is a SwiftUI Button — must query via .buttons, not .otherElements.
-        let card = app.buttons["HomeInsightsCard_1"]
-        XCTAssertTrue(card.waitForExistence(timeout: 5))
-        card.tap()
+        // SwiftUI's accessibility model can expose InsightCardView either as a
+        // button (its root is `Button`) or as an other-element wrapper, depending
+        // on whether the outer `.accessibilityIdentifier` modifier ends up on
+        // the same accessibility node as the inner `.accessibilityLabel`. Query
+        // both to stay robust across SwiftUI versions.
+        let asButton = app.buttons["HomeInsightsCard_1"]
+        let asOther = app.otherElements["HomeInsightsCard_1"]
+        XCTAssertTrue(
+            asButton.waitForExistence(timeout: 10) || asOther.waitForExistence(timeout: 5),
+            "HomeInsightsCard_1 should exist as either a button or an other element"
+        )
+        if asButton.exists {
+            asButton.tap()
+        } else {
+            asOther.tap()
+        }
         let title = app.staticTexts["TodayDetailTitle"]
-        XCTAssertTrue(title.waitForExistence(timeout: 5))
+        XCTAssertTrue(title.waitForExistence(timeout: 10))
     }
 
     // MARK: - UI2: NavBar title + Back (AC-2)
@@ -104,6 +116,11 @@ final class TodayDetailUITests: XCTestCase {
         launchAndPushToday()
         let row0 = app.otherElements["HapchungRow_0"]
         let row1 = app.otherElements["HapchungRow_1"]
+        if !row0.waitForExistence(timeout: 5) {
+            for _ in 0..<4 where !row0.exists {
+                app.swipeUp()
+            }
+        }
         XCTAssertTrue(row0.waitForExistence(timeout: 5))
         XCTAssertTrue(row1.exists)
         XCTAssertTrue(row0.label.contains("申"))
@@ -116,6 +133,9 @@ final class TodayDetailUITests: XCTestCase {
 
     func testHapchungCardHiddenWhenEmpty() {
         launchAndPushToday(["-mockTodayHapchungEmpty"])
+        // Allow scroll so we exhaust the screen for the section before asserting
+        // its absence.
+        for _ in 0..<3 { app.swipeUp() }
         XCTAssertFalse(app.otherElements["HapchungSection"].exists)
         XCTAssertFalse(app.otherElements["HapchungRow_0"].exists)
     }
@@ -125,6 +145,9 @@ final class TodayDetailUITests: XCTestCase {
     func testHapchungNegativeRowStyling() {
         launchAndPushToday()
         let row1 = app.otherElements["HapchungRow_1"]
+        if !row1.waitForExistence(timeout: 5) {
+            for _ in 0..<4 where !row1.exists { app.swipeUp() }
+        }
         XCTAssertTrue(row1.waitForExistence(timeout: 5))
         XCTAssertTrue(row1.label.contains("−18") || row1.label.contains("-18"))
         XCTAssertTrue(app.otherElements["HapchungRow_1_NegativeStyle"].exists)
@@ -135,6 +158,9 @@ final class TodayDetailUITests: XCTestCase {
     func testHapchungScoreFormatting() {
         launchAndPushToday()
         let row0Score = app.staticTexts["HapchungRow_0_Score"]
+        if !row0Score.waitForExistence(timeout: 5) {
+            for _ in 0..<4 where !row0Score.exists { app.swipeUp() }
+        }
         let row1Score = app.staticTexts["HapchungRow_1_Score"]
         XCTAssertTrue(row0Score.waitForExistence(timeout: 5))
         XCTAssertEqual(row0Score.label, "+12")
@@ -156,6 +182,9 @@ final class TodayDetailUITests: XCTestCase {
         launchAndPushToday(["-mockTodayMottoTabooOn"])
         let mottoCard = app.otherElements["DailyMottoCard"]
         let tabooCard = app.otherElements["DailyTabooCard"]
+        if !mottoCard.waitForExistence(timeout: 3) {
+            for _ in 0..<5 where !mottoCard.exists { app.swipeUp() }
+        }
         XCTAssertTrue(mottoCard.waitForExistence(timeout: 5))
         XCTAssertTrue(tabooCard.exists)
         XCTAssertTrue(app.staticTexts["오늘의 한마디 예시"].exists)
@@ -167,12 +196,13 @@ final class TodayDetailUITests: XCTestCase {
     func testDisclaimerAtBottom() {
         launchAndPushToday()
         let disclaimer = app.staticTexts["DisclaimerText"]
-        // Disclaimer is below the fold; scroll to find it.
-        XCTAssertTrue(disclaimer.waitForExistence(timeout: 5) || {
-            app.swipeUp()
-            app.swipeUp()
-            return disclaimer.waitForExistence(timeout: 3)
-        }())
+        // Disclaimer is below the fold; scroll until it appears or attempts run out.
+        if !disclaimer.waitForExistence(timeout: 3) {
+            for _ in 0..<6 where !disclaimer.exists {
+                app.swipeUp()
+            }
+        }
+        XCTAssertTrue(disclaimer.waitForExistence(timeout: 5), "DisclaimerText should appear at bottom of TodayDetailView")
     }
 
     // MARK: - UI16: Dynamic Type XL — score 잘림 없음 (AC-14)

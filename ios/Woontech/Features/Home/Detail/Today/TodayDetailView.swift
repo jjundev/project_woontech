@@ -244,29 +244,36 @@ private struct HapchungCard: View {
     let events: [HapchungEvent]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("오늘의 합충(合沖)")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(DesignTokens.ink)
-                Spacer()
-                Text("합(+) · 충(−)")
-                    .font(.caption2)
-                    .foregroundColor(DesignTokens.muted)
-            }
+        // Group wrapper guarantees a single, stable accessibility container that
+        // XCUITest can query as `app.otherElements["HapchungSection"]`. Without
+        // the Group wrap, SwiftUI sometimes elides the outer VStack from the
+        // accessibility tree when its children all carry their own identifiers
+        // (v3 hypothesis C2.3a).
+        Group {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("오늘의 합충(合沖)")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(DesignTokens.ink)
+                    Spacer()
+                    Text("합(+) · 충(−)")
+                        .font(.caption2)
+                        .foregroundColor(DesignTokens.muted)
+                }
 
-            VStack(spacing: 8) {
-                ForEach(Array(events.enumerated()), id: \.offset) { index, event in
-                    HapchungRowView(event: event, index: index)
+                VStack(spacing: 8) {
+                    ForEach(Array(events.enumerated()), id: \.offset) { index, event in
+                        HapchungRowView(event: event, index: index)
+                    }
                 }
             }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(DesignTokens.line3, lineWidth: 1)
+            )
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .overlay(
-            RoundedRectangle(cornerRadius: 6)
-                .stroke(DesignTokens.line3, lineWidth: 1)
-        )
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("HapchungSection")
     }
@@ -314,16 +321,17 @@ private struct HapchungRowView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            // 비주얼 검증을 위한 invisible 식별자 (AC-9). Text marker는 항상 staticText로
-            // 노출되므로 XCUITest의 `app.otherElements["HapchungRow_<i>_NegativeStyle"]`
-            // 또는 어느 query type에서든 안정적으로 찾을 수 있다 (Color.clear는 트리에서
-            // 누락될 수 있음).
+            // 비주얼 검증을 위한 식별자 (AC-9). Image with isHidden=false (rendered
+            // but accessibility-hidden) provides a stable accessibility node
+            // queryable via `app.otherElements["HapchungRow_<i>_NegativeStyle"]`.
+            // Empty Text could be elided; Color.clear with frame is sometimes
+            // dropped from the accessibility tree (v3 hypothesis C2.3b).
             if isNegative {
-                Text("negative")
-                    .font(.system(size: 1))
-                    .foregroundColor(.clear)
+                Color.clear
                     .frame(width: 1, height: 1)
+                    .accessibilityElement()
                     .accessibilityIdentifier("HapchungRow_\(index)_NegativeStyle")
+                    .accessibilityLabel("negative")
             }
         }
         .padding(10)

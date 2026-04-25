@@ -490,37 +490,54 @@ def run_test(
     xcodebuild_args: Sequence[str],
     worktree_dir_override: str | None = None,
 ) -> int:
-    simulator = resolve_simulator(ui=ui)
-    if ui:
-        reset_simulator(simulator.udid)
+    # Compute outputs up-front so the harness-visible summary file is written
+    # via the `finally` block even if simulator resolution/reset raises before
+    # xcodebuild starts. The harness treats a missing summary as
+    # `diagnostic_infra_missing` and stops the run; persisting a placeholder
+    # keeps the failure visible to the reviewer instead.
     mode = "ui" if ui else "unit"
     derived_data_path = DERIVED_DATA_ROOT / mode
     result_bundle_path = _result_bundle_path(derived_data_path, mode)
-    selection_args = list(xcodebuild_args)
-    if not any(arg.startswith("-only-testing:") for arg in selection_args):
-        selection_args.insert(0, f"-only-testing:{target}")
-    args = _xcodebuild_base(derived_data_path) + [
-        "-destination",
-        f"id={simulator.udid}",
-        "-resultBundlePath",
-        str(result_bundle_path),
-        "test",
-        *selection_args,
-    ]
-    code = run_with_optional_repair(
-        args,
-        simulator_udid=simulator.udid,
-        derived_data_path=derived_data_path,
-        result_bundle_path=result_bundle_path,
-    )
-    _persist_test_artifacts(
-        mode,
-        result_bundle_path,
-        worktree_dir(worktree_dir_override),
-        exit_code=code,
-        simulator_udid=simulator.udid if ui else None,
-    )
-    return code
+    target_worktree = worktree_dir(worktree_dir_override)
+    simulator_udid: str | None = None
+    code = 1
+    try:
+        simulator = resolve_simulator(ui=ui)
+        simulator_udid = simulator.udid
+        if ui:
+            reset_simulator(simulator.udid)
+        selection_args = list(xcodebuild_args)
+        if not any(arg.startswith("-only-testing:") for arg in selection_args):
+            selection_args.insert(0, f"-only-testing:{target}")
+        args = _xcodebuild_base(derived_data_path) + [
+            "-destination",
+            f"id={simulator.udid}",
+            "-resultBundlePath",
+            str(result_bundle_path),
+            "test",
+            *selection_args,
+        ]
+        code = run_with_optional_repair(
+            args,
+            simulator_udid=simulator.udid,
+            derived_data_path=derived_data_path,
+            result_bundle_path=result_bundle_path,
+        )
+        return code
+    finally:
+        try:
+            _persist_test_artifacts(
+                mode,
+                result_bundle_path,
+                target_worktree,
+                exit_code=code,
+                simulator_udid=simulator_udid if ui else None,
+            )
+        except Exception as exc:  # noqa: BLE001 — never let persist break the runner
+            print(
+                f"warning: _persist_test_artifacts failed for {mode}: {exc}",
+                file=sys.stderr,
+            )
 
 
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:

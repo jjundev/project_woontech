@@ -18,7 +18,7 @@ from typing import Optional
 from .events import bus
 
 
-IMPL_AGENT_NAMES = {"implementor", "implement_reviewer"}
+IMPL_AGENT_NAMES = {"implementor", "implement-reviewer"}
 IMPL_PHASE_NAMES = {"implementing", "impl_review", "impl_rework"}
 IMPL_STATE_NAMES = {"implementing", "impl_review"}
 ALWAYS_LOG_TYPES = {"pipeline_started", "pipeline_resuming", "pipeline_done", "escalation"}

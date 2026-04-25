@@ -18,7 +18,8 @@ final class WeeklyEventsTests: XCTestCase {
             ddayDate: "2026.05.01",
             impact: .positive,
             oneLiner: "Test description",
-            investContext: "Test context"
+            investContext: "Test context",
+            timeGroup: .thisWeek
         )
 
         // Then
@@ -42,7 +43,8 @@ final class WeeklyEventsTests: XCTestCase {
             ddayDate: "2026.05.01",
             impact: .positive,
             oneLiner: "Test",
-            investContext: "Test"
+            investContext: "Test",
+            timeGroup: .thisWeek
         )
         let event2 = WeeklyEvent(
             id: id,
@@ -53,7 +55,8 @@ final class WeeklyEventsTests: XCTestCase {
             ddayDate: "2026.05.06",
             impact: .negative,
             oneLiner: "Different",
-            investContext: "Different"
+            investContext: "Different",
+            timeGroup: .thisMonth
         )
 
         // When & Then
@@ -72,7 +75,8 @@ final class WeeklyEventsTests: XCTestCase {
             ddayDate: "2026.05.01",
             impact: .positive,
             oneLiner: "Test",
-            investContext: "Test"
+            investContext: "Test",
+            timeGroup: .thisWeek
         )
 
         // Then
@@ -280,7 +284,8 @@ final class WeeklyEventsTests: XCTestCase {
             ddayDate: "4/27 월",
             impact: .negative,
             oneLiner: "Test",
-            investContext: "Test"
+            investContext: "Test",
+            timeGroup: .thisWeek
         )
 
         // Then
@@ -298,7 +303,8 @@ final class WeeklyEventsTests: XCTestCase {
             impact: .positive,
             oneLiner: "Test",
             investContext: "Test",
-            badge: "중요"
+            badge: "중요",
+            timeGroup: .within3Months
         )
 
         // Then
@@ -317,7 +323,8 @@ final class WeeklyEventsTests: XCTestCase {
             impact: .positive,
             oneLiner: "Test",
             investContext: "Test",
-            badge: nil
+            badge: nil,
+            timeGroup: .within3Months
         )
 
         // Then
@@ -335,7 +342,8 @@ final class WeeklyEventsTests: XCTestCase {
             ddayDate: "4/25 토",
             impact: .neutral,
             oneLiner: "Test",
-            investContext: "Test"
+            investContext: "Test",
+            timeGroup: .thisWeek
         )
 
         // Then

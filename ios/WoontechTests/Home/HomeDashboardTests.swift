@@ -64,7 +64,8 @@ final class HomeDashboardTests: XCTestCase {
             ddayDate: "2026.05.01",
             impact: .positive,
             oneLiner: "Test",
-            investContext: "Test"
+            investContext: "Test",
+            timeGroup: .thisWeek
         )
         let routes: Set<HomeRoute> = [
             .investing,
@@ -87,7 +88,8 @@ final class HomeDashboardTests: XCTestCase {
             ddayDate: "2026.05.01",
             impact: .positive,
             oneLiner: "Test",
-            investContext: "Test"
+            investContext: "Test",
+            timeGroup: .thisWeek
         )
         let event2 = WeeklyEvent(
             id: sharedID,
@@ -98,7 +100,8 @@ final class HomeDashboardTests: XCTestCase {
             ddayDate: "2026.05.01",
             impact: .positive,
             oneLiner: "Test",
-            investContext: "Test"
+            investContext: "Test",
+            timeGroup: .thisWeek
         )
         XCTAssertEqual(HomeRoute.event(event1), HomeRoute.event(event2))
     }

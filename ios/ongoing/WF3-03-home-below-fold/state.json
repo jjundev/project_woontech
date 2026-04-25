@@ -1,0 +1,17 @@
+{
+  "id": "WF3-03-home-below-fold",
+  "state": "implementing",
+  "paused_from": null,
+  "title": "WF3-03 \u2014 \ud648 below-the-fold (Weekly \ud750\ub984 + \uacf5\uc720 \ud6c5 + PRO \ud2f0\uc800 + Disclaimer)",
+  "plan_version": 0,
+  "impl_version": 0,
+  "plan_retries": 0,
+  "impl_retries": 0,
+  "max_plan_retries": 3,
+  "max_impl_retries": 3,
+  "escalation": null,
+  "created_at": 1777078637.45441,
+  "updated_at": 1777078881.883879,
+  "branch": "feature/WF3-03-home-below-fold",
+  "pr_url": null
+}

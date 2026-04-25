@@ -56,7 +56,17 @@ final class HomeDashboardTests: XCTestCase {
     // MARK: - HomeRoute Hashable tests (AC-9)
 
     func test_homeRoute_allCasesHashable() {
-        let event = WeeklyEvent()
+        let event = WeeklyEvent(
+            type: .daewoon,
+            icon: "🔄",
+            title: "Test Event",
+            dday: -10,
+            ddayDate: "2026.05.01",
+            impact: .positive,
+            oneLiner: "Test",
+            investContext: "Test",
+            timeGroup: .thisWeek
+        )
         let routes: Set<HomeRoute> = [
             .investing,
             .event(event),
@@ -69,8 +79,30 @@ final class HomeDashboardTests: XCTestCase {
 
     func test_homeRoute_event_hashEquality() {
         let sharedID = UUID()
-        let event1 = WeeklyEvent(id: sharedID)
-        let event2 = WeeklyEvent(id: sharedID)
+        let event1 = WeeklyEvent(
+            id: sharedID,
+            type: .daewoon,
+            icon: "🔄",
+            title: "Test Event",
+            dday: -10,
+            ddayDate: "2026.05.01",
+            impact: .positive,
+            oneLiner: "Test",
+            investContext: "Test",
+            timeGroup: .thisWeek
+        )
+        let event2 = WeeklyEvent(
+            id: sharedID,
+            type: .daewoon,
+            icon: "🔄",
+            title: "Test Event",
+            dday: -10,
+            ddayDate: "2026.05.01",
+            impact: .positive,
+            oneLiner: "Test",
+            investContext: "Test",
+            timeGroup: .thisWeek
+        )
         XCTAssertEqual(HomeRoute.event(event1), HomeRoute.event(event2))
     }
 

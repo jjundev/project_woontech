@@ -70,6 +70,13 @@
 		B001006D000000000000A06D /* CollectionExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001006D000000000000A06D /* CollectionExtensions.swift */; };
 		B001006E000000000000A06E /* HeroInvestingCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001006E000000000000A06E /* HeroInvestingCardView.swift */; };
 		B001006F000000000000A06F /* InsightCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001006F000000000000A06F /* InsightCardView.swift */; };
+		B0010070000000000000A070 /* WeeklyEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010070000000000000A070 /* WeeklyEvent.swift */; };
+		B0010071000000000000A071 /* DisclaimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010071000000000000A071 /* DisclaimerView.swift */; };
+		B0010072000000000000A072 /* EventCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010072000000000000A072 /* EventCardView.swift */; };
+		B0010073000000000000A073 /* WeeklyEventsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010073000000000000A073 /* WeeklyEventsSection.swift */; };
+		B0010074000000000000A074 /* ShareHookCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010074000000000000A074 /* ShareHookCard.swift */; };
+		B0010075000000000000A075 /* ProTeaserCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010075000000000000A075 /* ProTeaserCard.swift */; };
+		B0010076000000000000A076 /* WeeklyEventsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010076000000000000A076 /* WeeklyEventsTests.swift */; };
 		B0010101000000000000A101 /* SajuInputModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010101000000000000A101 /* SajuInputModelTests.swift */; };
 		B0010102000000000000A102 /* SajuFlowModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010102000000000000A102 /* SajuFlowModelTests.swift */; };
 		B0010103000000000000A103 /* SolarTimeCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010103000000000000A103 /* SolarTimeCalculatorTests.swift */; };
@@ -168,6 +175,13 @@
 		A001006D000000000000A06D /* CollectionExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionExtensions.swift; sourceTree = "<group>"; };
 		A001006E000000000000A06E /* HeroInvestingCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroInvestingCardView.swift; sourceTree = "<group>"; };
 		A001006F000000000000A06F /* InsightCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightCardView.swift; sourceTree = "<group>"; };
+		A0010070000000000000A070 /* WeeklyEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyEvent.swift; sourceTree = "<group>"; };
+		A0010071000000000000A071 /* DisclaimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisclaimerView.swift; sourceTree = "<group>"; };
+		A0010072000000000000A072 /* EventCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventCardView.swift; sourceTree = "<group>"; };
+		A0010073000000000000A073 /* WeeklyEventsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyEventsSection.swift; sourceTree = "<group>"; };
+		A0010074000000000000A074 /* ShareHookCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareHookCard.swift; sourceTree = "<group>"; };
+		A0010075000000000000A075 /* ProTeaserCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProTeaserCard.swift; sourceTree = "<group>"; };
+		A0010076000000000000A076 /* WeeklyEventsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyEventsTests.swift; sourceTree = "<group>"; };
 		A0010101000000000000A101 /* SajuInputModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuInputModelTests.swift; sourceTree = "<group>"; };
 		A0010102000000000000A102 /* SajuFlowModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuFlowModelTests.swift; sourceTree = "<group>"; };
 		A0010103000000000000A103 /* SolarTimeCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SolarTimeCalculatorTests.swift; sourceTree = "<group>"; };
@@ -240,9 +254,18 @@
 			path = SajuInput;
 			sourceTree = "<group>";
 		};
+		A0010910000000000000A910 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A0010070000000000000A070 /* WeeklyEvent.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
 		7B6FD085F57360344B6F63B8 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				A0010910000000000000A910 /* Models */,
 				C4B901D898BA88FAECCC27A1 /* DesignTokens.swift */,
 				A001006D000000000000A06D /* CollectionExtensions.swift */,
 				37ED5F66605992BA4E6AFAD9 /* OnboardingFlowModel.swift */,
@@ -340,6 +363,7 @@
 			isa = PBXGroup;
 			children = (
 				A001006B000000000000A06B /* HomeDashboardTests.swift */,
+				A0010076000000000000A076 /* WeeklyEventsTests.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -400,15 +424,28 @@
 			path = Referral;
 			sourceTree = "<group>";
 		};
+		A0010911000000000000A911 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A0010072000000000000A072 /* EventCardView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
 		A0010906000000000000A906 /* Home */ = {
 			isa = PBXGroup;
 			children = (
 				A0010907000000000000A907 /* Providers */,
+				A0010911000000000000A911 /* Views */,
 				A0010061000000000000A061 /* HomeRoute.swift */,
 				A0010062000000000000A062 /* HomeDependencies.swift */,
 				A0010063000000000000A063 /* HomeDashboardView.swift */,
 				A0010064000000000000A064 /* HomeHeaderView.swift */,
 				A0010065000000000000A065 /* HomeRouteDestinations.swift */,
+				A0010071000000000000A071 /* DisclaimerView.swift */,
+				A0010073000000000000A073 /* WeeklyEventsSection.swift */,
+				A0010074000000000000A074 /* ShareHookCard.swift */,
+				A0010075000000000000A075 /* ProTeaserCard.swift */,
 				A001006E000000000000A06E /* HeroInvestingCardView.swift */,
 				A001006F000000000000A06F /* InsightCardView.swift */,
 			);
@@ -557,6 +594,7 @@
 				B0010106000000000000A106 /* SajuInputStorePersistenceTests.swift in Sources */,
 				B0010107000000000000A107 /* SajuResultAccuracyTests.swift in Sources */,
 				B001006B000000000000A06B /* HomeDashboardTests.swift in Sources */,
+				B0010076000000000000A076 /* WeeklyEventsTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -620,6 +658,12 @@
 				B001006D000000000000A06D /* CollectionExtensions.swift in Sources */,
 				B001006E000000000000A06E /* HeroInvestingCardView.swift in Sources */,
 				B001006F000000000000A06F /* InsightCardView.swift in Sources */,
+				B0010070000000000000A070 /* WeeklyEvent.swift in Sources */,
+				B0010071000000000000A071 /* DisclaimerView.swift in Sources */,
+				B0010072000000000000A072 /* EventCardView.swift in Sources */,
+				B0010073000000000000A073 /* WeeklyEventsSection.swift in Sources */,
+				B0010074000000000000A074 /* ShareHookCard.swift in Sources */,
+				B0010075000000000000A075 /* ProTeaserCard.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

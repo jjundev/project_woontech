@@ -77,10 +77,15 @@ struct WoontechApp: App {
         _store = StateObject(wrappedValue: OnboardingStore())
         _sajuStore = StateObject(wrappedValue: SajuInputStore(preload: preloadedProfile))
 
+        // Parse Today detail mock launch args for UI tests
+        let todayHapchungEmpty = args.contains("-mockTodayHapchungEmpty")
+        let todayMottoTabooOn = args.contains("-mockTodayMottoTabooOn")
+
         // Build HomeDependencies, applying any mock overrides from launch args
         let resolvedDeps: HomeDependencies
         let hasAnyMockArg = mockUnreadCount != nil || mockAvatarInitial != nil
             || mockHeroScore != nil || mockHeroDisplayName != nil || mockHeroDate != nil
+            || todayHapchungEmpty || todayMottoTabooOn
         if hasAnyMockArg {
             let userProfile: any UserProfileProviding = {
                 let name = mockHeroDisplayName ?? "홍길동"
@@ -106,10 +111,30 @@ struct WoontechApp: App {
                     }()
                 )
             }()
+            let todayDetail: any TodayDetailProviding = {
+                if todayHapchungEmpty && todayMottoTabooOn {
+                    return MockTodayDetailProvider(
+                        hapchungEvents: [],
+                        dailyMotto: "오늘의 한마디 예시",
+                        dailyTaboo: "금기 예시"
+                    )
+                }
+                if todayHapchungEmpty {
+                    return MockTodayDetailProvider(hapchungEvents: [])
+                }
+                if todayMottoTabooOn {
+                    return MockTodayDetailProvider(
+                        dailyMotto: "오늘의 한마디 예시",
+                        dailyTaboo: "금기 예시"
+                    )
+                }
+                return MockTodayDetailProvider()
+            }()
             resolvedDeps = HomeDependencies(
                 userProfile: userProfile,
                 notificationCenter: notificationCenter,
-                heroInvesting: heroInvesting
+                heroInvesting: heroInvesting,
+                todayDetail: todayDetail
             )
         } else {
             resolvedDeps = HomeDependencies.mock

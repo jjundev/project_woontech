@@ -10,6 +10,10 @@ struct HomeDashboardView: View {
     @State private var shareTapCount = 0
     @State private var proTrialTapCount = 0
 
+    private var showsUITestNavigationTriggers: Bool {
+        ProcessInfo.processInfo.arguments.contains("-openHome")
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             HomeHeaderView(
@@ -69,7 +73,7 @@ struct HomeDashboardView: View {
                     case .event:
                         EventPlaceholderView()
                     case .today:
-                        TodayPlaceholderView()
+                        TodayDetailView(provider: homeDeps.todayDetail)
                     case .tabooPlaceholder:
                         TabooPlaceholderView()
                     case .practicePlaceholder:
@@ -103,48 +107,44 @@ struct HomeDashboardView: View {
         }
         // Hidden push trigger buttons for UI tests (AC-10)
         .overlay(alignment: .bottomLeading) {
-            VStack(spacing: 0) {
-                Button {
-                    navigationPath.append(.investing)
-                } label: {
-                    Rectangle().fill(Color.clear).frame(width: 1, height: 1)
-                }
-                .accessibilityIdentifier("HomeNavPushInvesting")
-                .opacity(0)
+            if showsUITestNavigationTriggers {
+                VStack(spacing: 0) {
+                    uiTestNavigationButton("HomeNavPushInvesting") {
+                        navigationPath.append(.investing)
+                    }
 
-                Button {
-                    navigationPath.append(.event(MockWeeklyEventsProvider().events()[0]))
-                } label: {
-                    Rectangle().fill(Color.clear).frame(width: 1, height: 1)
-                }
-                .accessibilityIdentifier("HomeNavPushEvent")
-                .opacity(0)
+                    uiTestNavigationButton("HomeNavPushEvent") {
+                        navigationPath.append(.event(MockWeeklyEventsProvider().events()[0]))
+                    }
 
-                Button {
-                    navigationPath.append(.today)
-                } label: {
-                    Rectangle().fill(Color.clear).frame(width: 1, height: 1)
-                }
-                .accessibilityIdentifier("HomeNavPushToday")
-                .opacity(0)
+                    uiTestNavigationButton("HomeNavPushToday") {
+                        navigationPath.append(.today)
+                    }
 
-                Button {
-                    navigationPath.append(.tabooPlaceholder)
-                } label: {
-                    Rectangle().fill(Color.clear).frame(width: 1, height: 1)
-                }
-                .accessibilityIdentifier("HomeNavPushTaboo")
-                .opacity(0)
+                    uiTestNavigationButton("HomeNavPushTaboo") {
+                        navigationPath.append(.tabooPlaceholder)
+                    }
 
-                Button {
-                    navigationPath.append(.practicePlaceholder)
-                } label: {
-                    Rectangle().fill(Color.clear).frame(width: 1, height: 1)
+                    uiTestNavigationButton("HomeNavPushPractice") {
+                        navigationPath.append(.practicePlaceholder)
+                    }
                 }
-                .accessibilityIdentifier("HomeNavPushPractice")
-                .opacity(0)
             }
         }
+    }
+
+    private func uiTestNavigationButton(
+        _ identifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Color.black.opacity(0.001)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(identifier)
+        .accessibilityLabel(identifier)
     }
 }
 

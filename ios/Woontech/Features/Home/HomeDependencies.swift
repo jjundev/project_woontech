@@ -7,6 +7,7 @@ final class HomeDependencies: ObservableObject {
     var insights: any InsightsProviding
     var weeklyEvents: any WeeklyEventsProviding
     var investingAttitudeDetail: any InvestingAttitudeDetailProviding
+    var todayDetail: any TodayDetailProviding
 
     init(
         userProfile: any UserProfileProviding = MockUserProfileProvider(),
@@ -14,7 +15,8 @@ final class HomeDependencies: ObservableObject {
         heroInvesting: any HeroInvestingProviding = MockHeroInvestingProvider(),
         insights: any InsightsProviding = MockInsightsProvider(),
         weeklyEvents: any WeeklyEventsProviding = MockWeeklyEventsProvider(),
-        investingAttitudeDetail: any InvestingAttitudeDetailProviding = MockInvestingAttitudeDetailProvider()
+        investingAttitudeDetail: any InvestingAttitudeDetailProviding = MockInvestingAttitudeDetailProvider(),
+        todayDetail: any TodayDetailProviding = MockTodayDetailProvider()
     ) {
         self.userProfile = userProfile
         self.notificationCenter = notificationCenter
@@ -22,6 +24,7 @@ final class HomeDependencies: ObservableObject {
         self.insights = insights
         self.weeklyEvents = weeklyEvents
         self.investingAttitudeDetail = investingAttitudeDetail
+        self.todayDetail = todayDetail
     }
 
     static let mock = HomeDependencies()

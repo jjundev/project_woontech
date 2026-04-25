@@ -93,6 +93,10 @@
 		B0010301000000000000B301 /* InvestingAttitudeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010301000000000000A301 /* InvestingAttitudeDetailView.swift */; };
 		B0010302000000000000B302 /* InvestingAttitudeDetailViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010302000000000000A302 /* InvestingAttitudeDetailViewTests.swift */; };
 		B0010303000000000000B303 /* InvestingAttitudeDetailUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010303000000000000A303 /* InvestingAttitudeDetailUITests.swift */; };
+		B0010400000000000000B400 /* TodayDetailProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010400000000000000A400 /* TodayDetailProviding.swift */; };
+		B0010401000000000000B401 /* TodayDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010401000000000000A401 /* TodayDetailView.swift */; };
+		B0010402000000000000B402 /* TodayDetailViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010402000000000000A402 /* TodayDetailViewTests.swift */; };
+		B0010403000000000000B403 /* TodayDetailUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010403000000000000A403 /* TodayDetailUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -202,6 +206,10 @@
 		A0010301000000000000A301 /* InvestingAttitudeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvestingAttitudeDetailView.swift; sourceTree = "<group>"; };
 		A0010302000000000000A302 /* InvestingAttitudeDetailViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvestingAttitudeDetailViewTests.swift; sourceTree = "<group>"; };
 		A0010303000000000000A303 /* InvestingAttitudeDetailUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvestingAttitudeDetailUITests.swift; sourceTree = "<group>"; };
+		A0010400000000000000A400 /* TodayDetailProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayDetailProviding.swift; sourceTree = "<group>"; };
+		A0010401000000000000A401 /* TodayDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayDetailView.swift; sourceTree = "<group>"; };
+		A0010402000000000000A402 /* TodayDetailViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayDetailViewTests.swift; sourceTree = "<group>"; };
+		A0010403000000000000A403 /* TodayDetailUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayDetailUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -328,6 +336,7 @@
 			children = (
 				A001006C000000000000A06C /* HomeDashboardUITests.swift */,
 				A0010303000000000000A303 /* InvestingAttitudeDetailUITests.swift */,
+				A0010403000000000000A403 /* TodayDetailUITests.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -374,6 +383,7 @@
 				A001006B000000000000A06B /* HomeDashboardTests.swift */,
 				A0010076000000000000A076 /* WeeklyEventsTests.swift */,
 				A0010302000000000000A302 /* InvestingAttitudeDetailViewTests.swift */,
+				A0010402000000000000A402 /* TodayDetailViewTests.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -467,6 +477,7 @@
 			isa = PBXGroup;
 			children = (
 				A0010913000000000000A913 /* Investing */,
+				A0010914000000000000A914 /* Today */,
 			);
 			path = Detail;
 			sourceTree = "<group>";
@@ -478,6 +489,15 @@
 				A0010301000000000000A301 /* InvestingAttitudeDetailView.swift */,
 			);
 			path = Investing;
+			sourceTree = "<group>";
+		};
+		A0010914000000000000A914 /* Today */ = {
+			isa = PBXGroup;
+			children = (
+				A0010400000000000000A400 /* TodayDetailProviding.swift */,
+				A0010401000000000000A401 /* TodayDetailView.swift */,
+			);
+			path = Today;
 			sourceTree = "<group>";
 		};
 		A0010907000000000000A907 /* Providers */ = {
@@ -624,6 +644,7 @@
 				B001006B000000000000A06B /* HomeDashboardTests.swift in Sources */,
 				B0010076000000000000A076 /* WeeklyEventsTests.swift in Sources */,
 				B0010302000000000000B302 /* InvestingAttitudeDetailViewTests.swift in Sources */,
+				B0010402000000000000B402 /* TodayDetailViewTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -695,6 +716,8 @@
 				B0010075000000000000A075 /* ProTeaserCard.swift in Sources */,
 				B0010300000000000000B300 /* InvestingAttitudeDetailProviding.swift in Sources */,
 				B0010301000000000000B301 /* InvestingAttitudeDetailView.swift in Sources */,
+				B0010400000000000000B400 /* TodayDetailProviding.swift in Sources */,
+				B0010401000000000000B401 /* TodayDetailView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -710,6 +733,7 @@
 				B0010205000000000000A205 /* SajuAccessibilityUITests.swift in Sources */,
 				B001006C000000000000A06C /* HomeDashboardUITests.swift in Sources */,
 				B0010303000000000000B303 /* InvestingAttitudeDetailUITests.swift in Sources */,
+				B0010403000000000000B403 /* TodayDetailUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

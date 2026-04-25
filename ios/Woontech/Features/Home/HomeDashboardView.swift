@@ -69,7 +69,7 @@ struct HomeDashboardView: View {
                     case .event:
                         EventPlaceholderView()
                     case .today:
-                        TodayPlaceholderView()
+                        TodayDetailView(provider: homeDeps.todayDetail)
                     case .tabooPlaceholder:
                         TabooPlaceholderView()
                     case .practicePlaceholder:

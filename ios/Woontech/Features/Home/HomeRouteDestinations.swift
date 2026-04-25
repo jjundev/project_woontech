@@ -16,6 +16,7 @@ struct EventPlaceholderView: View {
     }
 }
 
+@available(*, deprecated, message: "Use TodayDetailView instead")
 struct TodayPlaceholderView: View {
     var body: some View {
         Text("준비중")

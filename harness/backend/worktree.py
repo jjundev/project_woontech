@@ -152,6 +152,11 @@ def worktree_branch(task_id: str) -> str:
 WRITE_TOOL_NAMES = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 BASH_TOOL_NAME = "Bash"
 BASH_DIR_COMMANDS = {"cd", "pushd", "popd"}
+# Tools that exist solely to launch or follow background processes. The
+# harness's post-reviewer artifact check fires the moment the agent finishes,
+# so any test offloaded to the background races against that check and shows
+# up as `diagnostic_infra_missing`. Block them at the hook level.
+DENIED_BACKGROUND_TOOLS = frozenset({"Monitor", "BashOutput", "KillShell"})
 
 
 @dataclass(frozen=True)
@@ -392,6 +397,27 @@ def make_path_guard(
     async def pre_tool(input: dict[str, Any], tool_use_id: Optional[str], context: Any) -> dict[str, Any]:
         tool_name = input.get("tool_name")
         ti = input.get("tool_input") or {}
+        if tool_name in DENIED_BACKGROUND_TOOLS:
+            reason = (
+                f"{tool_name} is not allowed in this phase. All build and test "
+                "commands must run synchronously so the harness can read the "
+                ".harness/test-results/ summaries after the agent finishes."
+            )
+            await emit(
+                "agent_blocked",
+                task_id=task_id,
+                tool=tool_name,
+                path="",
+                reason=reason,
+                command="",
+            )
+            return {
+                "hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "permissionDecision": "deny",
+                    "permissionDecisionReason": reason,
+                }
+            }
         if tool_name == BASH_TOOL_NAME:
             command = ti.get("command")
             if not isinstance(command, str) or not command.strip():
@@ -401,6 +427,19 @@ def make_path_guard(
                     "<missing command>",
                     task_id=task_id,
                     reason="Bash command is missing from tool_input; expected `command` or `cmd`.",
+                )
+                await emit("agent_blocked", **payload)
+                return response
+            if ti.get("run_in_background"):
+                payload, response = _deny_command(
+                    command.strip(),
+                    task_id=task_id,
+                    reason=(
+                        "Bash run_in_background is not allowed in this phase. "
+                        "Test/build commands must run synchronously so the "
+                        "harness can read .harness/test-results/last-{unit,ui}-summary.txt "
+                        "after the agent finishes."
+                    ),
                 )
                 await emit("agent_blocked", **payload)
                 return response
@@ -441,7 +480,7 @@ def make_path_guard(
     return {
         "PreToolUse": [
             HookMatcher(
-                matcher="Write|Edit|MultiEdit|NotebookEdit|Bash",
+                matcher="Write|Edit|MultiEdit|NotebookEdit|Bash|Monitor|BashOutput|KillShell",
                 hooks=[pre_tool],
             )
         ]

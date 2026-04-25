@@ -25,6 +25,21 @@ Your task (in order):
    the current code or checklist clearly proves it is resolved.
 2. Inspect the code in the worktree. Verify every checklist item is implemented.
 3. Run the build command. Run the unit tests. Run the UI tests. All must pass.
+   If a test command exits non-zero, **before forming any hypothesis**, Read
+   the diagnostic files the runner mirrors into the worktree:
+   - `.harness/test-results/last-unit-summary.txt`, `.harness/test-results/last-unit-failures.txt`
+   - `.harness/test-results/last-ui-summary.txt`, `.harness/test-results/last-ui-failures.txt`
+   Quote the actual failing assertion / error message in the feedback's
+   `Build / Test failures` section. Do not propose a fix from the streamed
+   xcodebuild stdout alone — that output lacks the structured per-test failure
+   detail that the xcresult bundle contains.
+   If the expected diagnostic file is missing or empty, do NOT proceed with
+   hypothesis-based fixes. A file whose body starts with
+   `[no xcresult bundle found]` is still a valid diagnostic artifact: quote it
+   and report the build/test infrastructure failure it describes.
+   End your response with `IMPLEMENT_REWORK_REQUIRED` and put a
+   `## Required changes` section containing exactly one line:
+   `DIAGNOSTIC_INFRASTRUCTURE_MISSING: <expected file path>`.
 4. Verify target membership in `Woontech.xcodeproj/project.pbxproj`. For every
    new `.swift` file listed in the runtime prompt, use the Grep tool on
    `Woontech.xcodeproj/project.pbxproj` and the Read tool for matching

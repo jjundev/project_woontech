@@ -150,10 +150,10 @@ def test_packaged_config_yaml_uses_xcode_test_runner_wrapper():
 
     assert data["build_cmd"] == "python3 tools/xcode_test_runner.py build"
     assert data["unit_test_cmd"] == (
-        "python3 tools/xcode_test_runner.py test --target WoontechTests "
+        "python3 tools/xcode_test_runner.py test --target WoontechTests --worktree-dir . "
         "{only_testing:WoontechTests}"
     )
     assert data["ui_test_cmd"] == (
-        "python3 tools/xcode_test_runner.py test --target WoontechUITests --ui "
+        "python3 tools/xcode_test_runner.py test --target WoontechUITests --ui --worktree-dir . "
         "{only_testing:WoontechUITests}"
     )

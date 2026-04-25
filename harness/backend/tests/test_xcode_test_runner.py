@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -121,3 +122,204 @@ def test_environment_launch_failure_does_not_match_regular_assertion_failure():
     output = "XCTAssertEqual failed: expected Home, got Dashboard"
 
     assert not runner.is_environment_launch_failure(output)
+
+
+def test_persist_test_artifacts_writes_no_bundle_marker_when_bundle_missing(tmp_path):
+    bundle = tmp_path / "missing.xcresult"
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+
+    runner._persist_test_artifacts("ui", bundle, worktree)
+
+    out_dir = worktree / runner.TEST_ARTIFACTS_SUBDIR
+    summary = (out_dir / "last-ui-summary.txt").read_text()
+    failures = (out_dir / "last-ui-failures.txt").read_text()
+    assert summary.startswith("[no xcresult bundle found]")
+    assert failures.startswith("[no xcresult bundle found]")
+    assert not (out_dir / "last-ui.xcresult").exists()
+
+
+def test_persist_test_artifacts_uses_exact_bundle_and_writes_filtered_failures(tmp_path, monkeypatch):
+    derived = tmp_path / "derived"
+    stale = derived / "Logs" / "Test" / "Test-Woontech-stale.xcresult"
+    stale.mkdir(parents=True)
+    (stale / "Info.plist").write_text("stale")
+    current = derived / "ResultBundles" / "current.xcresult"
+    current.mkdir(parents=True)
+    (current / "Info.plist").write_text("current")
+
+    captured: list[tuple[str, ...]] = []
+
+    def fake_capture(bundle, *args):
+        captured.append((str(bundle),) + args)
+        if args[-1:] == ("--compact",):
+            return json.dumps(
+                {
+                    "testNodes": [
+                        {
+                            "nodeType": "Test Case",
+                            "name": "PassingTests/test_passes()",
+                            "result": "Passed",
+                        },
+                        {
+                            "nodeType": "Test Case",
+                            "name": "FailingTests/test_fails()",
+                            "result": "Failed",
+                            "children": [
+                                {
+                                    "nodeType": "Failure Message",
+                                    "name": "XCTAssertEqual failed",
+                                    "details": "expected Home, got Dashboard",
+                                }
+                            ],
+                        },
+                    ]
+                }
+            )
+        return "<summary output>"
+
+    monkeypatch.setattr(runner, "_capture_xcresulttool", fake_capture)
+
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+
+    runner._persist_test_artifacts("unit", current, worktree)
+
+    out_dir = worktree / runner.TEST_ARTIFACTS_SUBDIR
+    summary = (out_dir / "last-unit-summary.txt").read_text()
+    failures = (out_dir / "last-unit-failures.txt").read_text()
+    bundle_copy = out_dir / "last-unit.xcresult"
+
+    assert "<summary output>" in summary
+    assert "FailingTests/test_fails()" in failures
+    assert "XCTAssertEqual failed" in failures
+    assert "expected Home, got Dashboard" in failures
+    assert "PassingTests/test_passes()" not in failures
+    assert str(current) in summary
+    assert bundle_copy.is_dir()
+    assert (bundle_copy / "Info.plist").read_text() == "current"
+    assert all(str(current) == row[0] for row in captured)
+
+
+def test_persist_test_artifacts_overwrites_previous_mirror(tmp_path, monkeypatch):
+    bundle = tmp_path / "Test-Woontech-A.xcresult"
+    bundle.mkdir(parents=True)
+    (bundle / "stamp").write_text("v1")
+
+    def fake_capture(bundle, *args):
+        if args[-1:] == ("--compact",):
+            return json.dumps({"testNodes": []})
+        return "ok"
+
+    monkeypatch.setattr(runner, "_capture_xcresulttool", fake_capture)
+
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+
+    runner._persist_test_artifacts("ui", bundle, worktree)
+    # Replace the source bundle with new content and re-run.
+    (bundle / "stamp").write_text("v2")
+    runner._persist_test_artifacts("ui", bundle, worktree)
+
+    mirror = worktree / runner.TEST_ARTIFACTS_SUBDIR / "last-ui.xcresult"
+    assert (mirror / "stamp").read_text() == "v2"
+
+
+def test_persist_test_artifacts_records_failure_parser_error(tmp_path, monkeypatch):
+    bundle = tmp_path / "current.xcresult"
+    bundle.mkdir()
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+
+    def fake_capture(bundle, *args):
+        if args[-1:] == ("--compact",):
+            return "{not json"
+        return "summary"
+
+    monkeypatch.setattr(runner, "_capture_xcresulttool", fake_capture)
+
+    runner._persist_test_artifacts("ui", bundle, worktree)
+
+    failures = (
+        worktree / runner.TEST_ARTIFACTS_SUBDIR / "last-ui-failures.txt"
+    ).read_text()
+    assert "[failed to parse xcresult tests JSON]" in failures
+    assert "{not json" in failures
+
+
+def test_run_test_adds_result_bundle_path_and_persists_exact_bundle(monkeypatch, tmp_path):
+    captured: dict[str, object] = {}
+
+    monkeypatch.setattr(
+        runner,
+        "resolve_simulator",
+        lambda *, ui: runner.SimulatorDevice("iPhone", "SIM", "runtime", "type", "Booted"),
+    )
+    monkeypatch.setattr(runner, "reset_simulator", lambda udid: None)
+
+    def fake_run(args, *, simulator_udid, derived_data_path, result_bundle_path=None):
+        captured["args"] = list(args)
+        captured["simulator_udid"] = simulator_udid
+        captured["derived_data_path"] = derived_data_path
+        captured["result_bundle_path"] = result_bundle_path
+        return 0
+
+    def fake_persist(kind, bundle, target_dir):
+        captured["persist"] = (kind, bundle, target_dir)
+
+    monkeypatch.setattr(runner, "run_with_optional_repair", fake_run)
+    monkeypatch.setattr(runner, "_persist_test_artifacts", fake_persist)
+
+    code = runner.run_test(
+        "WoontechTests",
+        ui=False,
+        xcodebuild_args=["-only-testing:WoontechTests/FooTests"],
+        worktree_dir_override=str(tmp_path),
+    )
+
+    args = captured["args"]
+    result_bundle_path = captured["result_bundle_path"]
+    assert code == 0
+    assert "-resultBundlePath" in args
+    assert args[args.index("-resultBundlePath") + 1] == str(result_bundle_path)
+    assert captured["persist"] == ("unit", result_bundle_path, tmp_path)
+
+
+def test_parse_args_extracts_worktree_dir_from_test_command():
+    args = runner.parse_args(
+        [
+            "test",
+            "--target",
+            "WoontechTests",
+            "--worktree-dir",
+            ".",
+            "-only-testing:WoontechTests/FooTests",
+        ]
+    )
+
+    assert args.worktree_dir == "."
+    assert args.xcodebuild_args == ["-only-testing:WoontechTests/FooTests"]
+
+
+def test_worktree_dir_honors_cli_then_env_overrides(monkeypatch, tmp_path):
+    monkeypatch.setenv(runner.ENV_WORKTREE_DIR, str(tmp_path / "env"))
+    monkeypatch.setenv(runner.ENV_CLAUDE_PROJECT_DIR, str(tmp_path / "claude"))
+    assert runner.worktree_dir(".") == Path(".")
+    assert runner.worktree_dir() == tmp_path / "env"
+
+
+def test_worktree_dir_honors_claude_project_dir(monkeypatch, tmp_path):
+    monkeypatch.delenv(runner.ENV_WORKTREE_DIR, raising=False)
+    monkeypatch.setenv(runner.ENV_CLAUDE_PROJECT_DIR, str(tmp_path))
+    assert runner.worktree_dir() == tmp_path
+
+
+def test_worktree_dir_honors_env_override(monkeypatch, tmp_path):
+    monkeypatch.setenv(runner.ENV_WORKTREE_DIR, str(tmp_path))
+    assert runner.worktree_dir() == tmp_path
+
+
+def test_worktree_dir_defaults_to_ios_root(monkeypatch):
+    monkeypatch.delenv(runner.ENV_WORKTREE_DIR, raising=False)
+    monkeypatch.delenv(runner.ENV_CLAUDE_PROJECT_DIR, raising=False)
+    assert runner.worktree_dir() == runner.ios_root()

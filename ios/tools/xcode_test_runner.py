@@ -22,6 +22,9 @@ UI_SIMULATOR_NAME = "Woontech UI Test iPhone 17 Pro"
 DERIVED_DATA_ROOT = Path("/tmp/woontech-derived-data")
 ENV_SIMULATOR_UDID = "WOONTECH_SIMULATOR_UDID"
 ENV_DEEP_REPAIR = "WOONTECH_XCODE_DEEP_REPAIR"
+ENV_WORKTREE_DIR = "WOONTECH_WORKTREE_DIR"
+ENV_CLAUDE_PROJECT_DIR = "CLAUDE_PROJECT_DIR"
+TEST_ARTIFACTS_SUBDIR = Path(".harness") / "test-results"
 LLDB_ENV_FAILURE_SIGNATURES = (
     "DebuggerVersionStore",
     "no debugger version",
@@ -57,6 +60,128 @@ def ios_root() -> Path:
 
 def project_path() -> Path:
     return ios_root() / PROJECT_NAME
+
+
+def worktree_dir(cli_worktree_dir: str | None = None) -> Path:
+    if cli_worktree_dir:
+        return Path(cli_worktree_dir)
+    for env_name in (ENV_WORKTREE_DIR, ENV_CLAUDE_PROJECT_DIR):
+        override = os.environ.get(env_name)
+        if override:
+            return Path(override)
+    return ios_root()
+
+
+def _capture_xcresulttool(bundle: Path, *args: str) -> str:
+    cmd = ["xcrun", "xcresulttool", *args, "--path", str(bundle)]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        return f"[xcresulttool invocation failed]\ncommand: {' '.join(cmd)}\nerror: {exc}\n"
+    body = (result.stdout or "") + (result.stderr or "")
+    if not body.strip():
+        body = f"[xcresulttool returned empty output]\ncommand: {' '.join(cmd)}\nexit: {result.returncode}\n"
+    return body
+
+
+def _format_failed_tests(tests_output: str) -> str:
+    try:
+        payload = json.loads(tests_output)
+    except json.JSONDecodeError as exc:
+        raw = tests_output if tests_output.strip() else "[empty xcresulttool tests output]\n"
+        return (
+            "[failed to parse xcresult tests JSON]\n"
+            f"error: {exc}\n\n"
+            "[raw xcresulttool tests output]\n"
+            f"{raw}"
+        )
+
+    lines: list[str] = []
+
+    def visit(node: dict[str, Any], path: list[str]) -> None:
+        name = str(node.get("name") or "<unnamed>")
+        node_type = str(node.get("nodeType") or "")
+        result = str(node.get("result") or "")
+        details = str(node.get("details") or "")
+        current_path = [*path, name]
+        if result == "Failed" or node_type == "Failure Message":
+            lines.append(f"- {' > '.join(current_path)}")
+            if node_type:
+                lines.append(f"  type: {node_type}")
+            if result:
+                lines.append(f"  result: {result}")
+            if details:
+                lines.append("  details:")
+                for detail_line in details.splitlines():
+                    lines.append(f"    {detail_line}")
+        for child in node.get("children") or []:
+            if isinstance(child, dict):
+                visit(child, current_path)
+
+    for root in payload.get("testNodes") or []:
+        if isinstance(root, dict):
+            visit(root, [])
+
+    if not lines:
+        return "[no failed tests found]\n"
+    return "\n".join(lines) + "\n"
+
+
+def _result_bundle_path(derived_data_path: Path, test_kind: str) -> Path:
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    unique = time.time_ns()
+    return (
+        derived_data_path
+        / "ResultBundles"
+        / f"Test-Woontech-{test_kind}-{stamp}-{os.getpid()}-{unique}.xcresult"
+    )
+
+
+def _persist_test_artifacts(test_kind: str, bundle: Path, target_dir: Path) -> None:
+    """Mirror the current xcresult bundle and human-readable summaries into the worktree.
+
+    The harness PreToolUse hook denies absolute paths outside the worktree, so the
+    Reviewer agent cannot read xcresult bundles directly under DERIVED_DATA_ROOT.
+    Persisting summaries inside the worktree keeps failure diagnostics visible via
+    the Read tool without weakening the bash policy.
+    """
+    out_dir = target_dir / TEST_ARTIFACTS_SUBDIR
+    try:
+        out_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        print(f"warning: could not create {out_dir}: {exc}", file=sys.stderr)
+        return
+
+    summary_path = out_dir / f"last-{test_kind}-summary.txt"
+    failures_path = out_dir / f"last-{test_kind}-failures.txt"
+    bundle_dest = out_dir / f"last-{test_kind}.xcresult"
+
+    if not bundle.is_dir():
+        message = (
+            f"[no xcresult bundle found]\n"
+            f"expected_bundle: {bundle}\n"
+            f"This usually means xcodebuild failed before producing a result bundle "
+            f"(e.g. a build error). Check the build output streamed during the run.\n"
+        )
+        summary_path.write_text(message)
+        failures_path.write_text(message)
+        return
+
+    summary = _capture_xcresulttool(bundle, "get", "test-results", "summary")
+    tests = _capture_xcresulttool(bundle, "get", "test-results", "tests", "--compact")
+    failures = _format_failed_tests(tests)
+    header = f"# xcresult {test_kind} ({{section}})\nbundle: {bundle}\n\n"
+    summary_path.write_text(header.format(section="summary") + summary)
+    failures_path.write_text(header.format(section="tests") + failures)
+
+    if bundle_dest.exists():
+        shutil.rmtree(bundle_dest, ignore_errors=True)
+    try:
+        shutil.copytree(bundle, bundle_dest)
+    except OSError as exc:
+        (out_dir / f"last-{test_kind}-bundle-copy-error.txt").write_text(
+            f"failed to copy {bundle} -> {bundle_dest}: {exc}\n"
+        )
 
 
 def _run_capture(args: Sequence[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -266,8 +391,12 @@ def run_with_optional_repair(
     *,
     simulator_udid: str | None,
     derived_data_path: Path,
+    result_bundle_path: Path | None = None,
 ) -> int:
     for attempt in range(2):
+        if result_bundle_path is not None:
+            _remove_path(result_bundle_path)
+            result_bundle_path.parent.mkdir(parents=True, exist_ok=True)
         code, output = _run_streaming(args)
         if code == 0:
             return 0
@@ -288,22 +417,38 @@ def run_build() -> int:
     return run_with_optional_repair(args, simulator_udid=None, derived_data_path=derived_data_path)
 
 
-def run_test(target: str, *, ui: bool, xcodebuild_args: Sequence[str]) -> int:
+def run_test(
+    target: str,
+    *,
+    ui: bool,
+    xcodebuild_args: Sequence[str],
+    worktree_dir_override: str | None = None,
+) -> int:
     simulator = resolve_simulator(ui=ui)
     if ui:
         reset_simulator(simulator.udid)
     mode = "ui" if ui else "unit"
     derived_data_path = DERIVED_DATA_ROOT / mode
+    result_bundle_path = _result_bundle_path(derived_data_path, mode)
     selection_args = list(xcodebuild_args)
     if not any(arg.startswith("-only-testing:") for arg in selection_args):
         selection_args.insert(0, f"-only-testing:{target}")
     args = _xcodebuild_base(derived_data_path) + [
         "-destination",
         f"id={simulator.udid}",
+        "-resultBundlePath",
+        str(result_bundle_path),
         "test",
         *selection_args,
     ]
-    return run_with_optional_repair(args, simulator_udid=simulator.udid, derived_data_path=derived_data_path)
+    code = run_with_optional_repair(
+        args,
+        simulator_udid=simulator.udid,
+        derived_data_path=derived_data_path,
+        result_bundle_path=result_bundle_path,
+    )
+    _persist_test_artifacts(mode, result_bundle_path, worktree_dir(worktree_dir_override))
+    return code
 
 
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
@@ -315,6 +460,7 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     test_parser = subparsers.add_parser("test", help="Run unit or UI tests on a concrete simulator UUID.")
     test_parser.add_argument("--target", required=True, choices=("WoontechTests", "WoontechUITests"))
     test_parser.add_argument("--ui", action="store_true", help="Use the dedicated UI-test simulator and reset it first.")
+    test_parser.add_argument("--worktree-dir", help="Directory where .harness/test-results should be written.")
 
     namespace, unknown = parser.parse_known_args(argv)
     namespace.xcodebuild_args = unknown
@@ -327,7 +473,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.command == "build":
             return run_build()
         if args.command == "test":
-            return run_test(args.target, ui=args.ui, xcodebuild_args=args.xcodebuild_args)
+            return run_test(
+                args.target,
+                ui=args.ui,
+                xcodebuild_args=args.xcodebuild_args,
+                worktree_dir_override=args.worktree_dir,
+            )
         raise RunnerError(f"Unknown command: {args.command}")
     except RunnerError as exc:
         print(f"error: {exc}", file=sys.stderr)

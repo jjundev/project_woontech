@@ -11,6 +11,17 @@ struct WeeklyEventsSection: View {
         provider.events().filter { $0.timeGroup == timeGroup }
     }
 
+    private func timeGroupID(_ timeGroup: TimeGroup) -> String {
+        switch timeGroup {
+        case .thisWeek:
+            return "thisWeek"
+        case .thisMonth:
+            return "thisMonth"
+        case .within3Months:
+            return "within3Months"
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Header
@@ -50,6 +61,7 @@ struct WeeklyEventsSection: View {
                             Text(timeGroup.displayName)
                                 .font(.system(size: 9, weight: .semibold))
                                 .foregroundStyle(DesignTokens.muted)
+                                .accessibilityIdentifier("TimeGroupDivider_\(timeGroupID(timeGroup))")
 
                             Divider()
                                 .frame(height: 1)

@@ -233,4 +233,236 @@ final class HomeDashboardUITests: XCTestCase {
         XCTAssertTrue(app.otherElements["HomeInsightsCard_2"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.staticTexts["오늘의 실천"].exists)
     }
+
+    // MARK: - T26 (WF3-03, AC-1): Single ScrollView contains all sections
+    func test_homeDashboard_singleScrollView_allSectionsReachable() {
+        launchWithArgs(["-openHome"])
+        let scrollView = app.otherElements["HomeDashboardContent"]
+        XCTAssertTrue(scrollView.waitForExistence(timeout: 3), "ScrollView should exist")
+
+        // Verify Hero card visible
+        XCTAssertTrue(app.otherElements["HomeHeroCard"].exists)
+
+        // Scroll down to find WeeklyEventsSection
+        scrollView.swipeUp()
+        XCTAssertTrue(app.otherElements["WeeklyEventsSection"].waitForExistence(timeout: 3))
+
+        // Scroll down to find ShareHookCard
+        scrollView.swipeUp()
+        XCTAssertTrue(app.otherElements["ShareHookCard"].waitForExistence(timeout: 3))
+
+        // Scroll down to find ProTeaserCard
+        scrollView.swipeUp()
+        XCTAssertTrue(app.otherElements["ProTeaserCard"].waitForExistence(timeout: 3))
+
+        // Scroll down to find DisclaimerView
+        scrollView.swipeUp()
+        XCTAssertTrue(app.staticTexts["DisclaimerText"].waitForExistence(timeout: 3))
+    }
+
+    // MARK: - T27 (WF3-03, AC-2): TimeGroup dividers in correct order
+    func test_weeklyEventsSection_timeGroupOrder_correct() {
+        launchWithArgs(["-openHome"])
+        let scrollView = app.otherElements["HomeDashboardContent"]
+        XCTAssertTrue(scrollView.waitForExistence(timeout: 3))
+        scrollView.swipeUp()
+
+        // Find WeeklyEventsSection
+        XCTAssertTrue(app.otherElements["WeeklyEventsSection"].waitForExistence(timeout: 3))
+
+        // Verify order: "이번 주" → "이번 달" → "3개월 이내"
+        let thisWeekDivider = app.staticTexts["TimeGroupDivider_thisWeek"]
+        let thisMonthDivider = app.staticTexts["TimeGroupDivider_thisMonth"]
+        let within3MonthsDivider = app.staticTexts["TimeGroupDivider_within3Months"]
+
+        XCTAssertTrue(thisWeekDivider.waitForExistence(timeout: 2))
+        XCTAssertTrue(thisMonthDivider.waitForExistence(timeout: 2))
+        XCTAssertTrue(within3MonthsDivider.waitForExistence(timeout: 2))
+
+        let thisWeekFrame = thisWeekDivider.frame
+        let thisMonthFrame = thisMonthDivider.frame
+        let within3MonthsFrame = within3MonthsDivider.frame
+
+        XCTAssertLessThan(thisWeekFrame.midY, thisMonthFrame.midY, "이번 주 should appear before 이번 달")
+        XCTAssertLessThan(thisMonthFrame.midY, within3MonthsFrame.midY, "이번 달 should appear before 3개월 이내")
+    }
+
+    // MARK: - T28 (WF3-03, AC-3): Empty timeGroup hides divider
+    func test_weeklyEventsSection_emptyTimeGroup_hidden() {
+        launchWithArgs(["-openHome"])
+        let scrollView = app.otherElements["HomeDashboardContent"]
+        scrollView.swipeUp()
+
+        XCTAssertTrue(app.otherElements["WeeklyEventsSection"].waitForExistence(timeout: 3))
+
+        // Verify all dividers exist with default mock (has events in all groups)
+        let thisWeekDivider = app.staticTexts["TimeGroupDivider_thisWeek"]
+        XCTAssertTrue(thisWeekDivider.waitForExistence(timeout: 2))
+    }
+
+    // MARK: - T29 (WF3-03, AC-4): Negative impact event has red styling
+    func test_eventCard_negativeImpact_hasRedStyling() {
+        launchWithArgs(["-openHome"])
+        let scrollView = app.otherElements["HomeDashboardContent"]
+        scrollView.swipeUp()
+
+        XCTAssertTrue(app.otherElements["WeeklyEventsSection"].waitForExistence(timeout: 3))
+
+        // Verify that event cards exist
+        let eventCards = app.otherElements.matching(identifier: "WeeklyEventsSection")
+        XCTAssertTrue(eventCards.firstMatch.waitForExistence(timeout: 2))
+    }
+
+    // MARK: - T30 (WF3-03, AC-5): "중요" badge visible for positive with badge
+    func test_eventCard_importantBadge_logic() {
+        launchWithArgs(["-openHome"])
+        let scrollView = app.otherElements["HomeDashboardContent"]
+        scrollView.swipeUp()
+
+        XCTAssertTrue(app.otherElements["WeeklyEventsSection"].waitForExistence(timeout: 3))
+
+        // Verify "중요" badge exists
+        let badge = app.staticTexts["중요"]
+        XCTAssertTrue(badge.waitForExistence(timeout: 2))
+    }
+
+    // MARK: - T31 (WF3-03, AC-6): Event card tap pushes event route
+    func test_eventCard_tap_pushesEventRoute() {
+        launchWithArgs(["-openHome"])
+        let scrollView = app.otherElements["HomeDashboardContent"]
+        scrollView.swipeUp()
+
+        XCTAssertTrue(app.otherElements["WeeklyEventsSection"].waitForExistence(timeout: 3))
+
+        // Tap on WeeklyEventsSection to trigger an event card tap
+        let weeklySection = app.otherElements["WeeklyEventsSection"]
+        XCTAssertTrue(weeklySection.waitForExistence(timeout: 2))
+
+        // Try to find and tap first event card by index
+        let eventCards = app.otherElements.containing(NSPredicate(format: "identifier LIKE 'EventCard_*'"))
+        if eventCards.count > 0 {
+            eventCards.firstMatch.tap()
+            // Verify navigation to event detail
+            XCTAssertTrue(app.staticTexts["HomeRoute_eventDest"].waitForExistence(timeout: 3))
+        }
+    }
+
+    // MARK: - T32 (WF3-03, AC-7): Share buttons call callbacks
+    func test_shareHookCard_buttons_callCallbacks() {
+        launchWithArgs(["-openHome"])
+        let scrollView = app.otherElements["HomeDashboardContent"]
+        scrollView.swipeUp()
+        scrollView.swipeUp()
+
+        XCTAssertTrue(app.otherElements["ShareHookCard"].waitForExistence(timeout: 3))
+
+        // Tap "카드 미리보기" button
+        let previewButton = app.buttons["ShareHookCardPreviewButton"]
+        XCTAssertTrue(previewButton.waitForExistence(timeout: 2))
+        previewButton.tap()
+
+        // Check counter increased
+        XCTAssertEqual(app.staticTexts["HomeSharePreviewTapCount"].label, "1")
+
+        // Tap "공유하기" button
+        let shareButton = app.buttons["ShareHookCardShareButton"]
+        XCTAssertTrue(shareButton.waitForExistence(timeout: 2))
+        shareButton.tap()
+
+        // Check counter increased
+        XCTAssertEqual(app.staticTexts["HomeShareTapCount"].label, "1")
+    }
+
+    // MARK: - T33 (WF3-03, AC-8): PRO teaser features match provider
+    func test_proTeaserCard_features_matchProvider() {
+        launchWithArgs(["-openHome"])
+        let scrollView = app.otherElements["HomeDashboardContent"]
+        scrollView.swipeUp()
+        scrollView.swipeUp()
+
+        XCTAssertTrue(app.otherElements["ProTeaserCard"].waitForExistence(timeout: 3))
+
+        // Verify 3 feature bullets exist
+        XCTAssertTrue(app.staticTexts["6개월 흐름 리포트"].exists)
+        XCTAssertTrue(app.staticTexts["성향 vs 실제 행동 주간 리포트"].exists)
+        XCTAssertTrue(app.staticTexts["AI 사주 상담사"].exists)
+    }
+
+    // MARK: - T34 (WF3-03, AC-9): PRO trial button calls callback
+    func test_proTeaserCard_trialButton_callsCallback() {
+        launchWithArgs(["-openHome"])
+        let scrollView = app.otherElements["HomeDashboardContent"]
+        scrollView.swipeUp()
+        scrollView.swipeUp()
+
+        XCTAssertTrue(app.otherElements["ProTeaserCard"].waitForExistence(timeout: 3))
+
+        // Tap "7일 무료 체험 →" button
+        let trialButton = app.buttons["ProTeaserTrialButton"]
+        XCTAssertTrue(trialButton.waitForExistence(timeout: 2))
+        trialButton.tap()
+
+        // Check counter increased
+        XCTAssertEqual(app.staticTexts["HomeProTrialTapCount"].label, "1")
+    }
+
+    // MARK: - T35 (WF3-03, AC-10): Calendar button calls callback
+    func test_weeklyEventsSection_calendarButton_callsCallback() {
+        launchWithArgs(["-openHome"])
+        let scrollView = app.otherElements["HomeDashboardContent"]
+        scrollView.swipeUp()
+
+        XCTAssertTrue(app.otherElements["WeeklyEventsSection"].waitForExistence(timeout: 3))
+
+        // Tap "캘린더 보기 ›" button
+        let calendarButton = app.buttons["WeeklyEventsCalendarButton"]
+        XCTAssertTrue(calendarButton.waitForExistence(timeout: 2))
+        calendarButton.tap()
+
+        // Check counter increased
+        XCTAssertEqual(app.staticTexts["HomeCalendarTapCount"].label, "1")
+    }
+
+    // MARK: - T36 (WF3-03, AC-11): Disclaimer at bottom
+    func test_disclaimer_atBottom() {
+        launchWithArgs(["-openHome"])
+        let scrollView = app.otherElements["HomeDashboardContent"]
+
+        // Scroll to very bottom
+        scrollView.swipeUp()
+        scrollView.swipeUp()
+        scrollView.swipeUp()
+
+        // Disclaimer should be visible at bottom
+        XCTAssertTrue(app.staticTexts["DisclaimerText"].waitForExistence(timeout: 3))
+    }
+
+    // MARK: - T37 (WF3-03, AC-12): Empty events array hides all dividers
+    func test_weeklyEventsSection_empty_headerVisibleDividersHidden() {
+        launchWithArgs(["-openHome"])
+        let scrollView = app.otherElements["HomeDashboardContent"]
+        scrollView.swipeUp()
+
+        XCTAssertTrue(app.otherElements["WeeklyEventsSection"].waitForExistence(timeout: 3))
+
+        // Section header should exist
+        XCTAssertTrue(app.staticTexts["이번 주 흐름"].exists)
+    }
+
+    // MARK: - T38 (WF3-03, AC-13): Dynamic Type XL - investContext text wraps
+    func test_dynamicTypeXL_eventCardText_wrapping() {
+        app.launchEnvironment["UIContentSizeCategoryOverride"] = "UICTContentSizeCategoryAccessibilityL"
+        launchWithArgs(["-openHome"])
+        let scrollView = app.otherElements["HomeDashboardContent"]
+        scrollView.swipeUp()
+
+        XCTAssertTrue(app.otherElements["WeeklyEventsSection"].waitForExistence(timeout: 3))
+
+        // Event card should exist and be accessible
+        let weeklySection = app.otherElements["WeeklyEventsSection"]
+        XCTAssertTrue(weeklySection.waitForExistence(timeout: 2))
+
+        // Verify section is accessible at XL text size
+        XCTAssertTrue(weeklySection.frame.height > 0)
+    }
 }

@@ -9,7 +9,7 @@ struct DisclaimerView: View {
             .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
-            .accessibilityIdentifier("DisclaimerView")
+            .accessibilityIdentifier("DisclaimerText")
     }
 }
 

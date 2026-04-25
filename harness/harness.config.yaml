@@ -10,8 +10,7 @@ ui_test_cmd: "python3 tools/xcode_test_runner.py test --target WoontechUITests -
 default_max_plan_retries: 3
 default_max_impl_retries: 3
 
-# github_repo: "your-org/your-repo"  # set to enable gh pr create
-
+github_repo: "jjundev/project_woontech"
 main_branch: main
 host: 127.0.0.1
 port: 8765

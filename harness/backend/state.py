@@ -53,8 +53,10 @@ class TaskState:
     impl_version: int = 0
     plan_retries: int = 0
     impl_retries: int = 0
+    ui_review_retries: int = 0
     max_plan_retries: int = 3
     max_impl_retries: int = 3
+    max_ui_review_iters: int = 2
     escalation: Optional[str] = None
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
@@ -203,6 +205,7 @@ def transition(config: HarnessConfig, task_id: str, new_state: StateName) -> Pat
             title=_title_from_spec(spec, task_id),
             max_plan_retries=config.default_max_plan_retries,
             max_impl_retries=config.default_max_impl_retries,
+            max_ui_review_iters=config.default_max_ui_review_iters,
         )
 
     # "done" triggers git mv inside the worktree.
@@ -270,6 +273,7 @@ def scan_task_folders(config: HarnessConfig) -> list[TaskState]:
                 title=_title_from_spec(spec, task_id),
                 max_plan_retries=config.default_max_plan_retries,
                 max_impl_retries=config.default_max_impl_retries,
+                max_ui_review_iters=config.default_max_ui_review_iters,
             )
         )
     return out

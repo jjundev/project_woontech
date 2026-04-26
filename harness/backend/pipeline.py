@@ -977,6 +977,12 @@ def _resume_phase_index(state: S.TaskState) -> int:
         return 0
     if state.state == "needs_attention":
         esc = (state.escalation or "").lower()
+        if esc == "main_merge_conflict":
+            if state.paused_from in ("implementing", "impl_review"):
+                return 1
+            if state.paused_from == "publishing":
+                return 2
+            return 0
         if "plan" in esc:
             return 0
         if "impl" in esc or esc == "diagnostic_infra_missing":
@@ -1035,10 +1041,30 @@ async def _prepare_resume_state(
     state: S.TaskState,
     resume_phase: int,
 ) -> Path:
-    target_state = ("planning", "implementing", "publishing")[resume_phase]
+    target_state: S.StateName = ("planning", "implementing", "publishing")[resume_phase]
     if state.state != target_state:
         task_dir = await _set_state(config, task_id, target_state)
     _clear_escalation(task_dir)
+
+    # Pull main into the worktree so resumed tasks pick up tooling/harness
+    # improvements that landed after the worktree was created. Conflicts
+    # escalate to needs_attention; other git failures bubble up as unexpected
+    # errors handled by run_pipeline's top-level recovery path.
+    try:
+        result = W.sync_worktree_with_main(config, task_id)
+        await emit("main_sync", task_id=task_id, result=result)
+    except W.MainMergeConflictError as exc:
+        await emit("main_sync_conflict", task_id=task_id, detail=str(exc))
+        # S.transition clears paused_from for non-paused states, so store this
+        # phase hint after moving to needs_attention. A later resume uses it to
+        # return to the phase where main sync was attempted.
+        task_dir = await _set_state(config, task_id, "needs_attention")
+        s = S.read_state(task_dir)
+        s.escalation = "main_merge_conflict"
+        s.paused_from = target_state
+        S.write_state(task_dir, s)
+        raise
+
     return task_dir
 
 
@@ -1083,7 +1109,16 @@ async def run_pipeline(
             resume_phase = _resume_phase_index(state)
             current_phase = PHASE_NAMES[resume_phase]
             await emit("pipeline_resuming", task_id=task_id, state=state.state)
-            task_dir = await _prepare_resume_state(config, task_id, workspace, state, resume_phase)
+            try:
+                task_dir = await _prepare_resume_state(
+                    config, task_id, workspace, state, resume_phase
+                )
+            except W.MainMergeConflictError:
+                # _prepare_resume_state has already flipped state.escalation =
+                # "main_merge_conflict" and set state to needs_attention. Skip
+                # the rest of the pipeline; resuming after the user resolves
+                # the conflict will re-enter at the same phase.
+                return
             if resume_phase > 0:
                 await emit(
                     "plan_steps",

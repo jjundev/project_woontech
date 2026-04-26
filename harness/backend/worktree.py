@@ -146,6 +146,180 @@ def worktree_branch(task_id: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# origin/main → worktree branch synchronization
+# ---------------------------------------------------------------------------
+
+
+class MainMergeConflictError(GitError):
+    """origin/<main> auto-merge into the worktree branch hit a real merge
+    conflict. Caller is expected to escalate the task to needs_attention with
+    escalation="main_merge_conflict" so a human can resolve and resume.
+    """
+
+
+_CONFLICT_STATUS_PREFIXES = {"UU", "AA", "DD", "AU", "UA", "DU", "UD"}
+
+
+def _commit_pending_changes(worktree_path: Path, label: str) -> bool:
+    """Commit any uncommitted worktree changes so they survive a subsequent
+    `git merge`. Mirrors the pattern in pipeline._maybe_auto_commit_worktree
+    (kept as a separate helper here to avoid a cross-module import). Returns
+    True iff a commit was actually made.
+    """
+    status = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=str(worktree_path),
+        capture_output=True,
+        text=True,
+    )
+    if status.returncode != 0 or not status.stdout.strip():
+        return False
+    add = subprocess.run(
+        ["git", "add", "-A"],
+        cwd=str(worktree_path),
+        capture_output=True,
+        text=True,
+    )
+    if add.returncode != 0:
+        return False
+    commit = subprocess.run(
+        ["git", "commit", "-m", f"Auto-commit: {label}"],
+        cwd=str(worktree_path),
+        capture_output=True,
+        text=True,
+    )
+    return commit.returncode == 0
+
+
+def _is_in_merge(worktree_path: Path) -> bool:
+    """True when the worktree is in the middle of an unresolved merge
+    (a previous run was interrupted, or a manual merge was left half-done)."""
+    result = subprocess.run(
+        ["git", "rev-parse", "--verify", "MERGE_HEAD"],
+        cwd=str(worktree_path),
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode == 0
+
+
+def sync_worktree_with_main(config: HarnessConfig, task_id: str) -> str:
+    """Bring the worktree branch up to date with `origin/<main_branch>`.
+
+    Behavior:
+      1. `git fetch origin <main>` — failure is treated as a warning and the
+         function proceeds with whatever local origin/main ref is available.
+      2. Refuse to proceed if a previous merge was left unresolved
+         (MERGE_HEAD present) — abort it and raise.
+      3. Auto-commit any pending uncommitted changes so they aren't dragged
+         into the merge.
+      4. If origin/<main> is already an ancestor of HEAD, return "up-to-date"
+         without creating a merge commit.
+      5. Otherwise run `git merge --no-edit origin/<main>`. On conflict, abort
+         the merge and raise MainMergeConflictError so the caller can escalate.
+
+    Returns:
+        - "up-to-date" — branch already includes origin/main
+        - "merged: <sha>" — a merge commit was created at <sha>
+        - "skipped: fetch failed" — could not fetch origin/main (network /
+          no-origin / etc.); no merge attempt was made. Will retry on the
+          next resume.
+
+    Raises:
+        MainMergeConflictError — caller must escalate to needs_attention.
+        GitError — any other unexpected git failure (caller may surface as
+        an unexpected pipeline error).
+    """
+    repo = repo_root(config)
+    worktree_path = project_worktree_path(config, task_id)
+    main_branch = config.main_branch
+
+    # 1) fetch — non-fatal. A flaky network or no-origin environment must not
+    #    block work. If the fetch fails we skip the merge entirely; whatever
+    #    local origin ref exists may be days stale and using it for an auto-
+    #    merge is more dangerous than waiting for the next resume to retry.
+    try:
+        _run(["git", "fetch", "origin", main_branch], cwd=repo)
+    except GitError as exc:
+        print(
+            f"[main-sync] fetch origin {main_branch} failed: {exc}; "
+            "skipping main sync until next resume",
+            flush=True,
+        )
+        return "skipped: fetch failed"
+
+    # 2) refuse mid-merge state before auto-commit can accidentally complete it
+    if _is_in_merge(worktree_path):
+        subprocess.run(
+            ["git", "merge", "--abort"],
+            cwd=str(worktree_path),
+            capture_output=True,
+            text=True,
+        )
+        raise MainMergeConflictError(
+            "worktree was left in an unresolved merge state from a prior run"
+        )
+
+    # 3) keep in-flight changes
+    _commit_pending_changes(worktree_path, label="pre-main-sync checkpoint")
+
+    # 4) already merged?
+    ancestor = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", f"origin/{main_branch}", "HEAD"],
+        cwd=str(worktree_path),
+        capture_output=True,
+        text=True,
+    )
+    if ancestor.returncode == 0:
+        return "up-to-date"
+
+    # 5) merge
+    merge = subprocess.run(
+        [
+            "git",
+            "merge",
+            "--no-edit",
+            "-m",
+            f"Auto-merge origin/{main_branch} into worktree branch",
+            f"origin/{main_branch}",
+        ],
+        cwd=str(worktree_path),
+        capture_output=True,
+        text=True,
+    )
+    if merge.returncode != 0:
+        status = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=str(worktree_path),
+            capture_output=True,
+            text=True,
+        )
+        is_conflict = any(
+            line[:2] in _CONFLICT_STATUS_PREFIXES
+            for line in (status.stdout or "").splitlines()
+        )
+        subprocess.run(
+            ["git", "merge", "--abort"],
+            cwd=str(worktree_path),
+            capture_output=True,
+            text=True,
+        )
+        if is_conflict:
+            tail = (merge.stderr or merge.stdout or "").strip()[:300]
+            raise MainMergeConflictError(
+                f"merge conflict between worktree branch and origin/{main_branch}: "
+                f"{tail}"
+            )
+        raise GitError(
+            f"git merge origin/{main_branch} failed: "
+            f"{(merge.stderr or merge.stdout).strip()}"
+        )
+
+    new_sha = _run(["git", "rev-parse", "HEAD"], cwd=worktree_path)
+    return f"merged: {new_sha}"
+
+
+# ---------------------------------------------------------------------------
 # PreToolUse path guard
 # ---------------------------------------------------------------------------
 

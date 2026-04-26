@@ -1212,3 +1212,77 @@ async def test_run_pipeline_defaults_to_impl_review_exhausted_when_unset(
     final_state = S.read_state(workspace)
     assert final_state.state == "needs_attention"
     assert final_state.escalation == "impl_review_exhausted"
+
+
+@pytest.mark.asyncio
+async def test_run_pipeline_escalates_on_main_merge_conflict(tmp_config, monkeypatch):
+    """When sync_worktree_with_main raises MainMergeConflictError on resume,
+    the pipeline must flip the task to needs_attention with
+    escalation='main_merge_conflict' and never invoke any agent phase."""
+    _make_task(tmp_config, "merge-conflict-task", "implementing")
+    tmp_config.worktree_path("merge-conflict-task").mkdir(parents=True, exist_ok=True)
+
+    def boom(config, task_id):
+        raise W.MainMergeConflictError("simulated merge conflict")
+
+    async def fake_plan(*args, **kwargs):
+        raise AssertionError("plan must not run when main merge conflicts")
+
+    async def fake_impl(*args, **kwargs):
+        raise AssertionError("impl must not run when main merge conflicts")
+
+    async def fake_publish(*args, **kwargs):
+        raise AssertionError("publish must not run when main merge conflicts")
+
+    monkeypatch.setattr(P.W, "sync_worktree_with_main", boom)
+    monkeypatch.setattr(P, "run_plan_phase", fake_plan)
+    monkeypatch.setattr(P, "run_impl_phase", fake_impl)
+    monkeypatch.setattr(P, "run_publish_phase", fake_publish)
+    monkeypatch.setattr(P.W, "remove_worktree", lambda *args, **kwargs: None)
+
+    await P.run_pipeline(tmp_config, "merge-conflict-task")
+
+    workspace = S.find_task_workspace(tmp_config, "merge-conflict-task")
+    assert workspace is not None
+    final_state = S.read_state(workspace)
+    assert final_state.state == "needs_attention"
+    assert final_state.escalation == "main_merge_conflict"
+
+
+@pytest.mark.asyncio
+async def test_run_pipeline_calls_main_sync_only_on_resume(tmp_config, monkeypatch):
+    """sync_worktree_with_main should fire exactly once on resume (state.json
+    exists) and not at all on a fresh start (no state.json yet)."""
+    sync_calls: list[str] = []
+
+    def fake_sync(config, task_id):
+        sync_calls.append(task_id)
+        return "up-to-date"
+
+    async def ok_plan(*args, **kwargs):
+        return True
+
+    async def ok_impl(*args, **kwargs):
+        return True
+
+    async def ok_publish(*args, **kwargs):
+        return True
+
+    monkeypatch.setattr(P.W, "sync_worktree_with_main", fake_sync)
+    monkeypatch.setattr(P, "run_plan_phase", ok_plan)
+    monkeypatch.setattr(P, "run_impl_phase", ok_impl)
+    monkeypatch.setattr(P, "run_publish_phase", ok_publish)
+    monkeypatch.setattr(P.W, "remove_worktree", lambda *args, **kwargs: None)
+
+    # Fresh start: spec.md only, no state.json yet
+    fresh_dir = tmp_config.todo_dir / "fresh-task"
+    fresh_dir.mkdir(parents=True, exist_ok=True)
+    (fresh_dir / "spec.md").write_text("# fresh\n", encoding="utf-8")
+    await P.run_pipeline(tmp_config, "fresh-task")
+    assert sync_calls == [], "main sync must not run for a brand-new task"
+
+    # Resume: existing state.json (set up via _make_task)
+    _make_task(tmp_config, "resume-sync-task", "implementing")
+    tmp_config.worktree_path("resume-sync-task").mkdir(parents=True, exist_ok=True)
+    await P.run_pipeline(tmp_config, "resume-sync-task")
+    assert sync_calls == ["resume-sync-task"], "main sync must run exactly once on resume"

@@ -25,6 +25,14 @@ from ..events import emit
 STEP_MARKER_RE = re.compile(r"^STEP:\s*(.+?)\s*$", re.MULTILINE)
 
 
+def _join_text_blocks(blocks: list[str]) -> str:
+    # Newline-join, not concat: the SDK can split a single model response into
+    # multiple TextBlocks. If we glue them with "" the boundary fuses adjacent
+    # words ("...completesIMPLEMENT_REWORK_REQUIRED"), breaking line-based
+    # token detection downstream.
+    return "\n".join(blocks)
+
+
 def step_markers_for_agent(agent_name: str, text: str) -> list[str]:
     if agent_name != "implementor":
         return []
@@ -158,7 +166,7 @@ async def run_agent(
             model_usage=model_usage,
         )
     return AgentResult(
-        text="".join(text_buf),
+        text=_join_text_blocks(text_buf),
         tool_uses=tool_uses,
         stop_reason=stop_reason,
         usage=usage,

@@ -1,22 +1,58 @@
 from __future__ import annotations
 
+import subprocess as _real_subprocess
 from pathlib import Path
 
 import pytest
 
+from backend import agents as A
 from backend import pipeline as P
 from backend import state as S
 from backend import worktree as W
 
 
-def _setup_task(tmp_config, task_id: str):
-    """Create a task with bootstrapped workspace and worktree, leave it at ui_verify state."""
+def _make_subprocess_run_stub(rc_sequence: list[int]):
+    """Build a `subprocess.run` replacement that intercepts only UI-test calls.
+
+    `discover_new_swift_files` (called from inside `_run_ui_reviewer`) shells out
+    to `git` via `subprocess.run(..., capture_output=True)`. We pass those
+    through to the real implementation and only rig non-git invocations using
+    `rc_sequence` (one return code per scripted call).
+    """
+    real_run = _real_subprocess.run
+    counter = {"n": 0}
+
+    def fake_run(argv, cwd=None, **kwargs):
+        if argv and argv[0] == "git":
+            return real_run(argv, cwd=cwd, **kwargs)
+        idx = counter["n"]
+        counter["n"] += 1
+        rc = rc_sequence[idx] if idx < len(rc_sequence) else rc_sequence[-1]
+
+        class _R:
+            returncode = rc
+
+        return _R()
+
+    return fake_run, counter
+
+
+def _setup_task(tmp_config, task_id: str, *, max_ui_review_iters: int = 1):
+    """Create a task with bootstrapped workspace and worktree, leave it at ui_verify state.
+
+    Defaults `max_ui_review_iters=1` so the reviewer loop is disabled — tests
+    that exercise the legacy single-shot gate behavior keep working unchanged.
+    Tests that exercise the reviewer loop pass `max_ui_review_iters=2` (or more).
+    """
     todo_dir = tmp_config.todo_dir / task_id
     todo_dir.mkdir(parents=True, exist_ok=True)
     (todo_dir / "spec.md").write_text("# ui verify gate\n", encoding="utf-8")
     task_dir = S.transition(tmp_config, task_id, "ui_verify")
     W.create_worktree(tmp_config, task_id)
     worktree_dir = W.project_worktree_path(tmp_config, task_id)
+    state = S.read_state(task_dir)
+    state.max_ui_review_iters = max_ui_review_iters
+    S.write_state(task_dir, state)
     return task_dir, worktree_dir
 
 
@@ -25,6 +61,45 @@ def _write_ui_artifacts(worktree_dir: Path, body: str = "ui ok\n") -> None:
     artifacts.mkdir(parents=True, exist_ok=True)
     (artifacts / "last-ui-summary.txt").write_text(body)
     (artifacts / "last-ui-failures.txt").write_text(body)
+
+
+def _make_reviewer_stub(
+    decisions: list[str],
+    *,
+    patch_on_fail: bool = False,
+    tool_uses: list[dict[str, object]] | None = None,
+    capture: dict[str, object] | None = None,
+):
+    """Return a fake `A.run_agent` that yields the given decision tokens in order.
+
+    Each call consumes one decision; if the queue empties, the stub raises so
+    a runaway loop fails loudly instead of silently producing the wrong token.
+    """
+    queue = list(decisions)
+    calls = {"n": 0}
+
+    async def fake_run_agent(spec, prompt, **kwargs):
+        if not queue:
+            raise AssertionError("reviewer stub called more times than expected")
+        calls["n"] += 1
+        if capture is not None:
+            capture["prompt"] = prompt
+            capture["kwargs"] = kwargs
+        token = queue.pop(0)
+        if patch_on_fail and token == "IMPLEMENT_FAIL":
+            cwd = Path(kwargs["cwd"])
+            (cwd / f"ui-reviewer-patch-{calls['n']}.txt").write_text(
+                f"patch {calls['n']}\n",
+                encoding="utf-8",
+            )
+        text = f"some reasoning\n{token}\n" if token else "no decision here\n"
+        return A.AgentResult(
+            text=text,
+            tool_uses=list(tool_uses or []),
+            stop_reason="end_turn",
+        )
+
+    return fake_run_agent, queue
 
 
 @pytest.mark.asyncio
@@ -139,7 +214,14 @@ async def test_ui_verify_flags_diagnostic_infra_when_artifacts_missing(
 
 def test_ui_verify_specific_escalations_route_back_to_ui_verify_phase():
     """Resume index for ui_verify-flavored escalations must be 2 (not 1 = impl)."""
-    for esc in ("ui_verification_failed", "ui_verify_diagnostic_infra_missing"):
+    for esc in (
+        "ui_verification_failed",
+        "ui_verify_diagnostic_infra_missing",
+        "ui_verify_review_exhausted",
+        "ui_verify_rework_required",
+        "ui_verify_review_ambiguous",
+        "ui_verify_review_stalled",
+    ):
         state = S.TaskState(id="t", state="needs_attention", escalation=esc)
         assert P._resume_phase_index(state) == 2, (
             f"escalation {esc!r} must route back to the UI verification gate"
@@ -205,3 +287,346 @@ async def test_run_pipeline_surfaces_ui_verify_failure_as_needs_attention(
     final_state = S.read_state(workspace)
     assert final_state.state == "needs_attention"
     assert final_state.escalation == "ui_verification_failed"
+
+
+# ---------------------------------------------------------------------------
+# Reviewer-driven retry loop (max_ui_review_iters >= 2)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_ui_verify_reviewer_patch_then_pass(tmp_config, monkeypatch):
+    """Iter 1 fails → reviewer applies a patch (IMPLEMENT_FAIL) → iter 2 passes."""
+    task_dir, worktree_dir = _setup_task(
+        tmp_config, "ui-reviewer-patch", max_ui_review_iters=2
+    )
+    _write_ui_artifacts(worktree_dir)
+
+    fake_run, call_count = _make_subprocess_run_stub([1, 0])
+    monkeypatch.setattr(P.subprocess, "run", fake_run)
+    # Skip artifact freshness checks — the helper writes them once at setup.
+    monkeypatch.setattr(P, "_assert_test_artifacts_visible", lambda *a, **k: None)
+
+    async def fake_resolve(config, worktree_dir, task_id):
+        return ("echo unit", "/usr/bin/false")
+
+    monkeypatch.setattr(P, "_resolve_test_commands", fake_resolve)
+
+    fake_run_agent, _ = _make_reviewer_stub(["IMPLEMENT_FAIL"], patch_on_fail=True)
+    monkeypatch.setattr(P.A, "run_agent", fake_run_agent)
+
+    events: list[tuple[str, dict]] = []
+
+    async def fake_emit(event_type, **payload):
+        events.append((event_type, payload))
+
+    monkeypatch.setattr(P, "emit", fake_emit)
+
+    ok = await P.run_ui_verify_phase(
+        tmp_config, "ui-reviewer-patch", task_dir, worktree_dir
+    )
+
+    assert ok is True
+    # The stub increments only on non-git invocations (UI test runs).
+    assert call_count["n"] == 2, "UI tests should have run twice (iter 1 fail, iter 2 pass)"
+    state = S.read_state(task_dir)
+    assert state.escalation is None
+    assert state.ui_review_retries == 1, (
+        "reviewer ran on iter 1 between the two test runs"
+    )
+    assert any(t == "ui_verify_passed" for t, _ in events)
+    assert any(
+        t == "retry" and p.get("phase") == "ui_verify_review" for t, p in events
+    )
+
+
+@pytest.mark.asyncio
+async def test_ui_verify_reviewer_rework_required(tmp_config, monkeypatch):
+    """Reviewer says rework needed → escalation `ui_verify_rework_required`."""
+    task_dir, worktree_dir = _setup_task(
+        tmp_config, "ui-reviewer-rework", max_ui_review_iters=3
+    )
+    _write_ui_artifacts(worktree_dir)
+
+    fake_run, _ = _make_subprocess_run_stub([1])
+    monkeypatch.setattr(P.subprocess, "run", fake_run)
+    monkeypatch.setattr(P, "_assert_test_artifacts_visible", lambda *a, **k: None)
+
+    async def fake_resolve(config, worktree_dir, task_id):
+        return ("echo unit", "/usr/bin/false")
+
+    monkeypatch.setattr(P, "_resolve_test_commands", fake_resolve)
+
+    fake_run_agent, _ = _make_reviewer_stub(["IMPLEMENT_REWORK_REQUIRED"])
+    monkeypatch.setattr(P.A, "run_agent", fake_run_agent)
+
+    async def fake_emit(event_type, **payload):
+        pass
+
+    monkeypatch.setattr(P, "emit", fake_emit)
+
+    ok = await P.run_ui_verify_phase(
+        tmp_config, "ui-reviewer-rework", task_dir, worktree_dir
+    )
+
+    assert ok is False
+    state = S.read_state(task_dir)
+    assert state.escalation == "ui_verify_rework_required"
+    assert state.ui_review_retries == 1
+
+
+@pytest.mark.asyncio
+async def test_ui_verify_review_exhausted(tmp_config, monkeypatch):
+    """All iterations fail and reviewer keeps signaling FAIL → review_exhausted."""
+    task_dir, worktree_dir = _setup_task(
+        tmp_config, "ui-reviewer-exhausted", max_ui_review_iters=2
+    )
+    _write_ui_artifacts(worktree_dir)
+
+    fake_run, _ = _make_subprocess_run_stub([1])
+    monkeypatch.setattr(P.subprocess, "run", fake_run)
+    monkeypatch.setattr(P, "_assert_test_artifacts_visible", lambda *a, **k: None)
+
+    async def fake_resolve(config, worktree_dir, task_id):
+        return ("echo unit", "/usr/bin/false")
+
+    monkeypatch.setattr(P, "_resolve_test_commands", fake_resolve)
+
+    # Only one reviewer call expected: between iter 1 and iter 2. After iter 2
+    # also fails, the loop terminates via the iteration==max_iters branch.
+    fake_run_agent, _ = _make_reviewer_stub(["IMPLEMENT_FAIL"], patch_on_fail=True)
+    monkeypatch.setattr(P.A, "run_agent", fake_run_agent)
+
+    async def fake_emit(event_type, **payload):
+        pass
+
+    monkeypatch.setattr(P, "emit", fake_emit)
+
+    ok = await P.run_ui_verify_phase(
+        tmp_config, "ui-reviewer-exhausted", task_dir, worktree_dir
+    )
+
+    assert ok is False
+    state = S.read_state(task_dir)
+    assert state.escalation == "ui_verify_review_exhausted"
+    assert state.ui_review_retries == 2
+
+
+@pytest.mark.asyncio
+async def test_ui_verify_review_ambiguous_pass_token(tmp_config, monkeypatch):
+    """Reviewer responds IMPLEMENT_PASS after a UI failure — wrong, treat as ambiguous."""
+    task_dir, worktree_dir = _setup_task(
+        tmp_config, "ui-reviewer-ambiguous", max_ui_review_iters=2
+    )
+    _write_ui_artifacts(worktree_dir)
+
+    fake_run, _ = _make_subprocess_run_stub([1])
+    monkeypatch.setattr(P.subprocess, "run", fake_run)
+    monkeypatch.setattr(P, "_assert_test_artifacts_visible", lambda *a, **k: None)
+
+    async def fake_resolve(config, worktree_dir, task_id):
+        return ("echo unit", "/usr/bin/false")
+
+    monkeypatch.setattr(P, "_resolve_test_commands", fake_resolve)
+
+    fake_run_agent, _ = _make_reviewer_stub(["IMPLEMENT_PASS"])
+    monkeypatch.setattr(P.A, "run_agent", fake_run_agent)
+
+    async def fake_emit(event_type, **payload):
+        pass
+
+    monkeypatch.setattr(P, "emit", fake_emit)
+
+    ok = await P.run_ui_verify_phase(
+        tmp_config, "ui-reviewer-ambiguous", task_dir, worktree_dir
+    )
+
+    assert ok is False
+    state = S.read_state(task_dir)
+    assert state.escalation == "ui_verify_review_ambiguous"
+
+
+@pytest.mark.asyncio
+async def test_ui_reviewer_uses_next_feedback_version(tmp_config, monkeypatch):
+    """UI reviewer must not overwrite feedback generated during impl_review."""
+    task_dir, worktree_dir = _setup_task(
+        tmp_config, "ui-reviewer-feedback-version", max_ui_review_iters=2
+    )
+    (task_dir / "implement-feedback-version-1.md").write_text(
+        "# existing feedback\n",
+        encoding="utf-8",
+    )
+
+    capture: dict[str, object] = {}
+    fake_run_agent, _ = _make_reviewer_stub(
+        ["IMPLEMENT_REWORK_REQUIRED"],
+        capture=capture,
+    )
+    monkeypatch.setattr(P.A, "run_agent", fake_run_agent)
+
+    decision, _result, diagnostics_ok = await P._run_ui_reviewer(
+        tmp_config,
+        "ui-reviewer-feedback-version",
+        task_dir,
+        worktree_dir,
+        1,
+        "echo unit",
+        "/usr/bin/false",
+    )
+
+    assert diagnostics_ok is True
+    assert decision == "IMPLEMENT_REWORK_REQUIRED"
+    prompt = str(capture["prompt"])
+    kwargs = capture["kwargs"]
+    assert "Iteration: 2" in prompt
+    assert "UI retry iteration: 1" in prompt
+    assert "implement-feedback-version-2.md" in prompt
+    assert isinstance(kwargs, dict)
+    assert kwargs["iteration"] == 2
+
+
+@pytest.mark.asyncio
+async def test_ui_verify_auto_commits_reviewer_dirty_patch(tmp_config, monkeypatch):
+    """Reviewer patches that are left dirty must be committed before retry/publish."""
+    task_dir, worktree_dir = _setup_task(
+        tmp_config, "ui-reviewer-autocommit", max_ui_review_iters=2
+    )
+    _write_ui_artifacts(worktree_dir)
+
+    fake_run, _ = _make_subprocess_run_stub([1, 0])
+    monkeypatch.setattr(P.subprocess, "run", fake_run)
+    monkeypatch.setattr(P, "_assert_test_artifacts_visible", lambda *a, **k: None)
+
+    async def fake_resolve(config, worktree_dir, task_id):
+        return ("echo unit", "/usr/bin/false")
+
+    monkeypatch.setattr(P, "_resolve_test_commands", fake_resolve)
+
+    async def fake_run_agent(spec, prompt, **kwargs):
+        patch = Path(kwargs["cwd"]) / "LocalizedPatch.swift"
+        patch.write_text("// reviewer patch\n", encoding="utf-8")
+        return A.AgentResult(
+            text="patched\nIMPLEMENT_FAIL\n",
+            tool_uses=[],
+            stop_reason="end_turn",
+        )
+
+    monkeypatch.setattr(P.A, "run_agent", fake_run_agent)
+
+    async def fake_emit(event_type, **payload):
+        pass
+
+    monkeypatch.setattr(P, "emit", fake_emit)
+
+    ok = await P.run_ui_verify_phase(
+        tmp_config, "ui-reviewer-autocommit", task_dir, worktree_dir
+    )
+
+    assert ok is True
+    show = _real_subprocess.run(
+        ["git", "show", "--name-only", "--format=%s", "HEAD"],
+        cwd=worktree_dir,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "Auto-commit: ui verify reviewer patch iter 1" in show.stdout
+    assert "LocalizedPatch.swift" in show.stdout
+
+
+@pytest.mark.asyncio
+async def test_ui_verify_stalls_when_reviewer_fail_without_patch(tmp_config, monkeypatch):
+    """IMPLEMENT_FAIL with no commit/change is protocol drift, not a retry signal."""
+    task_dir, worktree_dir = _setup_task(
+        tmp_config, "ui-reviewer-stalled", max_ui_review_iters=2
+    )
+    _write_ui_artifacts(worktree_dir)
+
+    fake_run, _ = _make_subprocess_run_stub([1])
+    monkeypatch.setattr(P.subprocess, "run", fake_run)
+    monkeypatch.setattr(P, "_assert_test_artifacts_visible", lambda *a, **k: None)
+
+    async def fake_resolve(config, worktree_dir, task_id):
+        return ("echo unit", "/usr/bin/false")
+
+    monkeypatch.setattr(P, "_resolve_test_commands", fake_resolve)
+
+    fake_run_agent, _ = _make_reviewer_stub(["IMPLEMENT_FAIL"])
+    monkeypatch.setattr(P.A, "run_agent", fake_run_agent)
+
+    async def fake_emit(event_type, **payload):
+        pass
+
+    monkeypatch.setattr(P, "emit", fake_emit)
+
+    ok = await P.run_ui_verify_phase(
+        tmp_config, "ui-reviewer-stalled", task_dir, worktree_dir
+    )
+
+    assert ok is False
+    state = S.read_state(task_dir)
+    assert state.escalation == "ui_verify_review_stalled"
+    assert state.ui_review_retries == 1
+
+
+@pytest.mark.asyncio
+async def test_ui_reviewer_test_run_requires_fresh_artifacts(tmp_config, monkeypatch):
+    """Reviewer-run tests use the same diagnostic freshness guard as impl_review."""
+    task_dir, worktree_dir = _setup_task(
+        tmp_config, "ui-reviewer-artifacts", max_ui_review_iters=2
+    )
+    _write_ui_artifacts(worktree_dir)
+
+    fake_run, _ = _make_subprocess_run_stub([1])
+    monkeypatch.setattr(P.subprocess, "run", fake_run)
+
+    calls: list[set[str]] = []
+
+    def fake_assert(worktree_dir, kinds, since):
+        calls.append(set(kinds))
+        if len(calls) == 2:
+            raise P.DiagnosticInfrastructureError(
+                worktree_dir / ".harness" / "test-results" / "last-ui-summary.txt",
+                "stale",
+            )
+
+    monkeypatch.setattr(P, "_assert_test_artifacts_visible", fake_assert)
+
+    async def fake_resolve(config, worktree_dir, task_id):
+        return (
+            "echo unit",
+            "python3 tools/xcode_test_runner.py test --target WoontechUITests --ui",
+        )
+
+    monkeypatch.setattr(P, "_resolve_test_commands", fake_resolve)
+
+    fake_run_agent, _ = _make_reviewer_stub(
+        ["IMPLEMENT_FAIL"],
+        tool_uses=[
+            {
+                "name": "Bash",
+                "input": {
+                    "command": (
+                        "python3 tools/xcode_test_runner.py test "
+                        "--target WoontechUITests --ui"
+                    )
+                },
+            }
+        ],
+    )
+    monkeypatch.setattr(P.A, "run_agent", fake_run_agent)
+
+    async def fake_emit(event_type, **payload):
+        pass
+
+    monkeypatch.setattr(P, "emit", fake_emit)
+
+    ok = await P.run_ui_verify_phase(
+        tmp_config, "ui-reviewer-artifacts", task_dir, worktree_dir
+    )
+
+    assert ok is False
+    assert calls == [{"ui"}, {"ui"}]
+    state = S.read_state(task_dir)
+    assert state.escalation == "ui_verify_diagnostic_infra_missing"
+    assert state.ui_review_retries == 1

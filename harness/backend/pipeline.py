@@ -91,6 +91,11 @@ def _latest_feedback(paths: list[Path]) -> list[Path]:
     return paths[-1:] if paths else []
 
 
+def _next_impl_feedback_version(task_dir: Path) -> int:
+    versions = [_feedback_version(path) for path in _all_impl_feedback(task_dir)]
+    return max(versions, default=0) + 1
+
+
 _DIAG_MISSING_RE = re.compile(
     r"DIAGNOSTIC_INFRASTRUCTURE_MISSING:\s*(\S[^\r\n]*)",
 )
@@ -198,6 +203,29 @@ async def _record_diagnostic_infra_missing(
         state.impl_retries = iteration
         state.impl_version = iteration + 1
     state.escalation = "diagnostic_infra_missing"
+    S.write_state(task_dir, state)
+    await emit(
+        "diagnostic_infra_missing",
+        task_id=task_id,
+        phase=phase,
+        iteration=iteration,
+        missing_path=str(error.path),
+        reason=error.reason,
+    )
+
+
+async def _record_ui_verify_diagnostic_infra_missing(
+    task_dir: Path,
+    task_id: str,
+    phase: str,
+    error: DiagnosticInfrastructureError,
+    *,
+    iteration: Optional[int] = None,
+) -> None:
+    state = S.read_state(task_dir)
+    if iteration is not None:
+        state.ui_review_retries = iteration
+    state.escalation = "ui_verify_diagnostic_infra_missing"
     S.write_state(task_dir, state)
     await emit(
         "diagnostic_infra_missing",
@@ -382,6 +410,26 @@ def _reviewer_bash_policy(config: HarnessConfig, unit_cmd: str) -> W.BashPolicy:
             _tokenize_command(config.build_cmd),
             _tokenize_command(unit_cmd),
         ),
+    )
+
+
+def _ui_reviewer_bash_policy(
+    config: HarnessConfig, unit_cmd: str, ui_cmd: str
+) -> W.BashPolicy:
+    """Bash policy for the reviewer when invoked from the ui_verify gate.
+
+    Adds the resolved `ui_cmd` to the allowlist so the reviewer can re-run
+    UI tests after applying a localized patch. Skips `echo SKIP: ...`
+    placeholders that signal "no resolvable tests in this worktree".
+    """
+    exact_cmds: list[tuple[str, ...]] = [_tokenize_command(config.build_cmd)]
+    if not unit_cmd.lstrip().startswith("echo"):
+        exact_cmds.append(_tokenize_command(unit_cmd))
+    if not ui_cmd.lstrip().startswith("echo"):
+        exact_cmds.append(_tokenize_command(ui_cmd))
+    return _merge_bash_policy(
+        _common_git_bash_policy(),
+        exact=tuple(exact_cmds),
     )
 
 
@@ -917,32 +965,18 @@ Commit the rework and respond IMPLEMENT_DONE, or respond IMPLEMENT_BLOCKED if yo
     return False
 
 
-async def run_ui_verify_phase(
-    config: HarnessConfig,
+async def _run_ui_tests_once(
     task_id: str,
     task_dir: Path,
     worktree_dir: Path,
-) -> bool:
-    """Run the UI test suite once as a publish-readiness gate.
+    ui_cmd: str,
+) -> Optional[int]:
+    """Run UI tests once via subprocess and verify diagnostic artifacts.
 
-    Pulled out of the impl_review iteration loop so UI tests don't run 1× per
-    reviewer iteration (and N× more per agent self-retry). The harness invokes
-    the resolved `ui_cmd` directly via subprocess — `xcode_test_runner.py`
-    keeps its environment-failure repair retry, so a CoreSimulator/LLDB blip
-    still gets one auto-recovery attempt at the runner level.
+    Returns the subprocess exit code on a clean run (0 = pass, non-zero = fail).
+    Returns None when an unparseable command or diagnostic-infrastructure
+    failure has already triggered an escalation — caller should abort the phase.
     """
-    await emit("phase_started", task_id=task_id, phase="ui_verify")
-    _, ui_cmd = await _resolve_test_commands(config, worktree_dir, task_id)
-
-    if ui_cmd.lstrip().startswith("echo"):
-        # No changed UI test files and no mandatory classes resolved → nothing to verify.
-        await emit(
-            "ui_verify_skipped",
-            task_id=task_id,
-            reason="no resolvable UI tests in this worktree",
-        )
-        return True
-
     started_at = time.time()
     try:
         argv = shlex.split(ui_cmd)
@@ -955,7 +989,7 @@ async def run_ui_verify_phase(
         state = S.read_state(task_dir)
         state.escalation = "ui_verification_failed"
         S.write_state(task_dir, state)
-        return False
+        return None
 
     proc = subprocess.run(argv, cwd=str(worktree_dir))
 
@@ -964,30 +998,243 @@ async def run_ui_verify_phase(
     except DiagnosticInfrastructureError as exc:
         # Tag the escalation as ui-verify-specific so resume routes back to the
         # gate (not back into impl_review) — same root cause, different phase.
-        state = S.read_state(task_dir)
-        state.escalation = "ui_verify_diagnostic_infra_missing"
-        S.write_state(task_dir, state)
-        await emit(
-            "diagnostic_infra_missing",
-            task_id=task_id,
-            phase="ui_verify",
-            missing_path=str(exc.path),
-            reason=exc.reason,
+        await _record_ui_verify_diagnostic_infra_missing(
+            task_dir, task_id, "ui_verify", exc,
         )
-        return False
+        return None
 
-    if proc.returncode == 0:
-        await emit("ui_verify_passed", task_id=task_id)
+    return proc.returncode
+
+
+async def _run_ui_reviewer(
+    config: HarnessConfig,
+    task_id: str,
+    task_dir: Path,
+    worktree_dir: Path,
+    iteration: int,
+    unit_cmd: str,
+    ui_cmd: str,
+) -> tuple[Optional[str], A.AgentResult, bool]:
+    """Invoke the implement-reviewer agent on a UI verification failure.
+
+    Returns `(decision, result, diagnostics_ok)`. `decision` is one of
+    IMPLEMENT_PASS / IMPLEMENT_FAIL / IMPLEMENT_REWORK_REQUIRED, or None when
+    the agent's terminal token is missing or ambiguous. `diagnostics_ok` is
+    False only when the reviewer ran a test command but fresh diagnostic
+    artifacts were not visible.
+    """
+    latest_feedback = _latest_feedback(_all_impl_feedback(task_dir))
+    feedback_version = _next_impl_feedback_version(task_dir)
+    new_swift_files = discover_new_swift_files(worktree_dir, config.main_branch)
+    reviewer_guard = W.make_path_guard(
+        worktree_dir,
+        task_id=task_id,
+        bash_policy=_ui_reviewer_bash_policy(config, unit_cmd, ui_cmd),
+    )
+    reviewer_prompt = f"""Task workspace: {task_dir}
+Spec: {task_dir / 'spec.md'}
+Plan: {task_dir / 'implement-plan.md'}
+Checklist: {task_dir / 'implement-checklist.md'}
+Latest implement-feedback file (carries forward unresolved items from earlier iterations):
+{_format_feedback_paths(latest_feedback)}
+Worktree: {worktree_dir}
+Iteration: {feedback_version}
+UI retry iteration: {iteration}
+
+The UI verification gate just failed. Unit tests already passed in
+impl_review — this is specifically a UI test failure detected by the
+publish-readiness gate.
+
+Build command: {config.build_cmd}
+Unit test command (already passed in impl_review; rerun only if you need to
+verify a patch did not regress unit tests): {unit_cmd}
+UI test command (rerun this after applying a patch to confirm the fix):
+{ui_cmd}
+
+New `.swift` files added in this worktree vs {config.main_branch}:
+{_format_text_list(new_swift_files)}
+
+Read the UI failure diagnostics first:
+- .harness/test-results/last-ui-summary.txt
+- .harness/test-results/last-ui-failures.txt
+- .harness/test-results/last-ui-screenshot.png
+- .harness/test-results/last-ui-environment.txt
+
+If the failure is patch-eligible (small/localized — e.g. accessibility
+identifiers, test selectors, scroll strategy, minor SwiftUI accessibility
+tree adjustments), DIRECTLY edit the worktree to apply only the required
+fix, re-run the UI test command to confirm, commit, write
+implement-feedback-version-{feedback_version}.md, and respond IMPLEMENT_FAIL.
+
+If the failure requires implementor rework (broader logic / architecture /
+spec reinterpretation), do NOT edit code, write
+implement-feedback-version-{feedback_version}.md describing the required changes,
+and respond IMPLEMENT_REWORK_REQUIRED.
+
+Do NOT respond IMPLEMENT_PASS — the UI tests just failed.
+"""
+    reviewer_started_at = time.time()
+    result = await A.run_agent(
+        A.resolve_agent(A.IMPLEMENT_REVIEWER, config),
+        reviewer_prompt,
+        cwd=worktree_dir,
+        task_id=task_id,
+        iteration=feedback_version,
+        hooks=reviewer_guard,
+    )
+    reviewer_test_kinds = _test_kinds_from_tool_uses(result.tool_uses)
+    if reviewer_test_kinds:
+        try:
+            _assert_test_artifacts_visible(
+                worktree_dir,
+                reviewer_test_kinds,
+                reviewer_started_at,
+            )
+        except DiagnosticInfrastructureError as exc:
+            await _record_ui_verify_diagnostic_infra_missing(
+                task_dir,
+                task_id,
+                "ui_verify_review",
+                exc,
+                iteration=iteration,
+            )
+            return None, result, False
+    decision = _find_terminal_token(
+        result.text,
+        ("IMPLEMENT_PASS", "IMPLEMENT_FAIL", "IMPLEMENT_REWORK_REQUIRED"),
+    )
+    return decision, result, True
+
+
+async def run_ui_verify_phase(
+    config: HarnessConfig,
+    task_id: str,
+    task_dir: Path,
+    worktree_dir: Path,
+) -> bool:
+    """Run UI tests as a publish-readiness gate, with reviewer-driven retry.
+
+    Pulled out of the impl_review iteration loop so UI tests don't run 1× per
+    reviewer iteration. On failure, invokes the implement-reviewer agent to
+    attempt a localized patch (accessibility identifiers, test selectors,
+    minor SwiftUI tweaks) and retries up to `max_ui_review_iters` total
+    iterations. Broader rework needs surface as `ui_verify_rework_required`
+    for user intervention. With `max_ui_review_iters=1`, the reviewer is
+    skipped and behavior matches the original single-shot gate.
+    """
+    await emit("phase_started", task_id=task_id, phase="ui_verify")
+    unit_cmd, ui_cmd = await _resolve_test_commands(config, worktree_dir, task_id)
+
+    if ui_cmd.lstrip().startswith("echo"):
+        # No changed UI test files and no mandatory classes resolved → nothing to verify.
+        await emit(
+            "ui_verify_skipped",
+            task_id=task_id,
+            reason="no resolvable UI tests in this worktree",
+        )
         return True
 
     state = S.read_state(task_dir)
-    state.escalation = "ui_verification_failed"
-    S.write_state(task_dir, state)
-    await emit(
-        "ui_verify_failed",
-        task_id=task_id,
-        exit_code=proc.returncode,
-    )
+    max_iters = max(1, state.max_ui_review_iters or config.default_max_ui_review_iters)
+
+    for iteration in range(1, max_iters + 1):
+        exit_code = await _run_ui_tests_once(task_id, task_dir, worktree_dir, ui_cmd)
+        if exit_code is None:
+            return False
+        if exit_code == 0:
+            await emit("ui_verify_passed", task_id=task_id, iteration=iteration)
+            return True
+
+        if iteration == max_iters:
+            state = S.read_state(task_dir)
+            state.escalation = (
+                "ui_verify_review_exhausted" if iteration > 1 else "ui_verification_failed"
+            )
+            state.ui_review_retries = iteration
+            S.write_state(task_dir, state)
+            await emit(
+                "ui_verify_failed",
+                task_id=task_id,
+                exit_code=exit_code,
+                iteration=iteration,
+                reason=state.escalation,
+            )
+            return False
+
+        _maybe_auto_commit_worktree(
+            worktree_dir, f"pre-ui-review workspace checkpoint iter {iteration}"
+        )
+        pre_review_sha = _head_sha(worktree_dir)
+        decision, result, diagnostics_ok = await _run_ui_reviewer(
+            config, task_id, task_dir, worktree_dir, iteration, unit_cmd, ui_cmd,
+        )
+        if not diagnostics_ok:
+            return False
+        if decision == "IMPLEMENT_FAIL":
+            auto_committed = _maybe_auto_commit_worktree(
+                worktree_dir, f"ui verify reviewer patch iter {iteration}"
+            )
+            post_review_sha = _head_sha(worktree_dir)
+            if post_review_sha == pre_review_sha:
+                state = S.read_state(task_dir)
+                state.escalation = "ui_verify_review_stalled"
+                state.ui_review_retries = iteration
+                S.write_state(task_dir, state)
+                await emit(
+                    "agent_stall",
+                    task_id=task_id,
+                    phase="ui_verify_review",
+                    iteration=iteration,
+                    head_sha=_short_sha(pre_review_sha),
+                )
+                return False
+            state = S.read_state(task_dir)
+            state.ui_review_retries = iteration
+            S.write_state(task_dir, state)
+            await emit(
+                "iter_progress",
+                task_id=task_id,
+                phase="ui_verify_review",
+                iteration=iteration,
+                pre_sha=_short_sha(pre_review_sha),
+                post_sha=_short_sha(post_review_sha),
+                auto_committed=auto_committed,
+            )
+            await emit(
+                "retry",
+                task_id=task_id,
+                phase="ui_verify_review",
+                iteration=iteration,
+            )
+            continue
+        if decision == "IMPLEMENT_REWORK_REQUIRED":
+            state = S.read_state(task_dir)
+            state.escalation = "ui_verify_rework_required"
+            state.ui_review_retries = iteration
+            S.write_state(task_dir, state)
+            await emit(
+                "ui_verify_failed",
+                task_id=task_id,
+                exit_code=exit_code,
+                iteration=iteration,
+                reason="rework_required",
+            )
+            return False
+        # IMPLEMENT_PASS or missing token — both are wrong here since UI tests
+        # just failed; treat as ambiguous and escalate.
+        state = S.read_state(task_dir)
+        state.escalation = "ui_verify_review_ambiguous"
+        state.ui_review_retries = iteration
+        S.write_state(task_dir, state)
+        await emit(
+            "agent_ambiguous",
+            task_id=task_id,
+            phase="ui_verify_review",
+            iteration=iteration,
+            stop_reason=result.stop_reason,
+            text_tail=_text_tail(result.text),
+        )
+        return False
     return False
 
 

@@ -49,11 +49,12 @@ def _release_wake_lock() -> None:
 CLASS_RE = re.compile(r"class\s+(\w+)\s*:\s*[^\{]*XCTestCase")
 ONLY_TESTING_TOKEN_RE = re.compile(r"\{only_testing:(\w+)\}")
 PROJECT_SWIFT_ROOTS = ("Woontech", "WoontechTests", "WoontechUITests")
-PHASE_NAMES = ("plan", "impl", "publish")
+PHASE_NAMES = ("plan", "impl", "ui_verify", "publish")
 TEST_ARTIFACTS_SUBDIR = Path(".harness") / "test-results"
 UNEXPECTED_ESCALATIONS = {
     "plan": "plan_unexpected_error",
     "impl": "impl_unexpected_error",
+    "ui_verify": "ui_verify_unexpected_error",
     "publish": "publish_unexpected_error",
 }
 
@@ -374,13 +375,12 @@ def _implementor_bash_policy(config: HarnessConfig) -> W.BashPolicy:
     return _merge_bash_policy(_common_git_bash_policy(), exact=exact, prefixes=prefixes)
 
 
-def _reviewer_bash_policy(config: HarnessConfig, unit_cmd: str, ui_cmd: str) -> W.BashPolicy:
+def _reviewer_bash_policy(config: HarnessConfig, unit_cmd: str) -> W.BashPolicy:
     return _merge_bash_policy(
         _common_git_bash_policy(),
         exact=(
             _tokenize_command(config.build_cmd),
             _tokenize_command(unit_cmd),
-            _tokenize_command(ui_cmd),
         ),
     )
 
@@ -655,16 +655,16 @@ Worktree (where you write code): {worktree_dir}
 
 Build command: {config.build_cmd}
 Unit test command template: {config.unit_test_cmd}
-UI test command template (DO NOT run): {config.ui_test_cmd}
 
-The test command templates contain a `{{only_testing:Target}}` token that the
-harness will rewrite to run the XCTestCase classes found in the added or
+The unit test command template contains a `{{only_testing:Target}}` token that
+the harness will rewrite to run the XCTestCase classes found in the added or
 modified test files in this worktree. For your own verification run, substitute
 the token with `-only-testing:Target/YourClass` for each test class in the
 added or modified test files you touch.
 
 Implement the feature per the checklist. Ensure build + unit tests pass.
-Write UI tests but don't run them. Commit.
+Write UI tests but don't run them — the harness runs them once in a dedicated
+verification gate after impl review passes. Commit.
 """
         # Commit any pending workspace writes (state.json flipped to implementing
         # etc.) so the pre-implementor SHA reflects a clean tree. Without this,
@@ -738,11 +738,11 @@ Write UI tests but don't run them. Commit.
                 return False
         latest_feedback = _latest_feedback(_all_impl_feedback(task_dir))
         new_swift_files = discover_new_swift_files(worktree_dir, config.main_branch)
-        unit_cmd, ui_cmd = await _resolve_test_commands(config, worktree_dir, task_id)
+        unit_cmd, _ = await _resolve_test_commands(config, worktree_dir, task_id)
         reviewer_guard = W.make_path_guard(
             worktree_dir,
             task_id=task_id,
-            bash_policy=_reviewer_bash_policy(config, unit_cmd, ui_cmd),
+            bash_policy=_reviewer_bash_policy(config, unit_cmd),
         )
         reviewer_prompt = f"""Task workspace: {task_dir}
 Spec: {task_dir / 'spec.md'}
@@ -755,14 +755,14 @@ Iteration: {iteration}
 
 Build command: {config.build_cmd}
 Unit test command (scoped to XCTestCase classes in changed test files in this worktree): {unit_cmd}
-UI test command (scoped to XCTestCase classes in changed test files in this worktree, plus mandatory launch contract classes; failure in AppLaunchContractUITests blocks publish; RUN IT): {ui_cmd}
 New `.swift` files added in this worktree vs {config.main_branch}:
 {_format_text_list(new_swift_files)}
 
-Run the commands as given. If the command is an `echo SKIP: ...` placeholder,
-the harness has determined there are no changed test files for that target in
-this worktree —
-note the skip in your review and proceed; do not invent tests.
+Run the unit test command as given. If it is an `echo SKIP: ...` placeholder,
+the harness has determined there are no changed unit test files in this
+worktree — note the skip in your review and proceed; do not invent tests.
+Do NOT run UI tests here; the harness runs them once in a dedicated
+verification gate after this phase passes.
 
 If PASS, write implement-review.md and respond IMPLEMENT_PASS.
 If FAIL and reviewer patch is eligible, write implement-feedback-version-{iteration}.md, directly fix the code in the worktree, commit, and respond IMPLEMENT_FAIL.
@@ -836,17 +836,18 @@ Worktree (where you write code): {worktree_dir}
 
 Build command: {config.build_cmd}
 Unit test command template: {config.unit_test_cmd}
-UI test command template (DO NOT run): {config.ui_test_cmd}
 
-The test command templates contain a `{{only_testing:Target}}` token that the
-harness will rewrite to run the XCTestCase classes found in the added or
+The unit test command template contains a `{{only_testing:Target}}` token that
+the harness will rewrite to run the XCTestCase classes found in the added or
 modified test files in this worktree. For your own verification run, substitute
 the token with `-only-testing:Target/YourClass` for each test class in the
 added or modified test files you touch.
 
 A reviewer found issues that are not eligible for a direct reviewer patch.
 Read the latest feedback and implement only the required changes in the worktree.
-Ensure build + unit tests pass, update UI tests if needed, but do not run UI tests.
+Ensure build + unit tests pass, and update UI tests if needed (the harness runs
+UI tests once in a dedicated verification gate after this phase — do not run
+them here).
 Commit the rework and respond IMPLEMENT_DONE, or respond IMPLEMENT_BLOCKED if you cannot make it pass.
 """
             _git_commit_workspace(
@@ -916,6 +917,80 @@ Commit the rework and respond IMPLEMENT_DONE, or respond IMPLEMENT_BLOCKED if yo
     return False
 
 
+async def run_ui_verify_phase(
+    config: HarnessConfig,
+    task_id: str,
+    task_dir: Path,
+    worktree_dir: Path,
+) -> bool:
+    """Run the UI test suite once as a publish-readiness gate.
+
+    Pulled out of the impl_review iteration loop so UI tests don't run 1× per
+    reviewer iteration (and N× more per agent self-retry). The harness invokes
+    the resolved `ui_cmd` directly via subprocess — `xcode_test_runner.py`
+    keeps its environment-failure repair retry, so a CoreSimulator/LLDB blip
+    still gets one auto-recovery attempt at the runner level.
+    """
+    await emit("phase_started", task_id=task_id, phase="ui_verify")
+    _, ui_cmd = await _resolve_test_commands(config, worktree_dir, task_id)
+
+    if ui_cmd.lstrip().startswith("echo"):
+        # No changed UI test files and no mandatory classes resolved → nothing to verify.
+        await emit(
+            "ui_verify_skipped",
+            task_id=task_id,
+            reason="no resolvable UI tests in this worktree",
+        )
+        return True
+
+    started_at = time.time()
+    try:
+        argv = shlex.split(ui_cmd)
+    except ValueError as exc:
+        await emit(
+            "ui_verify_failed",
+            task_id=task_id,
+            reason=f"unparseable ui command: {exc}",
+        )
+        state = S.read_state(task_dir)
+        state.escalation = "ui_verification_failed"
+        S.write_state(task_dir, state)
+        return False
+
+    proc = subprocess.run(argv, cwd=str(worktree_dir))
+
+    try:
+        _assert_test_artifacts_visible(worktree_dir, {"ui"}, started_at)
+    except DiagnosticInfrastructureError as exc:
+        # Tag the escalation as ui-verify-specific so resume routes back to the
+        # gate (not back into impl_review) — same root cause, different phase.
+        state = S.read_state(task_dir)
+        state.escalation = "ui_verify_diagnostic_infra_missing"
+        S.write_state(task_dir, state)
+        await emit(
+            "diagnostic_infra_missing",
+            task_id=task_id,
+            phase="ui_verify",
+            missing_path=str(exc.path),
+            reason=exc.reason,
+        )
+        return False
+
+    if proc.returncode == 0:
+        await emit("ui_verify_passed", task_id=task_id)
+        return True
+
+    state = S.read_state(task_dir)
+    state.escalation = "ui_verification_failed"
+    S.write_state(task_dir, state)
+    await emit(
+        "ui_verify_failed",
+        task_id=task_id,
+        exit_code=proc.returncode,
+    )
+    return False
+
+
 async def run_publish_phase(
     config: HarnessConfig,
     task_id: str,
@@ -960,35 +1035,44 @@ Respond PUBLISH_DONE or PUBLISH_BLOCKED.
 
 
 def _resume_phase_index(state: S.TaskState) -> int:
-    """Returns which phase to start from: 0=plan, 1=impl, 2=publish."""
+    """Returns which phase to start from: 0=plan, 1=impl, 2=ui_verify, 3=publish."""
     if state.state in ("planning", "plan_review", "todo", "draft"):
         return 0
     if state.state in ("implementing", "impl_review"):
         return 1
-    if state.state == "publishing":
+    if state.state == "ui_verify":
         return 2
+    if state.state == "publishing":
+        return 3
     if state.state == "paused":
         if state.paused_from in ("planning", "plan_review"):
             return 0
         if state.paused_from in ("implementing", "impl_review"):
             return 1
-        if state.paused_from == "publishing":
+        if state.paused_from == "ui_verify":
             return 2
+        if state.paused_from == "publishing":
+            return 3
         return 0
     if state.state == "needs_attention":
         esc = (state.escalation or "").lower()
         if esc == "main_merge_conflict":
             if state.paused_from in ("implementing", "impl_review"):
                 return 1
-            if state.paused_from == "publishing":
+            if state.paused_from == "ui_verify":
                 return 2
+            if state.paused_from == "publishing":
+                return 3
             return 0
         if "plan" in esc:
             return 0
+        # ui_verify-specific escalations route back to the UI gate.
+        if "ui_verif" in esc:
+            return 2
         if "impl" in esc or esc == "diagnostic_infra_missing":
             return 1
         if "publish" in esc:
-            return 2
+            return 3
         return 0
     return 0
 
@@ -1041,7 +1125,7 @@ async def _prepare_resume_state(
     state: S.TaskState,
     resume_phase: int,
 ) -> Path:
-    target_state: S.StateName = ("planning", "implementing", "publishing")[resume_phase]
+    target_state: S.StateName = ("planning", "implementing", "ui_verify", "publishing")[resume_phase]
     if state.state != target_state:
         task_dir = await _set_state(config, task_id, target_state)
     _clear_escalation(task_dir)
@@ -1194,10 +1278,32 @@ async def run_pipeline(
                     )
                     return
 
-            # Publish phase
+            # UI verify phase (publish-readiness gate; runs UI tests once)
             current_phase = PHASE_NAMES[2]
             if resume_phase <= 2:
                 if not (is_resume and resume_phase == 2):
+                    task_dir = await _set_state(config, task_id, "ui_verify")
+                ui_ok = await run_ui_verify_phase(
+                    config, task_id, task_dir, worktree_dir
+                )
+                if not ui_ok:
+                    s = S.read_state(task_dir)
+                    if s.escalation is None:
+                        s.escalation = "ui_verification_failed"
+                        S.write_state(task_dir, s)
+                    await _set_state(config, task_id, "needs_attention")
+                    await emit(
+                        "escalation",
+                        task_id=task_id,
+                        phase="ui_verify",
+                        escalation=s.escalation,
+                    )
+                    return
+
+            # Publish phase
+            current_phase = PHASE_NAMES[3]
+            if resume_phase <= 3:
+                if not (is_resume and resume_phase == 3):
                     task_dir = await _set_state(config, task_id, "publishing")
                 pub_ok = await run_publish_phase(config, task_id, task_dir, worktree_dir)
                 if not pub_ok:

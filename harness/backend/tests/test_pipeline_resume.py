@@ -32,11 +32,15 @@ def _make_task(tmp_config, task_id: str, state_name: S.StateName, escalation: st
         ("draft", None, 0),
         ("implementing", None, 1),
         ("impl_review", None, 1),
-        ("publishing", None, 2),
+        ("ui_verify", None, 2),
+        ("publishing", None, 3),
         ("needs_attention", "plan_review_exhausted", 0),
         ("needs_attention", "impl_review_exhausted", 1),
         ("needs_attention", "diagnostic_infra_missing", 1),
-        ("needs_attention", "publish_failed", 2),
+        ("needs_attention", "ui_verification_failed", 2),
+        ("needs_attention", "ui_verify_diagnostic_infra_missing", 2),
+        ("needs_attention", "ui_verify_unexpected_error", 2),
+        ("needs_attention", "publish_failed", 3),
         ("needs_attention", None, 0),
         ("needs_attention", "something_new", 0),
     ],
@@ -53,7 +57,8 @@ def test_resume_phase_index_mapping(state_name, escalation, expected):
         ("plan_review", 0),
         ("implementing", 1),
         ("impl_review", 1),
-        ("publishing", 2),
+        ("ui_verify", 2),
+        ("publishing", 3),
         (None, 0),
     ],
 )
@@ -69,7 +74,8 @@ def test_resume_phase_index_mapping_for_paused_state(paused_from, expected):
         ("plan_review", 0),
         ("implementing", 1),
         ("impl_review", 1),
-        ("publishing", 2),
+        ("ui_verify", 2),
+        ("publishing", 3),
         (None, 0),
     ],
 )
@@ -107,6 +113,11 @@ async def test_run_pipeline_resumes_from_impl_state(tmp_config, monkeypatch):
         calls.append(("impl", state.state, state.escalation))
         return True
 
+    async def fake_ui_verify(config, task_id, task_dir, worktree_dir):
+        state = S.read_state(task_dir)
+        calls.append(("ui_verify", state.state, state.escalation))
+        return True
+
     async def fake_publish(config, task_id, task_dir, worktree_dir):
         state = S.read_state(task_dir)
         calls.append(("publish", state.state, state.escalation))
@@ -114,6 +125,7 @@ async def test_run_pipeline_resumes_from_impl_state(tmp_config, monkeypatch):
 
     monkeypatch.setattr(P, "run_plan_phase", fake_plan)
     monkeypatch.setattr(P, "run_impl_phase", fake_impl)
+    monkeypatch.setattr(P, "run_ui_verify_phase", fake_ui_verify)
     monkeypatch.setattr(P, "run_publish_phase", fake_publish)
     monkeypatch.setattr(P.W, "remove_worktree", lambda *args, **kwargs: None)
 
@@ -121,6 +133,7 @@ async def test_run_pipeline_resumes_from_impl_state(tmp_config, monkeypatch):
 
     assert calls == [
         ("impl", "implementing", None),
+        ("ui_verify", "ui_verify", None),
         ("publish", "publishing", None),
     ]
 
@@ -145,11 +158,15 @@ async def test_run_pipeline_skips_planner_when_resuming_with_existing_plan(tmp_c
     async def fake_impl(*args, **kwargs):
         return True
 
+    async def fake_ui_verify(*args, **kwargs):
+        return True
+
     async def fake_publish(*args, **kwargs):
         return True
 
     monkeypatch.setattr(P, "run_plan_phase", fake_plan_phase)
     monkeypatch.setattr(P, "run_impl_phase", fake_impl)
+    monkeypatch.setattr(P, "run_ui_verify_phase", fake_ui_verify)
     monkeypatch.setattr(P, "run_publish_phase", fake_publish)
 
     await P.run_pipeline(tmp_config, "resume-skip-planner")
@@ -177,12 +194,16 @@ async def test_run_pipeline_reemits_plan_steps_when_resuming_impl(tmp_config, mo
     async def fake_impl(*args, **kwargs):
         return True
 
+    async def fake_ui_verify(*args, **kwargs):
+        return True
+
     async def fake_publish(*args, **kwargs):
         return True
 
     monkeypatch.setattr(P, "emit", fake_emit)
     monkeypatch.setattr(P, "run_plan_phase", fake_plan)
     monkeypatch.setattr(P, "run_impl_phase", fake_impl)
+    monkeypatch.setattr(P, "run_ui_verify_phase", fake_ui_verify)
     monkeypatch.setattr(P, "run_publish_phase", fake_publish)
 
     await P.run_pipeline(tmp_config, "resume-plan-steps")
@@ -211,11 +232,15 @@ async def test_run_pipeline_events_include_run_id(tmp_config, monkeypatch):
     async def ok_impl(*args, **kwargs):
         return True
 
+    async def ok_ui_verify(*args, **kwargs):
+        return True
+
     async def ok_publish(*args, **kwargs):
         return True
 
     monkeypatch.setattr(P, "run_plan_phase", ok_plan)
     monkeypatch.setattr(P, "run_impl_phase", ok_impl)
+    monkeypatch.setattr(P, "run_ui_verify_phase", ok_ui_verify)
     monkeypatch.setattr(P, "run_publish_phase", ok_publish)
 
     queue = await bus.subscribe()
@@ -253,6 +278,11 @@ async def test_run_pipeline_resumes_impl_from_needs_attention(tmp_config, monkey
         calls.append(("impl", state.state, state.escalation))
         return True
 
+    async def fake_ui_verify(config, task_id, task_dir, worktree_dir):
+        state = S.read_state(task_dir)
+        calls.append(("ui_verify", state.state, state.escalation))
+        return True
+
     async def fake_publish(config, task_id, task_dir, worktree_dir):
         state = S.read_state(task_dir)
         calls.append(("publish", state.state, state.escalation))
@@ -260,6 +290,7 @@ async def test_run_pipeline_resumes_impl_from_needs_attention(tmp_config, monkey
 
     monkeypatch.setattr(P, "run_plan_phase", fake_plan)
     monkeypatch.setattr(P, "run_impl_phase", fake_impl)
+    monkeypatch.setattr(P, "run_ui_verify_phase", fake_ui_verify)
     monkeypatch.setattr(P, "run_publish_phase", fake_publish)
     monkeypatch.setattr(P.W, "remove_worktree", lambda *args, **kwargs: None)
 
@@ -267,6 +298,7 @@ async def test_run_pipeline_resumes_impl_from_needs_attention(tmp_config, monkey
 
     assert calls == [
         ("impl", "implementing", None),
+        ("ui_verify", "ui_verify", None),
         ("publish", "publishing", None),
     ]
 
@@ -286,6 +318,10 @@ async def test_run_pipeline_resumes_publish_from_needs_attention(tmp_config, mon
         calls.append(("impl", "", None))
         return True
 
+    async def fake_ui_verify(*args, **kwargs):
+        calls.append(("ui_verify", "", None))
+        return True
+
     async def fake_publish(config, task_id, task_dir, worktree_dir):
         state = S.read_state(task_dir)
         calls.append(("publish", state.state, state.escalation))
@@ -293,6 +329,7 @@ async def test_run_pipeline_resumes_publish_from_needs_attention(tmp_config, mon
 
     monkeypatch.setattr(P, "run_plan_phase", fake_plan)
     monkeypatch.setattr(P, "run_impl_phase", fake_impl)
+    monkeypatch.setattr(P, "run_ui_verify_phase", fake_ui_verify)
     monkeypatch.setattr(P, "run_publish_phase", fake_publish)
     monkeypatch.setattr(P.W, "remove_worktree", lambda *args, **kwargs: None)
 
@@ -319,12 +356,17 @@ async def test_run_pipeline_unknown_needs_attention_restarts_from_plan(tmp_confi
         calls.append(("impl", "", None))
         return True
 
+    async def fake_ui_verify(*args, **kwargs):
+        calls.append(("ui_verify", "", None))
+        return True
+
     async def fake_publish(*args, **kwargs):
         calls.append(("publish", "", None))
         return True
 
     monkeypatch.setattr(P, "run_plan_phase", fake_plan)
     monkeypatch.setattr(P, "run_impl_phase", fake_impl)
+    monkeypatch.setattr(P, "run_ui_verify_phase", fake_ui_verify)
     monkeypatch.setattr(P, "run_publish_phase", fake_publish)
     monkeypatch.setattr(P.W, "remove_worktree", lambda *args, **kwargs: None)
 
@@ -349,6 +391,12 @@ async def test_run_pipeline_clears_stale_escalation_after_resume(tmp_config, mon
         assert state.escalation is None
         return True
 
+    async def fake_ui_verify(config, task_id, task_dir, worktree_dir):
+        state = S.read_state(task_dir)
+        assert state.state == "ui_verify"
+        assert state.escalation is None
+        return True
+
     async def fake_publish(config, task_id, task_dir, worktree_dir):
         state = S.read_state(task_dir)
         assert state.state == "publishing"
@@ -357,6 +405,7 @@ async def test_run_pipeline_clears_stale_escalation_after_resume(tmp_config, mon
 
     monkeypatch.setattr(P, "run_plan_phase", fake_plan)
     monkeypatch.setattr(P, "run_impl_phase", fake_impl)
+    monkeypatch.setattr(P, "run_ui_verify_phase", fake_ui_verify)
     monkeypatch.setattr(P, "run_publish_phase", fake_publish)
     monkeypatch.setattr(P.W, "remove_worktree", lambda *args, **kwargs: None)
 
@@ -385,19 +434,24 @@ async def test_run_pipeline_handles_stale_worktree_on_fresh_start(tmp_config, mo
         calls.append("impl")
         return True
 
+    async def fake_ui_verify(config, task_id, task_dir, worktree_dir):
+        calls.append("ui_verify")
+        return True
+
     async def fake_publish(config, task_id, task_dir, worktree_dir):
         calls.append("publish")
         return True
 
     monkeypatch.setattr(P, "run_plan_phase", fake_plan)
     monkeypatch.setattr(P, "run_impl_phase", fake_impl)
+    monkeypatch.setattr(P, "run_ui_verify_phase", fake_ui_verify)
     monkeypatch.setattr(P, "run_publish_phase", fake_publish)
     monkeypatch.setattr(P.W, "remove_worktree", lambda *args, **kwargs: None)
 
     await P.run_pipeline(tmp_config, "stale-fresh")
 
     final_state = S.read_state(S.find_task_dir(tmp_config, "stale-fresh"))
-    assert calls == ["plan", "impl", "publish"]
+    assert calls == ["plan", "impl", "ui_verify", "publish"]
     assert final_state.state == "done"
     assert tmp_config.worktree_path("stale-fresh").exists()
 
@@ -408,6 +462,7 @@ async def test_run_pipeline_handles_stale_worktree_on_fresh_start(tmp_config, mo
     [
         ("plan", "run_plan_phase", "plan_unexpected_error"),
         ("impl", "run_impl_phase", "impl_unexpected_error"),
+        ("ui_verify", "run_ui_verify_phase", "ui_verify_unexpected_error"),
         ("publish", "run_publish_phase", "publish_unexpected_error"),
     ],
 )
@@ -434,6 +489,9 @@ async def test_run_pipeline_converts_unexpected_errors_to_needs_attention(
     async def ok_impl(*args, **kwargs):
         return True
 
+    async def ok_ui_verify(*args, **kwargs):
+        return True
+
     async def ok_publish(*args, **kwargs):
         return True
 
@@ -443,6 +501,7 @@ async def test_run_pipeline_converts_unexpected_errors_to_needs_attention(
     monkeypatch.setattr(P, "emit", fake_emit)
     monkeypatch.setattr(P, "run_plan_phase", boom if failing_attr == "run_plan_phase" else ok_plan)
     monkeypatch.setattr(P, "run_impl_phase", boom if failing_attr == "run_impl_phase" else ok_impl)
+    monkeypatch.setattr(P, "run_ui_verify_phase", boom if failing_attr == "run_ui_verify_phase" else ok_ui_verify)
     monkeypatch.setattr(P, "run_publish_phase", boom if failing_attr == "run_publish_phase" else ok_publish)
 
     await P.run_pipeline(tmp_config, task_id)
@@ -480,6 +539,11 @@ async def test_run_pipeline_uses_project_subdir_for_monorepo_phases(monorepo_con
         assert worktree_dir == expected
         return True
 
+    async def fake_ui_verify(config, task_id, task_dir, worktree_dir):
+        calls.append(("ui_verify", str(worktree_dir)))
+        assert worktree_dir == expected
+        return True
+
     async def fake_publish(config, task_id, task_dir, worktree_dir):
         calls.append(("publish", str(worktree_dir)))
         assert worktree_dir == expected
@@ -487,6 +551,7 @@ async def test_run_pipeline_uses_project_subdir_for_monorepo_phases(monorepo_con
 
     monkeypatch.setattr(P, "run_plan_phase", fake_plan)
     monkeypatch.setattr(P, "run_impl_phase", fake_impl)
+    monkeypatch.setattr(P, "run_ui_verify_phase", fake_ui_verify)
     monkeypatch.setattr(P, "run_publish_phase", fake_publish)
     monkeypatch.setattr(P.W, "remove_worktree", lambda *args, **kwargs: None)
 
@@ -495,6 +560,7 @@ async def test_run_pipeline_uses_project_subdir_for_monorepo_phases(monorepo_con
     assert calls == [
         ("plan", str(expected)),
         ("impl", str(expected)),
+        ("ui_verify", str(expected)),
         ("publish", str(expected)),
     ]
 
@@ -847,11 +913,15 @@ async def test_run_pipeline_resumes_plan_unexpected_error_into_monorepo_project_
     async def fake_impl(*args, **kwargs):
         return True
 
+    async def fake_ui_verify(*args, **kwargs):
+        return True
+
     async def fake_publish(*args, **kwargs):
         return True
 
     monkeypatch.setattr(P, "run_plan_phase", fake_plan)
     monkeypatch.setattr(P, "run_impl_phase", fake_impl)
+    monkeypatch.setattr(P, "run_ui_verify_phase", fake_ui_verify)
     monkeypatch.setattr(P, "run_publish_phase", fake_publish)
     monkeypatch.setattr(P.W, "remove_worktree", lambda *args, **kwargs: None)
 
@@ -870,14 +940,25 @@ def _bash_result(callback, command: str):
     )
 
 
-def test_reviewer_bash_policy_allows_exact_resolved_test_commands(tmp_config):
+def test_reviewer_bash_policy_allows_exact_resolved_unit_command(tmp_config):
     unit_cmd = "xcodebuild test -scheme Woontech -only-testing:WoontechTests/FooTests"
-    ui_cmd = "echo 'SKIP: no changed ui test files in this worktree'"
-    policy = P._reviewer_bash_policy(tmp_config, unit_cmd, ui_cmd)
+    policy = P._reviewer_bash_policy(tmp_config, unit_cmd)
     callback = _bash_callback(tmp_config.worktree_path("review-guard"), bash_policy=policy)
 
     assert _bash_result(callback, unit_cmd) == {}
-    assert _bash_result(callback, ui_cmd) == {}
+
+
+def test_reviewer_bash_policy_denies_ui_test_command(tmp_config):
+    """UI tests now run in a dedicated harness gate, not by the reviewer agent.
+    The reviewer's bash policy must deny xcodebuild UI invocations even when a
+    valid ui_cmd has been resolved for the gate."""
+    unit_cmd = "xcodebuild test -scheme Woontech -only-testing:WoontechTests/FooTests"
+    ui_cmd = "xcodebuild test -scheme Woontech -only-testing:WoontechUITests/AppLaunchContractUITests"
+    policy = P._reviewer_bash_policy(tmp_config, unit_cmd)
+    callback = _bash_callback(tmp_config.worktree_path("review-guard-ui"), bash_policy=policy)
+
+    denied = _bash_result(callback, ui_cmd)
+    assert denied["hookSpecificOutput"]["permissionDecision"] == "deny"
 
 
 def test_common_bash_policy_allows_pwd_and_ls_diagnostics(tmp_config):
@@ -894,8 +975,7 @@ def test_common_bash_policy_allows_pwd_and_ls_diagnostics(tmp_config):
 
 def test_reviewer_bash_policy_denies_pbxproj_grep_check(tmp_config):
     unit_cmd = "xcodebuild test -scheme Woontech -only-testing:WoontechTests/FooTests"
-    ui_cmd = "echo 'SKIP: no changed ui test files in this worktree'"
-    policy = P._reviewer_bash_policy(tmp_config, unit_cmd, ui_cmd)
+    policy = P._reviewer_bash_policy(tmp_config, unit_cmd)
     callback = _bash_callback(tmp_config.worktree_path("review-guard-deny"), bash_policy=policy)
 
     denied = _bash_result(callback, "grep -c Foo.swift Woontech.xcodeproj/project.pbxproj")
@@ -1186,11 +1266,15 @@ async def test_run_pipeline_preserves_diagnostic_infra_escalation(tmp_config, mo
         S.write_state(task_dir, state)
         return False
 
+    async def fake_ui_verify(*args, **kwargs):
+        raise AssertionError("ui_verify must not run after impl failure")
+
     async def fake_publish(*args, **kwargs):
         raise AssertionError("publish must not run after impl failure")
 
     monkeypatch.setattr(P, "run_plan_phase", fake_plan)
     monkeypatch.setattr(P, "run_impl_phase", fake_impl)
+    monkeypatch.setattr(P, "run_ui_verify_phase", fake_ui_verify)
     monkeypatch.setattr(P, "run_publish_phase", fake_publish)
     monkeypatch.setattr(P.W, "remove_worktree", lambda *args, **kwargs: None)
 
@@ -1218,11 +1302,15 @@ async def test_run_pipeline_defaults_to_impl_review_exhausted_when_unset(
     async def fake_impl(*args, **kwargs):
         return False
 
+    async def fake_ui_verify(*args, **kwargs):
+        raise AssertionError("ui_verify must not run after impl failure")
+
     async def fake_publish(*args, **kwargs):
         raise AssertionError("publish must not run after impl failure")
 
     monkeypatch.setattr(P, "run_plan_phase", fake_plan)
     monkeypatch.setattr(P, "run_impl_phase", fake_impl)
+    monkeypatch.setattr(P, "run_ui_verify_phase", fake_ui_verify)
     monkeypatch.setattr(P, "run_publish_phase", fake_publish)
     monkeypatch.setattr(P.W, "remove_worktree", lambda *args, **kwargs: None)
 
@@ -1252,12 +1340,16 @@ async def test_run_pipeline_escalates_on_main_merge_conflict(tmp_config, monkeyp
     async def fake_impl(*args, **kwargs):
         raise AssertionError("impl must not run when main merge conflicts")
 
+    async def fake_ui_verify(*args, **kwargs):
+        raise AssertionError("ui_verify must not run when main merge conflicts")
+
     async def fake_publish(*args, **kwargs):
         raise AssertionError("publish must not run when main merge conflicts")
 
     monkeypatch.setattr(P.W, "sync_worktree_with_main", boom)
     monkeypatch.setattr(P, "run_plan_phase", fake_plan)
     monkeypatch.setattr(P, "run_impl_phase", fake_impl)
+    monkeypatch.setattr(P, "run_ui_verify_phase", fake_ui_verify)
     monkeypatch.setattr(P, "run_publish_phase", fake_publish)
     monkeypatch.setattr(P.W, "remove_worktree", lambda *args, **kwargs: None)
 
@@ -1297,6 +1389,11 @@ async def test_run_pipeline_resumes_main_merge_conflict_at_saved_phase(tmp_confi
         calls.append(("impl", state.state, state.escalation))
         return True
 
+    async def fake_ui_verify(config, task_id, task_dir, worktree_dir):
+        state = S.read_state(task_dir)
+        calls.append(("ui_verify", state.state, state.escalation))
+        return True
+
     async def fake_publish(config, task_id, task_dir, worktree_dir):
         state = S.read_state(task_dir)
         calls.append(("publish", state.state, state.escalation))
@@ -1305,6 +1402,7 @@ async def test_run_pipeline_resumes_main_merge_conflict_at_saved_phase(tmp_confi
     monkeypatch.setattr(P.W, "sync_worktree_with_main", fake_sync)
     monkeypatch.setattr(P, "run_plan_phase", fake_plan)
     monkeypatch.setattr(P, "run_impl_phase", fake_impl)
+    monkeypatch.setattr(P, "run_ui_verify_phase", fake_ui_verify)
     monkeypatch.setattr(P, "run_publish_phase", fake_publish)
     monkeypatch.setattr(P.W, "remove_worktree", lambda *args, **kwargs: None)
 
@@ -1312,6 +1410,7 @@ async def test_run_pipeline_resumes_main_merge_conflict_at_saved_phase(tmp_confi
 
     assert calls == [
         ("impl", "implementing", None),
+        ("ui_verify", "ui_verify", None),
         ("publish", "publishing", None),
     ]
 
@@ -1332,12 +1431,16 @@ async def test_run_pipeline_calls_main_sync_only_on_resume(tmp_config, monkeypat
     async def ok_impl(*args, **kwargs):
         return True
 
+    async def ok_ui_verify(*args, **kwargs):
+        return True
+
     async def ok_publish(*args, **kwargs):
         return True
 
     monkeypatch.setattr(P.W, "sync_worktree_with_main", fake_sync)
     monkeypatch.setattr(P, "run_plan_phase", ok_plan)
     monkeypatch.setattr(P, "run_impl_phase", ok_impl)
+    monkeypatch.setattr(P, "run_ui_verify_phase", ok_ui_verify)
     monkeypatch.setattr(P, "run_publish_phase", ok_publish)
     monkeypatch.setattr(P.W, "remove_worktree", lambda *args, **kwargs: None)
 

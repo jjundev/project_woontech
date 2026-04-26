@@ -328,6 +328,8 @@ function phaseLabel(phase: string): string {
       return "Implementing";
     case "impl_review":
       return "Impl Review";
+    case "ui_verify":
+      return "UI Verify";
     case "publishing":
       return "Publishing";
     default:

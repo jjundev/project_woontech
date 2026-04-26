@@ -1,0 +1,17 @@
+{
+  "id": "WF3-05-detail-event",
+  "state": "published",
+  "paused_from": null,
+  "title": "WF3-05 \u2014 \uc774\ubca4\ud2b8 \uc0c1\uc138 (Weekly \uce74\ub4dc \ud0ed \ubaa9\uc801\uc9c0)",
+  "plan_version": 2,
+  "impl_version": 1,
+  "plan_retries": 1,
+  "impl_retries": 1,
+  "max_plan_retries": 3,
+  "max_impl_retries": 3,
+  "escalation": null,
+  "created_at": 1777183105.546148,
+  "updated_at": 1777200600.0,
+  "branch": "feature/WF3-05-detail-event",
+  "pr_url": "https://github.com/jjundev/project_woontech/pull/30"
+}

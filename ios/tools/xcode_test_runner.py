@@ -431,6 +431,83 @@ def reset_simulator(udid: str) -> None:
     _run_quiet(["xcrun", "simctl", "erase", udid])
 
 
+BOOT_TIMEOUT_SECONDS = 120
+BOOT_COMMAND_TIMEOUT_SECONDS = 30
+
+
+class SimulatorBootError(RunnerError):
+    """Raised when explicit simulator boot or bootstatus fails — distinct from
+    a generic RunnerError so callers can route boot races into the structured
+    placeholder summary instead of letting xcodebuild see an under-prepared
+    simulator.
+    """
+
+
+def boot_simulator(udid: str, *, timeout: int = BOOT_TIMEOUT_SECONDS) -> None:
+    """Bring the simulator to a fully-ready state synchronously, so xcodebuild
+    can install the test runner the moment it starts.
+
+    Steps:
+      1. `xcrun simctl boot <udid>` — idempotent (no-op if already Booted).
+      2. `xcrun simctl bootstatus <udid> -b` — blocks until SpringBoard and
+         attendant services are up; returns 0 immediately when already booted.
+
+    On timeout or non-zero exit, raises `SimulatorBootError`. The caller
+    (`run_test`) routes that into the existing placeholder-summary path so
+    the harness reviewer sees a structured `preflight_failed: simulator_boot`
+    marker rather than an opaque "Failed to install or launch the test runner"
+    crash from xcodebuild.
+    """
+    print(f"[boot] xcrun simctl boot {udid}", flush=True)
+    try:
+        boot_result = subprocess.run(
+            ["xcrun", "simctl", "boot", udid],
+            cwd=str(ios_root()),
+            capture_output=True,
+            text=True,
+            timeout=BOOT_COMMAND_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        raise SimulatorBootError(
+            f"simctl boot {udid} did not complete within "
+            f"{BOOT_COMMAND_TIMEOUT_SECONDS}s"
+        )
+    # "Unable to boot device in current state: Booted" is a benign no-op that
+    # simctl signals via a non-zero exit. Treat that one phrase as success;
+    # any other non-zero exit is a real failure.
+    if boot_result.returncode != 0:
+        combined = (boot_result.stderr or "") + (boot_result.stdout or "")
+        if "current state: Booted" not in combined:
+            raise SimulatorBootError(
+                f"simctl boot {udid} exit {boot_result.returncode}: "
+                f"{_shorten_detail(combined)}"
+            )
+
+    print(
+        f"[boot] xcrun simctl bootstatus {udid} -b (timeout {timeout}s)",
+        flush=True,
+    )
+    try:
+        status = subprocess.run(
+            ["xcrun", "simctl", "bootstatus", udid, "-b"],
+            cwd=str(ios_root()),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        raise SimulatorBootError(
+            f"simctl bootstatus {udid} did not complete within {timeout}s"
+        )
+    if status.returncode != 0:
+        combined = (status.stderr or "") + (status.stdout or "")
+        raise SimulatorBootError(
+            f"simctl bootstatus {udid} exit {status.returncode}: "
+            f"{_shorten_detail(combined)}"
+        )
+    print(f"[boot] simulator {udid} ready", flush=True)
+
+
 def _remove_path(path: Path) -> None:
     shutil.rmtree(path, ignore_errors=True)
 
@@ -928,6 +1005,20 @@ def run_test(
         simulator_udid = simulator.udid
         if ui:
             reset_simulator(simulator.udid)
+            try:
+                boot_simulator(simulator.udid)
+            except SimulatorBootError as exc:
+                # Surface boot failures through the same structured prefix the
+                # reviewer agent already keys off (`preflight_failed:`), so a
+                # boot race produces a readable placeholder summary instead of
+                # crashing inside xcodebuild with an opaque test-runner launch
+                # error.
+                pre_failure = PreflightFailure(
+                    check="simulator_boot",
+                    detail=str(exc),
+                    remediation="none",
+                )
+                raise
         selection_args = list(xcodebuild_args)
         if not any(arg.startswith("-only-testing:") for arg in selection_args):
             selection_args.insert(0, f"-only-testing:{target}")

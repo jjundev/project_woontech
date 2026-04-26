@@ -80,7 +80,6 @@ struct EventDetailView: View {
             }
         }
         .toolbar(.hidden, for: .navigationBar)
-        .accessibilityIdentifier("EventDetailView")
         // Spy counters: opacity 0, uninteractable, readable by XCUITest
         .overlay(alignment: .topLeading) {
             VStack(spacing: 0) {
@@ -159,6 +158,7 @@ struct EventDetailView: View {
             RoundedRectangle(cornerRadius: 8)
                 .stroke(DesignTokens.line3, lineWidth: 1)
         )
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("EventDetailTitleCard")
     }
 
@@ -328,6 +328,7 @@ struct EventDetailView: View {
             .buttonStyle(.plain)
             .accessibilityIdentifier("EventDetailLearnButton")
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("EventDetailActionButtons")
     }
 }

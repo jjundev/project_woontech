@@ -45,19 +45,16 @@ final class EventDetailUITests: XCTestCase {
         app.launch()
         let root = app.otherElements["HomeDashboardRoot"]
         XCTAssertTrue(root.waitForExistence(timeout: 10))
-        // Scroll to find an EventCard
-        let weeklySection = app.otherElements["WeeklyEventsSection"]
-        if !weeklySection.waitForExistence(timeout: 5) {
-            app.swipeUp()
+        // Scroll to reveal event cards
+        let scrollView = app.scrollViews.firstMatch
+        XCTAssertTrue(scrollView.waitForExistence(timeout: 5), "A ScrollView should exist")
+        // Find the first mock event card by its title label (MockWeeklyEventsProvider events()[0].title)
+        let eventLabel = app.staticTexts["곡우(穀雨)"]
+        if !eventLabel.waitForExistence(timeout: 5) {
+            for _ in 0..<4 { scrollView.swipeUp() }
         }
-        // Query any EventCard button (identifier starts with "EventCard_")
-        let predicate = NSPredicate(format: "identifier BEGINSWITH 'EventCard_'")
-        let cards = app.buttons.matching(predicate)
-        if !cards.firstMatch.waitForExistence(timeout: 5) {
-            for _ in 0..<3 { app.swipeUp() }
-        }
-        XCTAssertTrue(cards.firstMatch.waitForExistence(timeout: 10), "At least one EventCard should exist")
-        cards.firstMatch.tap()
+        XCTAssertTrue(eventLabel.waitForExistence(timeout: 10), "An event card label should exist")
+        eventLabel.tap()
         let title = app.staticTexts["EventDetailTitle"]
         XCTAssertTrue(title.waitForExistence(timeout: 10), "EventDetailTitle should appear after card tap")
     }

@@ -432,6 +432,7 @@ def reset_simulator(udid: str) -> None:
 
 
 BOOT_TIMEOUT_SECONDS = 120
+BOOT_COMMAND_TIMEOUT_SECONDS = 30
 
 
 class SimulatorBootError(RunnerError):
@@ -458,13 +459,19 @@ def boot_simulator(udid: str, *, timeout: int = BOOT_TIMEOUT_SECONDS) -> None:
     crash from xcodebuild.
     """
     print(f"[boot] xcrun simctl boot {udid}", flush=True)
-    boot_result = subprocess.run(
-        ["xcrun", "simctl", "boot", udid],
-        cwd=str(ios_root()),
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
+    try:
+        boot_result = subprocess.run(
+            ["xcrun", "simctl", "boot", udid],
+            cwd=str(ios_root()),
+            capture_output=True,
+            text=True,
+            timeout=BOOT_COMMAND_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        raise SimulatorBootError(
+            f"simctl boot {udid} did not complete within "
+            f"{BOOT_COMMAND_TIMEOUT_SECONDS}s"
+        )
     # "Unable to boot device in current state: Booted" is a benign no-op that
     # simctl signals via a non-zero exit. Treat that one phrase as success;
     # any other non-zero exit is a real failure.

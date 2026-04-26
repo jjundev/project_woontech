@@ -927,6 +927,30 @@ def test_boot_simulator_treats_already_booted_as_success(monkeypatch):
     assert any(c[:3] == ["xcrun", "simctl", "bootstatus"] for c in fake_run.calls)
 
 
+def test_boot_simulator_raises_on_boot_timeout(monkeypatch):
+    """If the initial simctl boot command hangs, raise SimulatorBootError so
+    run_test() can still write the structured simulator_boot marker."""
+
+    def boot_handler(cmd):
+        raise subprocess.TimeoutExpired(
+            cmd=cmd,
+            timeout=runner.BOOT_COMMAND_TIMEOUT_SECONDS,
+        )
+
+    handlers = [
+        (lambda c: c[:3] == ["xcrun", "simctl", "boot"], boot_handler),
+        (lambda c: c[:3] == ["xcrun", "simctl", "bootstatus"], _FakeCompleted(0)),
+    ]
+    fake_run = _make_subprocess_router(handlers)
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+
+    with pytest.raises(runner.SimulatorBootError) as excinfo:
+        runner.boot_simulator("UDID-SLOW")
+
+    assert "simctl boot UDID-SLOW did not complete within 30s" in str(excinfo.value)
+    assert not any(c[:3] == ["xcrun", "simctl", "bootstatus"] for c in fake_run.calls)
+
+
 def test_boot_simulator_raises_on_bootstatus_timeout(monkeypatch):
     """If bootstatus -b doesn't return within the timeout, raise
     SimulatorBootError with the timeout duration in the message so the

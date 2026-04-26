@@ -74,6 +74,52 @@ Hard rules:
   "Implementation steps" section, emit a single line of the form
   `STEP: <number>` (or `STEP: <number>. <short title>`) on its own line.
   This signals progress to the dashboard. Emit each STEP line at most once.
+
+SwiftUI accessibility rules (UI test contract):
+- Do NOT attach `.accessibilityIdentifier(...)` to a `TabView` child view
+  (the view returned by the body and combined with `.tabItem { ... }`).
+  In the XCTest accessibility tree the modifier propagates onto the tab's
+  content subtree and overrides identifiers on descendant root containers
+  (e.g. `HomeDashboardRoot`, `SajuTabRoot`, hidden `*NavPush*` triggers).
+  Tab buttons must be addressed by tests via the system tab bar —
+  `app.tabBars.buttons["..."]` or
+  `app.tabBars.buttons.element(boundBy: index)` — never via a custom
+  identifier on the tab child. The same caution applies to any container
+  modifier that wraps a subtree already carrying named identifiers.
+- Use one identifier per accessibility element. Adding
+  `.accessibilityIdentifier(...)` to a container that already has named
+  descendants can flatten or shadow those descendant identifiers. If you need
+  both a container ID and child IDs, use
+  `.accessibilityElement(children: .contain)` on the container and verify the
+  resulting accessibility tree before shipping. Do not rely on a parent
+  identifier when descendant UI-test anchors must remain discoverable.
+- The XCTest query type must match the underlying control type. A
+  `ScrollView` is queried via `app.scrollViews[id]`, a `Button` via
+  `app.buttons[id]`, a `Text` via `app.staticTexts[id]`. Do not default to
+  `app.otherElements[id]`. If an identifier needs to live on a generic
+  container, wrap it in a known-typed wrapper (e.g. a `VStack` for
+  `otherElements`, a `Button` for `buttons`) so the test query is
+  determined by the wrapper, not by guessing the runtime element type.
+- When you add or change an `accessibilityIdentifier` on any of: `TabView`,
+  `NavigationStack`, root containers, overlays, hidden UI test trigger
+  buttons (`*NavPush*`, `HomeBellTapCount`, etc.), or any view used as a UI
+  test anchor, you MUST:
+    1. Read the corresponding UI test file and note which `app.<query>[id]`
+       call targets that identifier (`tabBars.buttons` / `scrollViews` /
+       `buttons` / `otherElements` / `staticTexts`).
+    2. Confirm the SwiftUI element type matches that query.
+    3. State the binding explicitly in your final note above
+       `IMPLEMENT_DONE`, e.g. `Identifier SajuTabRoot lives on the
+       SajuTabView root VStack and is queried via app.otherElements`.
+    4. If the identifier-bearing modifier sits on a `TabView` child, or on
+       a parent of an identifier-bearing descendant, redesign so the
+       identifier lives on a leaf-level wrapper. Do not ship the original
+       layout.
+- You do not run UI tests, but identifier-scoping bugs surface in the
+  reviewer's UI pass as `element not found` and trigger a full rework
+  cycle. Get this right at implementation time — accessibility scope is
+  not a reviewer concern, it is part of the implementation contract.
+
 - If the build or unit tests cannot be made to pass, put a short explanation
   above, then end your response with IMPLEMENT_BLOCKED on its own line — bare
   token, no backticks, no markdown, no quotes, no prefix. Do not claim success

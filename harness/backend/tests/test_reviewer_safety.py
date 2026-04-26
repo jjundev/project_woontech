@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from backend import pipeline as P
+from backend.agents.base import _join_text_blocks
 from backend.agents.implementor import IMPLEMENTOR
 from backend.agents.implement_reviewer import IMPLEMENT_REVIEWER
 from backend.agents.plan_reviewer import PLAN_REVIEWER
@@ -194,3 +195,47 @@ def test_text_tail_truncates_to_limit():
     text = "x" * 1000
     assert P._text_tail(text, limit=50) == "x" * 50
     assert P._text_tail("short") == "short"
+
+
+def test_join_text_blocks_preserves_block_boundaries():
+    assert _join_text_blocks([]) == ""
+    assert _join_text_blocks(["only block"]) == "only block"
+    assert _join_text_blocks(["first", "second"]) == "first\nsecond"
+
+
+def test_concatenated_blocks_without_separator_lose_terminal_token():
+    # Characterizes the bug we're fixing: when adjacent TextBlocks are glued
+    # with "" instead of "\n", the last word of the prose fuses with the
+    # token, and `_find_terminal_token` can no longer pick it up.
+    fused = "".join(
+        [
+            "Reviewed the diff. Navigation push to EventDetailView never completes",
+            "IMPLEMENT_REWORK_REQUIRED",
+        ]
+    )
+    assert (
+        P._find_terminal_token(
+            fused,
+            ("IMPLEMENT_PASS", "IMPLEMENT_FAIL", "IMPLEMENT_REWORK_REQUIRED"),
+        )
+        is None
+    )
+
+
+def test_join_text_blocks_keeps_terminal_token_detectable():
+    # Regression guard: with the newline join applied by `_join_text_blocks`,
+    # the token at the start of the second TextBlock survives as a standalone
+    # word on its own line and is detected normally.
+    joined = _join_text_blocks(
+        [
+            "Reviewed the diff. Navigation push to EventDetailView never completes",
+            "IMPLEMENT_REWORK_REQUIRED",
+        ]
+    )
+    assert (
+        P._find_terminal_token(
+            joined,
+            ("IMPLEMENT_PASS", "IMPLEMENT_FAIL", "IMPLEMENT_REWORK_REQUIRED"),
+        )
+        == "IMPLEMENT_REWORK_REQUIRED"
+    )

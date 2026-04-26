@@ -1,0 +1,17 @@
+{
+  "id": "WF3-05-detail-event",
+  "state": "planning",
+  "paused_from": null,
+  "title": "WF3-05 \u2014 \uc774\ubca4\ud2b8 \uc0c1\uc138 (Weekly \uce74\ub4dc \ud0ed \ubaa9\uc801\uc9c0)",
+  "plan_version": 0,
+  "impl_version": 0,
+  "plan_retries": 0,
+  "impl_retries": 0,
+  "max_plan_retries": 3,
+  "max_impl_retries": 3,
+  "escalation": null,
+  "created_at": 1777183105.546148,
+  "updated_at": 1777183105.54668,
+  "branch": "feature/WF3-05-detail-event",
+  "pr_url": null
+}

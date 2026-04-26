@@ -70,8 +70,15 @@ struct HomeDashboardView: View {
                     switch route {
                     case .investing:
                         InvestingAttitudeDetailView(provider: homeDeps.investingAttitudeDetail)
-                    case .event:
-                        EventPlaceholderView()
+                    case .event(let event):
+                        EventDetailView(
+                            event: event,
+                            provider: homeDeps.eventDetail,
+                            onShareTap: {},
+                            onBellReminderTap: {},
+                            onAddToCalendarTap: {},
+                            onLearnTap: {}
+                        )
                     case .today:
                         TodayDetailView(provider: homeDeps.todayDetail)
                     case .tabooPlaceholder:

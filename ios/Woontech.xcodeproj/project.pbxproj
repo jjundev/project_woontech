@@ -98,6 +98,10 @@
 		B0010401000000000000B401 /* TodayDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010401000000000000A401 /* TodayDetailView.swift */; };
 		B0010402000000000000B402 /* TodayDetailViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010402000000000000A402 /* TodayDetailViewTests.swift */; };
 		B0010403000000000000B403 /* TodayDetailUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010403000000000000A403 /* TodayDetailUITests.swift */; };
+		B0010500000000000000B500 /* EventDetailProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010500000000000000A500 /* EventDetailProviding.swift */; };
+		B0010501000000000000B501 /* EventDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010501000000000000A501 /* EventDetailView.swift */; };
+		B0010502000000000000B502 /* EventDetailViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010502000000000000A502 /* EventDetailViewTests.swift */; };
+		B0010503000000000000B503 /* EventDetailUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010503000000000000A503 /* EventDetailUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -212,6 +216,10 @@
 		A0010401000000000000A401 /* TodayDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayDetailView.swift; sourceTree = "<group>"; };
 		A0010402000000000000A402 /* TodayDetailViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayDetailViewTests.swift; sourceTree = "<group>"; };
 		A0010403000000000000A403 /* TodayDetailUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayDetailUITests.swift; sourceTree = "<group>"; };
+		A0010500000000000000A500 /* EventDetailProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailProviding.swift; sourceTree = "<group>"; };
+		A0010501000000000000A501 /* EventDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailView.swift; sourceTree = "<group>"; };
+		A0010502000000000000A502 /* EventDetailViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailViewTests.swift; sourceTree = "<group>"; };
+		A0010503000000000000A503 /* EventDetailUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -340,6 +348,7 @@
 				A001006C000000000000A06C /* HomeDashboardUITests.swift */,
 				A0010303000000000000A303 /* InvestingAttitudeDetailUITests.swift */,
 				A0010403000000000000A403 /* TodayDetailUITests.swift */,
+				A0010503000000000000A503 /* EventDetailUITests.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -387,6 +396,7 @@
 				A0010076000000000000A076 /* WeeklyEventsTests.swift */,
 				A0010302000000000000A302 /* InvestingAttitudeDetailViewTests.swift */,
 				A0010402000000000000A402 /* TodayDetailViewTests.swift */,
+				A0010502000000000000A502 /* EventDetailViewTests.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -481,8 +491,18 @@
 			children = (
 				A0010913000000000000A913 /* Investing */,
 				A0010914000000000000A914 /* Today */,
+				A0010915000000000000A915 /* Event */,
 			);
 			path = Detail;
+			sourceTree = "<group>";
+		};
+		A0010915000000000000A915 /* Event */ = {
+			isa = PBXGroup;
+			children = (
+				A0010500000000000000A500 /* EventDetailProviding.swift */,
+				A0010501000000000000A501 /* EventDetailView.swift */,
+			);
+			path = Event;
 			sourceTree = "<group>";
 		};
 		A0010913000000000000A913 /* Investing */ = {
@@ -648,6 +668,7 @@
 				B0010076000000000000A076 /* WeeklyEventsTests.swift in Sources */,
 				B0010302000000000000B302 /* InvestingAttitudeDetailViewTests.swift in Sources */,
 				B0010402000000000000B402 /* TodayDetailViewTests.swift in Sources */,
+				B0010502000000000000B502 /* EventDetailViewTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -721,6 +742,8 @@
 				B0010301000000000000B301 /* InvestingAttitudeDetailView.swift in Sources */,
 				B0010400000000000000B400 /* TodayDetailProviding.swift in Sources */,
 				B0010401000000000000B401 /* TodayDetailView.swift in Sources */,
+				B0010500000000000000B500 /* EventDetailProviding.swift in Sources */,
+				B0010501000000000000B501 /* EventDetailView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -738,6 +761,7 @@
 				B001006C000000000000A06C /* HomeDashboardUITests.swift in Sources */,
 				B0010303000000000000B303 /* InvestingAttitudeDetailUITests.swift in Sources */,
 				B0010403000000000000B403 /* TodayDetailUITests.swift in Sources */,
+				B0010503000000000000B503 /* EventDetailUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

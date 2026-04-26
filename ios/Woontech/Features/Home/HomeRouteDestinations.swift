@@ -9,6 +9,8 @@ struct InvestingPlaceholderView: View {
     }
 }
 
+// Deprecated - replaced with actual EventDetailView
+@available(*, deprecated, message: "Use EventDetailView instead")
 struct EventPlaceholderView: View {
     var body: some View {
         Text("준비중")

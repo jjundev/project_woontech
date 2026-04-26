@@ -160,6 +160,53 @@ def test_sync_aborts_preexisting_merge_state(synced_worktree):
     assert not (git_dir / "MERGE_HEAD").exists()
 
 
+def test_sync_does_not_auto_commit_resolved_but_uncommitted_merge(synced_worktree):
+    config, task_id, worktree_path = synced_worktree
+    repo = config.ios_root
+
+    shared = repo / "resolved_merge.txt"
+    _advance_origin_main(repo, shared, "main version\n", "main adds resolved_merge.txt")
+    subprocess.run(["git", "-C", str(repo), "fetch", "-q", "origin", "main"], check=True)
+
+    (worktree_path / "resolved_merge.txt").write_text(
+        "worktree version\n",
+        encoding="utf-8",
+    )
+    subprocess.run(["git", "-C", str(worktree_path), "add", "-A"], check=True)
+    subprocess.run(
+        ["git", "-C", str(worktree_path), "commit", "-q", "-m", "worktree adds shared file"],
+        check=True,
+    )
+    head_before = _git(worktree_path, "rev-parse", "HEAD")
+
+    merge = subprocess.run(
+        ["git", "-C", str(worktree_path), "merge", "origin/main"],
+        capture_output=True,
+        text=True,
+    )
+    assert merge.returncode != 0
+
+    # Simulate a human resolving conflicts but not committing yet. This still
+    # has MERGE_HEAD, so sync must escalate rather than finishing the merge.
+    (worktree_path / "resolved_merge.txt").write_text(
+        "resolved version\n",
+        encoding="utf-8",
+    )
+    subprocess.run(["git", "-C", str(worktree_path), "add", "resolved_merge.txt"], check=True)
+    assert _git(worktree_path, "rev-parse", "--verify", "MERGE_HEAD")
+
+    with pytest.raises(W.MainMergeConflictError):
+        W.sync_worktree_with_main(config, task_id)
+
+    assert _git(worktree_path, "rev-parse", "HEAD") == head_before
+    merge_head = subprocess.run(
+        ["git", "-C", str(worktree_path), "rev-parse", "--verify", "MERGE_HEAD"],
+        capture_output=True,
+        text=True,
+    )
+    assert merge_head.returncode != 0
+
+
 def test_sync_auto_commits_pending_changes_first(synced_worktree):
     config, task_id, worktree_path = synced_worktree
     repo = config.ios_root

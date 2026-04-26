@@ -62,6 +62,27 @@ def test_resume_phase_index_mapping_for_paused_state(paused_from, expected):
     assert P._resume_phase_index(state) == expected
 
 
+@pytest.mark.parametrize(
+    ("paused_from", "expected"),
+    [
+        ("planning", 0),
+        ("plan_review", 0),
+        ("implementing", 1),
+        ("impl_review", 1),
+        ("publishing", 2),
+        (None, 0),
+    ],
+)
+def test_resume_phase_index_mapping_for_main_merge_conflict(paused_from, expected):
+    state = S.TaskState(
+        id="WF1",
+        state="needs_attention",
+        escalation="main_merge_conflict",
+        paused_from=paused_from,
+    )
+    assert P._resume_phase_index(state) == expected
+
+
 def test_step_markers_are_only_extracted_for_implementor():
     from backend.agents.base import step_markers_for_agent
 
@@ -1247,6 +1268,52 @@ async def test_run_pipeline_escalates_on_main_merge_conflict(tmp_config, monkeyp
     final_state = S.read_state(workspace)
     assert final_state.state == "needs_attention"
     assert final_state.escalation == "main_merge_conflict"
+    assert final_state.paused_from == "implementing"
+
+
+@pytest.mark.asyncio
+async def test_run_pipeline_resumes_main_merge_conflict_at_saved_phase(tmp_config, monkeypatch):
+    task_dir = _make_task(
+        tmp_config,
+        "resume-main-conflict",
+        "needs_attention",
+        escalation="main_merge_conflict",
+    )
+    state = S.read_state(task_dir)
+    state.paused_from = "implementing"
+    S.write_state(task_dir, state)
+    tmp_config.worktree_path("resume-main-conflict").mkdir(parents=True, exist_ok=True)
+
+    calls: list[tuple[str, str, str | None]] = []
+
+    def fake_sync(config, task_id):
+        return "up-to-date"
+
+    async def fake_plan(*args, **kwargs):
+        raise AssertionError("plan must not run after main merge conflict from impl phase")
+
+    async def fake_impl(config, task_id, task_dir, worktree_dir, max_retries, **kwargs):
+        state = S.read_state(task_dir)
+        calls.append(("impl", state.state, state.escalation))
+        return True
+
+    async def fake_publish(config, task_id, task_dir, worktree_dir):
+        state = S.read_state(task_dir)
+        calls.append(("publish", state.state, state.escalation))
+        return True
+
+    monkeypatch.setattr(P.W, "sync_worktree_with_main", fake_sync)
+    monkeypatch.setattr(P, "run_plan_phase", fake_plan)
+    monkeypatch.setattr(P, "run_impl_phase", fake_impl)
+    monkeypatch.setattr(P, "run_publish_phase", fake_publish)
+    monkeypatch.setattr(P.W, "remove_worktree", lambda *args, **kwargs: None)
+
+    await P.run_pipeline(tmp_config, "resume-main-conflict")
+
+    assert calls == [
+        ("impl", "implementing", None),
+        ("publish", "publishing", None),
+    ]
 
 
 @pytest.mark.asyncio

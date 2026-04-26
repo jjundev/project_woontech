@@ -977,6 +977,12 @@ def _resume_phase_index(state: S.TaskState) -> int:
         return 0
     if state.state == "needs_attention":
         esc = (state.escalation or "").lower()
+        if esc == "main_merge_conflict":
+            if state.paused_from in ("implementing", "impl_review"):
+                return 1
+            if state.paused_from == "publishing":
+                return 2
+            return 0
         if "plan" in esc:
             return 0
         if "impl" in esc or esc == "diagnostic_infra_missing":
@@ -1035,7 +1041,7 @@ async def _prepare_resume_state(
     state: S.TaskState,
     resume_phase: int,
 ) -> Path:
-    target_state = ("planning", "implementing", "publishing")[resume_phase]
+    target_state: S.StateName = ("planning", "implementing", "publishing")[resume_phase]
     if state.state != target_state:
         task_dir = await _set_state(config, task_id, target_state)
     _clear_escalation(task_dir)
@@ -1049,10 +1055,14 @@ async def _prepare_resume_state(
         await emit("main_sync", task_id=task_id, result=result)
     except W.MainMergeConflictError as exc:
         await emit("main_sync_conflict", task_id=task_id, detail=str(exc))
+        # S.transition clears paused_from for non-paused states, so store this
+        # phase hint after moving to needs_attention. A later resume uses it to
+        # return to the phase where main sync was attempted.
+        task_dir = await _set_state(config, task_id, "needs_attention")
         s = S.read_state(task_dir)
         s.escalation = "main_merge_conflict"
+        s.paused_from = target_state
         S.write_state(task_dir, s)
-        await _set_state(config, task_id, "needs_attention")
         raise
 
     return task_dir

@@ -209,10 +209,10 @@ def sync_worktree_with_main(config: HarnessConfig, task_id: str) -> str:
     Behavior:
       1. `git fetch origin <main>` — failure is treated as a warning and the
          function proceeds with whatever local origin/main ref is available.
-      2. Auto-commit any pending uncommitted changes so they aren't dragged
-         into the merge.
-      3. Refuse to proceed if a previous merge was left unresolved
+      2. Refuse to proceed if a previous merge was left unresolved
          (MERGE_HEAD present) — abort it and raise.
+      3. Auto-commit any pending uncommitted changes so they aren't dragged
+         into the merge.
       4. If origin/<main> is already an ancestor of HEAD, return "up-to-date"
          without creating a merge commit.
       5. Otherwise run `git merge --no-edit origin/<main>`. On conflict, abort
@@ -248,10 +248,7 @@ def sync_worktree_with_main(config: HarnessConfig, task_id: str) -> str:
         )
         return "skipped: fetch failed"
 
-    # 2) keep in-flight changes
-    _commit_pending_changes(worktree_path, label="pre-main-sync checkpoint")
-
-    # 3) refuse mid-merge state
+    # 2) refuse mid-merge state before auto-commit can accidentally complete it
     if _is_in_merge(worktree_path):
         subprocess.run(
             ["git", "merge", "--abort"],
@@ -262,6 +259,9 @@ def sync_worktree_with_main(config: HarnessConfig, task_id: str) -> str:
         raise MainMergeConflictError(
             "worktree was left in an unresolved merge state from a prior run"
         )
+
+    # 3) keep in-flight changes
+    _commit_pending_changes(worktree_path, label="pre-main-sync checkpoint")
 
     # 4) already merged?
     ancestor = subprocess.run(

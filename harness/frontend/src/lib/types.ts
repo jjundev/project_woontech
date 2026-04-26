@@ -5,6 +5,7 @@ export type TaskStateName =
   | "plan_review"
   | "implementing"
   | "impl_review"
+  | "ui_verify"
   | "publishing"
   | "done"
   | "needs_attention"

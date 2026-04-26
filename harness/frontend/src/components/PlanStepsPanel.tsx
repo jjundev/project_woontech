@@ -188,7 +188,7 @@ function isTerminalProgressEvent(event: HarnessEvent): boolean {
   if (event.type === "pipeline_done") return true;
   if (event.type !== "phase_started") return false;
   const phase = String(event.payload?.phase ?? "");
-  return phase === "impl_review" || phase === "publishing";
+  return phase === "impl_review" || phase === "ui_verify" || phase === "publishing";
 }
 
 function matchStep(steps: PlanStep[], marker: string): number | null {

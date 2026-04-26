@@ -19,6 +19,7 @@ const STAGES: { key: TaskStateName; label: string }[] = [
   { key: "plan_review", label: "Plan Review" },
   { key: "implementing", label: "Implementing" },
   { key: "impl_review", label: "Impl Review" },
+  { key: "ui_verify", label: "UI Verify" },
   { key: "publishing", label: "Publishing" },
   { key: "done", label: "Done" },
 ];
@@ -32,6 +33,7 @@ const PAUSE_STATES: TaskStateName[] = [
   "plan_review",
   "implementing",
   "impl_review",
+  "ui_verify",
   "publishing",
 ];
 

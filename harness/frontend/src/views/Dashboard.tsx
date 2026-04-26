@@ -4,7 +4,7 @@ import type { HarnessEvent, TaskState, TaskStateName } from "../lib/types";
 
 const COLUMN_LABELS: Record<string, TaskStateName[]> = {
   "To Do": ["todo", "draft"],
-  Ongoing: ["planning", "plan_review", "implementing", "impl_review", "publishing", "paused"],
+  Ongoing: ["planning", "plan_review", "implementing", "impl_review", "ui_verify", "publishing", "paused"],
   "Needs Attention": ["needs_attention"],
   Done: ["done"],
 };

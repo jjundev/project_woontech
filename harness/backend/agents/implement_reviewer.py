@@ -47,7 +47,61 @@ Your task (in order):
    End your response with `IMPLEMENT_REWORK_REQUIRED` and put a
    `## Required changes` section containing exactly one line:
    `DIAGNOSTIC_INFRASTRUCTURE_MISSING: <expected file path>`.
-4. Verify target membership in `Woontech.xcodeproj/project.pbxproj`. For every
+4. Verify the SwiftUI accessibility contract for any UI-test-anchor change.
+   This task is mandatory even when build / unit / UI all reported green —
+   a green run can hide a fragile contract that breaks on the next harness
+   pass or on the publish-readiness `ui_verify` gate. Run `git diff` in the
+   worktree (or read the diff from the prompt) and check whether the change
+   touches any of:
+   - `TabView` body or any modifier chain on its child views
+   - A modifier chain that places `.accessibilityIdentifier` above or beside
+     `.tabItem`, `.toolbar`, `.navigationDestination`, or any container that
+     already owns identifier-bearing descendants
+   - Root containers carrying a UI test anchor (`*Root`, `*TabRoot`, hidden
+     push triggers `*NavPush*`, `HomeBellTapCount`, etc.)
+   - New views that introduce an identifier the existing UI tests query
+   For each such surface:
+   - Read the relevant UI test file (e.g. under `WoontechUITests/`) and list
+     every `app.<query>["<identifier>"]` call. Note the query type —
+     `tabBars`, `buttons`, `scrollViews`, `otherElements`, `staticTexts`.
+   - Confirm by reading the SwiftUI source that the identifier is attached
+     to a view whose XCTest exposure type matches the test's query. A
+     `ScrollView` is `scrollViews`, a `Button` is `buttons`, a leaf wrapper
+     is `otherElements`. A query/type mismatch (e.g. test uses
+     `otherElements` but the identifier sits on a `ScrollView`) is a FAIL —
+     eligible for reviewer patch only when the fix is a one-line
+     query-type change in the test, otherwise rework.
+   - If the implementor attached `.accessibilityIdentifier(...)` to a
+     `TabView` child (the view returned by the body and combined with
+     `.tabItem { ... }`), this is a blocking source-level regression even
+     if all UI tests passed in this run. The identifier propagates onto
+     the tab content subtree and shadows descendant root identifiers; the
+     test contract is fragile and will break on the next tree shape
+     change. FAIL with `Requires implementor rework` and quote the
+     offending modifier in `Required changes`. Tab button anchoring must
+     use `app.tabBars.buttons[...]`.
+   When a UI test failed with `element not found`, do NOT default-blame
+   the simulator or test flake. Hypothesis priority order:
+   1. Identifier scope flattened by an ancestor modifier (most common —
+      `TabView` child, container with implicit
+      `.accessibilityElement(children: .combine)` semantics).
+   2. Test query type mismatch (e.g. `otherElements` for a `ScrollView`).
+   3. Routing / navigation regression (the screen genuinely did not
+      appear — confirm via the xcresult UI hierarchy).
+   4. Genuine simulator infra failure — only when xcresult is missing or
+      boot/install/launch failed. The
+      `Unable to lookup in current state: Shutdown` line in
+      `last-ui-environment.txt` by itself is post-failure noise from
+      diagnostic collection, not a root cause.
+   For UI failures whose diagnostic text includes `element not found`, read
+   the UI hierarchy attachment in
+   `.harness/test-results/last-ui.xcresult` before deciding source vs.
+   infrastructure cause. Only fall back to diagnostic text when the xcresult
+   bundle or hierarchy attachment is missing; in that case, quote the missing
+   artifact and treat it as diagnostic infrastructure failure rather than
+   guessing a source-level fix. Do not classify a failure from
+   `last-ui-environment.txt` shutdown noise or summary files alone.
+5. Verify target membership in `Woontech.xcodeproj/project.pbxproj`. For every
    new `.swift` file listed in the runtime prompt, use the Grep tool on
    `Woontech.xcodeproj/project.pbxproj` and the Read tool for matching
    sections; do not use Bash for this check. For each listed file, confirm both
@@ -60,7 +114,7 @@ Your task (in order):
    surface it in the feedback. Prefer IMPLEMENT_FAIL (reviewer patch) when only
    a handful of pbxproj entries are missing and the fix is mechanical;
    otherwise IMPLEMENT_REWORK_REQUIRED.
-5. Decide PASS or FAIL.
+6. Decide PASS or FAIL.
 
 If PASS:
 - Write `implement-review.md` in the task folder with:
@@ -68,6 +122,13 @@ If PASS:
     ## Checklist status (all ✓)
     ## Build / Test results
     ## Notes
+- In `## Build / Test results` you MUST quote the actual unit and UI test
+  summary lines from `.harness/test-results/last-unit-summary.txt` and
+  `.harness/test-results/last-ui-summary.txt` (e.g. `Total: 19, Passed: 19,
+  Failed: 0`). A PASS without these quoted lines is invalid; quoting them
+  proves the suites were actually run in this iteration. If a summary file
+  is missing or stale, treat as a diagnostic infrastructure failure per
+  task 3 and do not write IMPLEMENT_PASS.
 - End your response with IMPLEMENT_PASS on its own line — bare token, no
   backticks, no markdown, no quotes, no prefix. This is the signal the harness
   parses to advance to publish.

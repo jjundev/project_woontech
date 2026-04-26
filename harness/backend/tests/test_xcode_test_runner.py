@@ -298,6 +298,7 @@ def test_run_test_passes_simulator_udid_for_ui_runs(monkeypatch, tmp_path):
         lambda *, ui: runner.SimulatorDevice("iPhone", "UI-SIM", "runtime", "type", "Booted"),
     )
     monkeypatch.setattr(runner, "reset_simulator", lambda udid: None)
+    monkeypatch.setattr(runner, "boot_simulator", lambda udid: None)
 
     def fake_run(args, *, simulator_udid, derived_data_path, result_bundle_path=None):
         return 7  # non-zero so persist will see a failing UI run
@@ -520,7 +521,7 @@ def _make_subprocess_router(handlers):
 
     calls: list[list[str]] = []
 
-    def fake_run(cmd, *, capture_output=True, text=True, timeout=None):
+    def fake_run(cmd, **_kwargs):
         calls.append(list(cmd))
         for predicate, response in handlers:
             if predicate(cmd):
@@ -872,4 +873,111 @@ def test_persist_test_artifacts_includes_preflight_prefix_when_provided(tmp_path
     assert summary.startswith(
         "preflight_failed: target_simulator_resolvable: no UI simulator available "
         "(remediation: repair_environment)"
+    )
+
+
+# ---------------------------------------------------------------------------
+# boot_simulator tests
+# ---------------------------------------------------------------------------
+
+
+def test_boot_simulator_runs_boot_then_bootstatus(monkeypatch):
+    """The healthy path must call `simctl boot` first, then `bootstatus -b`,
+    so xcodebuild sees a fully-booted simulator when it starts."""
+    handlers = [
+        (lambda c: c[:3] == ["xcrun", "simctl", "boot"], _FakeCompleted(0)),
+        (lambda c: c[:3] == ["xcrun", "simctl", "bootstatus"], _FakeCompleted(0)),
+    ]
+    fake_run = _make_subprocess_router(handlers)
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+
+    runner.boot_simulator("UDID-XYZ")
+
+    boot_calls = [c for c in fake_run.calls if c[:3] == ["xcrun", "simctl", "boot"]]
+    status_calls = [c for c in fake_run.calls if c[:3] == ["xcrun", "simctl", "bootstatus"]]
+    assert len(boot_calls) == 1
+    assert len(status_calls) == 1
+    # boot must come before bootstatus
+    assert fake_run.calls.index(boot_calls[0]) < fake_run.calls.index(status_calls[0])
+    # bootstatus must include `-b` blocking flag and the udid
+    assert status_calls[0] == ["xcrun", "simctl", "bootstatus", "UDID-XYZ", "-b"]
+
+
+def test_boot_simulator_treats_already_booted_as_success(monkeypatch):
+    """`simctl boot` on an already-booted device exits non-zero with a specific
+    'current state: Booted' message — that's a benign no-op, not a failure.
+    bootstatus must still run after."""
+    handlers = [
+        (
+            lambda c: c[:3] == ["xcrun", "simctl", "boot"],
+            _FakeCompleted(
+                149,
+                "",
+                "Unable to boot device in current state: Booted",
+            ),
+        ),
+        (lambda c: c[:3] == ["xcrun", "simctl", "bootstatus"], _FakeCompleted(0)),
+    ]
+    fake_run = _make_subprocess_router(handlers)
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+
+    # Should not raise.
+    runner.boot_simulator("UDID-ALREADY-BOOTED")
+
+    assert any(c[:3] == ["xcrun", "simctl", "bootstatus"] for c in fake_run.calls)
+
+
+def test_boot_simulator_raises_on_bootstatus_timeout(monkeypatch):
+    """If bootstatus -b doesn't return within the timeout, raise
+    SimulatorBootError with the timeout duration in the message so the
+    placeholder summary makes the wait-time obvious."""
+
+    def boot_handler(cmd):
+        return _FakeCompleted(0)
+
+    def bootstatus_handler(cmd):
+        raise subprocess.TimeoutExpired(cmd=cmd, timeout=5)
+
+    handlers = [
+        (lambda c: c[:3] == ["xcrun", "simctl", "boot"], boot_handler),
+        (lambda c: c[:3] == ["xcrun", "simctl", "bootstatus"], bootstatus_handler),
+    ]
+    monkeypatch.setattr(runner.subprocess, "run", _make_subprocess_router(handlers))
+
+    with pytest.raises(runner.SimulatorBootError) as excinfo:
+        runner.boot_simulator("UDID-SLOW", timeout=5)
+
+    assert "did not complete within 5s" in str(excinfo.value)
+
+
+def test_run_test_writes_simulator_boot_marker_when_boot_fails(monkeypatch, tmp_path):
+    """When boot_simulator raises, the placeholder summary must start with
+    `preflight_failed: simulator_boot:` so the reviewer agent uses the same
+    structured prefix it already keys off for preflight failures."""
+    monkeypatch.setattr(runner, "DERIVED_DATA_ROOT", tmp_path / "derived")
+    monkeypatch.setenv(runner.ENV_WORKTREE_DIR, str(tmp_path / "worktree"))
+    monkeypatch.setattr(runner, "preflight_check", lambda **kw: None)
+    monkeypatch.setattr(
+        runner,
+        "resolve_simulator",
+        lambda *, ui: runner.SimulatorDevice("iPhone", "UI-SIM", "runtime", "type", "Shutdown"),
+    )
+    monkeypatch.setattr(runner, "reset_simulator", lambda udid: None)
+
+    def fake_boot(udid, *, timeout=runner.BOOT_TIMEOUT_SECONDS):
+        raise runner.SimulatorBootError(
+            f"simctl bootstatus {udid} did not complete within 120s"
+        )
+
+    monkeypatch.setattr(runner, "boot_simulator", fake_boot)
+
+    with pytest.raises(runner.SimulatorBootError):
+        runner.run_test("WoontechUITests", ui=True, xcodebuild_args=[])
+
+    summary = (
+        tmp_path / "worktree" / runner.TEST_ARTIFACTS_SUBDIR / "last-ui-summary.txt"
+    ).read_text()
+    assert summary.startswith(
+        "preflight_failed: simulator_boot: simctl bootstatus UI-SIM "
+        "did not complete within 120s"
     )

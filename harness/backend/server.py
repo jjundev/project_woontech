@@ -238,6 +238,7 @@ async def pause_pipeline(task_id: str):
         task_dir = S.find_task_dir(config, task_id)
     except FileNotFoundError:
         raise HTTPException(404, "task not found")
+
     pipeline_task = _running_pipelines.get(task_id)
     if pipeline_task is not None and not pipeline_task.done():
         pipeline_task.cancel()
@@ -245,16 +246,19 @@ async def pause_pipeline(task_id: str):
             await pipeline_task
         except asyncio.CancelledError:
             pass
-    if (task_dir / "state.json").exists():
-        st = S.read_state(task_dir)
-        if st.state in PAUSABLE_STATES:
-            paused_from = st.state
-            st.paused_from = paused_from
-            st.state = "paused"
-            S.write_state(task_dir, st)
-            await emit("state_changed", task_id=task_id, state="paused", paused_from=paused_from)
-        elif st.state != "paused":
-            raise HTTPException(409, "no running pipeline")
+
+    if not (task_dir / "state.json").exists():
+        raise HTTPException(409, "no running pipeline")
+
+    st = S.read_state(task_dir)
+    if st.state not in PAUSABLE_STATES:
+        raise HTTPException(409, "no running pipeline")
+
+    paused_from = st.state
+    st.paused_from = paused_from
+    st.state = "paused"
+    S.write_state(task_dir, st)
+    await emit("state_changed", task_id=task_id, state="paused", paused_from=paused_from)
     return {"ok": True}
 
 

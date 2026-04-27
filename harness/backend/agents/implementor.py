@@ -76,11 +76,20 @@ Hard rules:
   This signals progress to the dashboard. Emit each STEP line at most once.
 
 SwiftUI accessibility rules (UI test contract):
-- Do NOT attach `.accessibilityIdentifier(...)` to a `TabView` child view
-  (the view returned by the body and combined with `.tabItem { ... }`).
-  In the XCTest accessibility tree the modifier propagates onto the tab's
-  content subtree and overrides identifiers on descendant root containers
-  (e.g. `HomeDashboardRoot`, `SajuTabRoot`, hidden `*NavPush*` triggers).
+- Do NOT attach `.accessibilityIdentifier(...)` OR `.accessibilityLabel(...)`
+  to a `TabView` child view (the view returned by the body and combined
+  with `.tabItem { ... }`).
+    - `.accessibilityIdentifier(...)`: in the XCTest accessibility tree
+      the modifier propagates onto the tab's content subtree and overrides
+      identifiers on descendant root containers (e.g. `HomeDashboardRoot`,
+      `SajuTabRoot`, hidden `*NavPush*` triggers).
+    - `.accessibilityLabel(...)`: the modifier does NOT propagate up to
+      the system tab bar button — VoiceOver still reads the default tab
+      title. The label only affects descendants of the child view, which
+      is almost never useful. To control the tab bar button's VoiceOver
+      label, place `.accessibilityLabel(...)` INSIDE the
+      `.tabItem { Label(...) ... }` closure, on the `Label` itself, not
+      on the tab content.
   Tab buttons must be addressed by tests via the system tab bar —
   `app.tabBars.buttons["..."]` or
   `app.tabBars.buttons.element(boundBy: index)` — never via a custom
@@ -115,6 +124,30 @@ SwiftUI accessibility rules (UI test contract):
        a parent of an identifier-bearing descendant, redesign so the
        identifier lives on a leaf-level wrapper. Do not ship the original
        layout.
+    5. Pre-IMPLEMENT_DONE query-type sweep. Before emitting
+       `IMPLEMENT_DONE`, enumerate every UI test identifier touched in
+       this diff (new ones you added, AND existing ones you reference
+       from new tests). For each, state the tuple
+       `(identifier, View where it lives, SwiftUI element type,
+       app.<query> used in the test)`. The mapping must satisfy:
+       `ScrollView` → `app.scrollViews`, `Button` → `app.buttons`,
+       `Text` → `app.staticTexts`, tab bar item → `app.tabBars.buttons`,
+       generic container → `app.otherElements`. Any mismatch (e.g. a
+       `ScrollView`-hosted id queried via `app.otherElements`) MUST be
+       fixed — either move the identifier onto a wrapper of the matching
+       type, or change the test query — before you respond
+       `IMPLEMENT_DONE`. Do not hand the bug to the reviewer.
+- When a UI test references an identifier owned by ANOTHER screen
+  (cross-tab navigation tests, root-route tests, app-launch contract
+  tests, etc.), you MUST first read that screen's existing UI test file
+  (`Grep` for the identifier under the UI test target) and copy the exact
+  `app.<query>[id]` form already in use there. Do NOT pick an identifier
+  from a Swift View source file alone — the source may carry stale or
+  `@available(*, deprecated)`-marked identifiers that no longer match the
+  view actually rendered at runtime. If the identifier you want is
+  attached to a deprecated symbol, find the live identifier on the
+  replacement view and use that one instead. Never ship a new test that
+  references a deprecated identifier.
 - You do not run UI tests, but identifier-scoping bugs surface in the
   reviewer's UI pass as `element not found` and trigger a full rework
   cycle. Get this right at implementation time — accessibility scope is

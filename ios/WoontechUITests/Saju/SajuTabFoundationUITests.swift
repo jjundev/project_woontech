@@ -226,6 +226,11 @@ final class SajuTabFoundationUITests: XCTestCase {
         XCTAssertTrue(homeTab.waitForExistence(timeout: 5))
         homeTab.tap()
         XCTAssertTrue(app.otherElements["HomeDashboardRoot"].waitForExistence(timeout: 5))
+        // Allow the tab-switch animation to fully settle before triggering
+        // navigation. In iOS 26, the TabView-nested NavigationStack requires a
+        // brief idle period after a tab reselection before it reliably commits
+        // a navigationPath.append call from the overlay button.
+        Thread.sleep(forTimeInterval: 1.5)
         let homePush = app.buttons["HomeNavPushInvesting"]
         XCTAssertTrue(homePush.waitForExistence(timeout: 5))
         homePush.tap()
@@ -234,7 +239,7 @@ final class SajuTabFoundationUITests: XCTestCase {
         // Use a longer timeout because pushing inside a TabView-nested
         // NavigationStack after a tab-switch sequence takes longer to settle
         // in iOS 26 than a direct boot-and-push case.
-        XCTAssertTrue(app.staticTexts["InvestingAttitudeDetailTitle"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.staticTexts["InvestingAttitudeDetailTitle"].waitForExistence(timeout: 12))
 
         // Saju placeholder must NOT be visible in the home tab tree (current
         // visible content). It may still exist in the off-screen saju tab tree

@@ -29,7 +29,18 @@ interface PhaseDivider {
   ts: number;
 }
 
-type Row = (ChatGroup & { kind: "group" }) | PhaseDivider;
+interface UiTestRun {
+  kind: "ui_tests";
+  key: string;
+  iteration?: number;
+  startTs: number;
+  command: string;
+  finished: boolean;
+  exitCode?: number;
+  durationS?: number;
+}
+
+type Row = (ChatGroup & { kind: "group" }) | PhaseDivider | UiTestRun;
 
 export function ChatTimeline({ events }: { events: HarnessEvent[] }) {
   const [now, setNow] = useState(() => Date.now());
@@ -66,13 +77,15 @@ export function ChatTimeline({ events }: { events: HarnessEvent[] }) {
       {rows.length === 0 && (
         <div className="text-slate-500 px-2 py-3">No agent activity yet.</div>
       )}
-      {rows.map((row) =>
-        row.kind === "divider" ? (
-          <PhaseDividerRow key={row.key} phase={row.phase} iteration={row.iteration} />
-        ) : (
-          <ChatBubble key={row.key} group={row} now={now} />
-        ),
-      )}
+      {rows.map((row) => {
+        if (row.kind === "divider") {
+          return <PhaseDividerRow key={row.key} phase={row.phase} iteration={row.iteration} />;
+        }
+        if (row.kind === "ui_tests") {
+          return <UiTestRunRow key={row.key} run={row} now={now} />;
+        }
+        return <ChatBubble key={row.key} group={row} now={now} />;
+      })}
       <div ref={endRef} />
     </div>
   );
@@ -187,12 +200,79 @@ function buildRows(events: HarnessEvent[]): Row[] {
       current.endTs = event.ts;
       continue;
     }
+
+    if (event.type === "ui_tests_started") {
+      flush();
+      const iteration = (event.payload?.iteration as number | undefined) ?? event.iteration;
+      rows.push({
+        kind: "ui_tests",
+        key: `ui_tests:${event.ts}:${iteration ?? ""}`,
+        iteration,
+        startTs: event.ts,
+        command: String(event.payload?.command ?? ""),
+        finished: false,
+      });
+      continue;
+    }
+
+    if (event.type === "ui_tests_finished") {
+      const iteration = (event.payload?.iteration as number | undefined) ?? event.iteration;
+      // Match the most recent un-finished ui_tests row with the same iteration.
+      for (let i = rows.length - 1; i >= 0; i--) {
+        const row = rows[i];
+        if (row.kind === "ui_tests" && !row.finished && row.iteration === iteration) {
+          row.finished = true;
+          row.exitCode = event.payload?.exit_code as number | undefined;
+          row.durationS = event.payload?.duration_s as number | undefined;
+          break;
+        }
+      }
+      continue;
+    }
     // Other event types (state_changed, file_changed, agent_usage, plan_*) are
     // intentionally not rendered in the chat view — they live in the Events tab.
   }
 
   flush();
   return rows;
+}
+
+function formatDuration(seconds: number): string {
+  const total = Math.max(0, Math.floor(seconds));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  if (m === 0) return `${s}s`;
+  return `${m}m ${s.toString().padStart(2, "0")}s`;
+}
+
+function UiTestRunRow({ run, now }: { run: UiTestRun; now: number }) {
+  const elapsedS = run.finished
+    ? run.durationS ?? 0
+    : Math.max(0, now / 1000 - run.startTs);
+  const passed = run.finished && run.exitCode === 0;
+  const failed = run.finished && run.exitCode !== 0;
+  const label = run.finished
+    ? passed
+      ? `UI tests passed (${formatDuration(elapsedS)})`
+      : `UI tests failed · exit ${run.exitCode} (${formatDuration(elapsedS)})`
+    : `Running UI tests… ${formatDuration(elapsedS)}`;
+  const stateClass = passed
+    ? "border-emerald-700/60 bg-emerald-900/20 text-emerald-200"
+    : failed
+    ? "border-rose-700/60 bg-rose-900/20 text-rose-200"
+    : "border-amber-700/60 bg-amber-900/20 text-amber-200";
+  return (
+    <div
+      className={`rounded-md border ${stateClass} px-2.5 py-1.5 flex items-center gap-2`}
+      title={run.command}
+    >
+      <span className="font-mono text-[10px]">{run.finished ? (passed ? "✓" : "✗") : "▶"}</span>
+      <span className="font-medium text-[12px]">{label}</span>
+      {run.iteration !== undefined && (
+        <span className="text-[10px] opacity-70">· iter {run.iteration}</span>
+      )}
+    </div>
+  );
 }
 
 function PhaseDividerRow({ phase, iteration }: { phase: string; iteration?: number }) {

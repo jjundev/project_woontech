@@ -89,9 +89,8 @@ struct HomeDashboardView: View {
                 }
             }
 
-            HomeTabBarPlaceholderView()
-                .accessibilityIdentifier("HomeTabBarPlaceholder")
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("HomeDashboardRoot")
         // Spy counters: opacity 0 so invisible, but readable by XCUITest via accessibilityIdentifier
         .overlay(alignment: .topLeading) {
@@ -155,13 +154,3 @@ struct HomeDashboardView: View {
     }
 }
 
-// MARK: - Private sub-views
-
-private struct HomeTabBarPlaceholderView: View {
-    var body: some View {
-        Rectangle()
-            .fill(Color(.systemBackground))
-            .frame(height: 49)
-            .overlay(alignment: .top) { Divider() }
-    }
-}

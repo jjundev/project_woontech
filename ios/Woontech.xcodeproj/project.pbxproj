@@ -102,6 +102,23 @@
 		B0010501000000000000B501 /* EventDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010501000000000000A501 /* EventDetailView.swift */; };
 		B0010502000000000000B502 /* EventDetailViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010502000000000000A502 /* EventDetailViewTests.swift */; };
 		B0010503000000000000B503 /* EventDetailUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010503000000000000A503 /* EventDetailUITests.swift */; };
+		B0010600000000000000B600 /* MainTabContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010600000000000000A600 /* MainTabContainerView.swift */; };
+		B0010610000000000000B610 /* SajuTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010610000000000000A610 /* SajuTabView.swift */; };
+		B0010611000000000000B611 /* SajuTabHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010611000000000000A611 /* SajuTabHeaderView.swift */; };
+		B0010612000000000000B612 /* SajuTabContentPlaceholderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010612000000000000A612 /* SajuTabContentPlaceholderView.swift */; };
+		B0010613000000000000B613 /* SajuRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010613000000000000A613 /* SajuRoute.swift */; };
+		B0010614000000000000B614 /* SajuRouteDestinations.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010614000000000000A614 /* SajuRouteDestinations.swift */; };
+		B0010615000000000000B615 /* SajuTabDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010615000000000000A615 /* SajuTabDependencies.swift */; };
+		B0010620000000000000B620 /* UserSajuOriginProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010620000000000000A620 /* UserSajuOriginProviding.swift */; };
+		B0010621000000000000B621 /* SajuCategoriesProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010621000000000000A621 /* SajuCategoriesProviding.swift */; };
+		B0010622000000000000B622 /* SajuElementsDetailProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010622000000000000A622 /* SajuElementsDetailProviding.swift */; };
+		B0010623000000000000B623 /* SajuTenGodsDetailProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010623000000000000A623 /* SajuTenGodsDetailProviding.swift */; };
+		B0010624000000000000B624 /* SajuLearningPathProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010624000000000000A624 /* SajuLearningPathProviding.swift */; };
+		B0010625000000000000B625 /* SajuLessonProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010625000000000000A625 /* SajuLessonProviding.swift */; };
+		B0010630000000000000B630 /* SajuRouteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010630000000000000A630 /* SajuRouteTests.swift */; };
+		B0010631000000000000B631 /* SajuTabDependenciesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010631000000000000A631 /* SajuTabDependenciesTests.swift */; };
+		B0010632000000000000B632 /* SajuMockProvidersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010632000000000000A632 /* SajuMockProvidersTests.swift */; };
+		B0010640000000000000B640 /* SajuTabFoundationUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010640000000000000A640 /* SajuTabFoundationUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -220,6 +237,23 @@
 		A0010501000000000000A501 /* EventDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailView.swift; sourceTree = "<group>"; };
 		A0010502000000000000A502 /* EventDetailViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailViewTests.swift; sourceTree = "<group>"; };
 		A0010503000000000000A503 /* EventDetailUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailUITests.swift; sourceTree = "<group>"; };
+		A0010600000000000000A600 /* MainTabContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabContainerView.swift; sourceTree = "<group>"; };
+		A0010610000000000000A610 /* SajuTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuTabView.swift; sourceTree = "<group>"; };
+		A0010611000000000000A611 /* SajuTabHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuTabHeaderView.swift; sourceTree = "<group>"; };
+		A0010612000000000000A612 /* SajuTabContentPlaceholderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuTabContentPlaceholderView.swift; sourceTree = "<group>"; };
+		A0010613000000000000A613 /* SajuRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuRoute.swift; sourceTree = "<group>"; };
+		A0010614000000000000A614 /* SajuRouteDestinations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuRouteDestinations.swift; sourceTree = "<group>"; };
+		A0010615000000000000A615 /* SajuTabDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuTabDependencies.swift; sourceTree = "<group>"; };
+		A0010620000000000000A620 /* UserSajuOriginProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSajuOriginProviding.swift; sourceTree = "<group>"; };
+		A0010621000000000000A621 /* SajuCategoriesProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuCategoriesProviding.swift; sourceTree = "<group>"; };
+		A0010622000000000000A622 /* SajuElementsDetailProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuElementsDetailProviding.swift; sourceTree = "<group>"; };
+		A0010623000000000000A623 /* SajuTenGodsDetailProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuTenGodsDetailProviding.swift; sourceTree = "<group>"; };
+		A0010624000000000000A624 /* SajuLearningPathProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuLearningPathProviding.swift; sourceTree = "<group>"; };
+		A0010625000000000000A625 /* SajuLessonProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuLessonProviding.swift; sourceTree = "<group>"; };
+		A0010630000000000000A630 /* SajuRouteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuRouteTests.swift; sourceTree = "<group>"; };
+		A0010631000000000000A631 /* SajuTabDependenciesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuTabDependenciesTests.swift; sourceTree = "<group>"; };
+		A0010632000000000000A632 /* SajuMockProvidersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuMockProvidersTests.swift; sourceTree = "<group>"; };
+		A0010640000000000000A640 /* SajuTabFoundationUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuTabFoundationUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -315,8 +349,54 @@
 				0EAF19F02DA02F27098FAA42 /* Onboarding */,
 				73994D50D22E9D283929B2DA /* SajuInput */,
 				9DC8AE54A45A6CABBF6C7939 /* Splash */,
+				A0010650000000000000A650 /* Saju */,
 			);
 			path = Features;
+			sourceTree = "<group>";
+		};
+		A0010650000000000000A650 /* Saju */ = {
+			isa = PBXGroup;
+			children = (
+				A0010651000000000000A651 /* Providers */,
+				A0010610000000000000A610 /* SajuTabView.swift */,
+				A0010611000000000000A611 /* SajuTabHeaderView.swift */,
+				A0010612000000000000A612 /* SajuTabContentPlaceholderView.swift */,
+				A0010613000000000000A613 /* SajuRoute.swift */,
+				A0010614000000000000A614 /* SajuRouteDestinations.swift */,
+				A0010615000000000000A615 /* SajuTabDependencies.swift */,
+			);
+			path = Saju;
+			sourceTree = "<group>";
+		};
+		A0010651000000000000A651 /* Providers */ = {
+			isa = PBXGroup;
+			children = (
+				A0010620000000000000A620 /* UserSajuOriginProviding.swift */,
+				A0010621000000000000A621 /* SajuCategoriesProviding.swift */,
+				A0010622000000000000A622 /* SajuElementsDetailProviding.swift */,
+				A0010623000000000000A623 /* SajuTenGodsDetailProviding.swift */,
+				A0010624000000000000A624 /* SajuLearningPathProviding.swift */,
+				A0010625000000000000A625 /* SajuLessonProviding.swift */,
+			);
+			path = Providers;
+			sourceTree = "<group>";
+		};
+		A0010660000000000000A660 /* Saju */ = {
+			isa = PBXGroup;
+			children = (
+				A0010630000000000000A630 /* SajuRouteTests.swift */,
+				A0010631000000000000A631 /* SajuTabDependenciesTests.swift */,
+				A0010632000000000000A632 /* SajuMockProvidersTests.swift */,
+			);
+			path = Saju;
+			sourceTree = "<group>";
+		};
+		A0010670000000000000A670 /* Saju */ = {
+			isa = PBXGroup;
+			children = (
+				A0010640000000000000A640 /* SajuTabFoundationUITests.swift */,
+			);
+			path = Saju;
 			sourceTree = "<group>";
 		};
 		9DC8AE54A45A6CABBF6C7939 /* Splash */ = {
@@ -331,6 +411,7 @@
 			isa = PBXGroup;
 			children = (
 				A0010909000000000000A909 /* Home */,
+				A0010670000000000000A670 /* Saju */,
 				702C0112632690D16DE08C4F /* OnboardingUITests.swift */,
 				A0010201000000000000A201 /* SajuInputUITests.swift */,
 				A0010202000000000000A202 /* SajuResultUITests.swift */,
@@ -368,6 +449,7 @@
 			children = (
 				50E02A39A4697609258292E6 /* RootView.swift */,
 				462F6E1094BC2B78720750A3 /* WoontechApp.swift */,
+				A0010600000000000000A600 /* MainTabContainerView.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -376,6 +458,7 @@
 			isa = PBXGroup;
 			children = (
 				A0010908000000000000A908 /* Home */,
+				A0010660000000000000A660 /* Saju */,
 				6E7C549E36616AECF819A8CA /* OnboardingFlowStateTests.swift */,
 				267FF3811964764EF1E9DB25 /* OnboardingStoreTests.swift */,
 				A0010101000000000000A101 /* SajuInputModelTests.swift */,
@@ -669,6 +752,9 @@
 				B0010302000000000000B302 /* InvestingAttitudeDetailViewTests.swift in Sources */,
 				B0010402000000000000B402 /* TodayDetailViewTests.swift in Sources */,
 				B0010502000000000000B502 /* EventDetailViewTests.swift in Sources */,
+				B0010630000000000000B630 /* SajuRouteTests.swift in Sources */,
+				B0010631000000000000B631 /* SajuTabDependenciesTests.swift in Sources */,
+				B0010632000000000000B632 /* SajuMockProvidersTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -744,6 +830,19 @@
 				B0010401000000000000B401 /* TodayDetailView.swift in Sources */,
 				B0010500000000000000B500 /* EventDetailProviding.swift in Sources */,
 				B0010501000000000000B501 /* EventDetailView.swift in Sources */,
+				B0010600000000000000B600 /* MainTabContainerView.swift in Sources */,
+				B0010610000000000000B610 /* SajuTabView.swift in Sources */,
+				B0010611000000000000B611 /* SajuTabHeaderView.swift in Sources */,
+				B0010612000000000000B612 /* SajuTabContentPlaceholderView.swift in Sources */,
+				B0010613000000000000B613 /* SajuRoute.swift in Sources */,
+				B0010614000000000000B614 /* SajuRouteDestinations.swift in Sources */,
+				B0010615000000000000B615 /* SajuTabDependencies.swift in Sources */,
+				B0010620000000000000B620 /* UserSajuOriginProviding.swift in Sources */,
+				B0010621000000000000B621 /* SajuCategoriesProviding.swift in Sources */,
+				B0010622000000000000B622 /* SajuElementsDetailProviding.swift in Sources */,
+				B0010623000000000000B623 /* SajuTenGodsDetailProviding.swift in Sources */,
+				B0010624000000000000B624 /* SajuLearningPathProviding.swift in Sources */,
+				B0010625000000000000B625 /* SajuLessonProviding.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -762,6 +861,7 @@
 				B0010303000000000000B303 /* InvestingAttitudeDetailUITests.swift in Sources */,
 				B0010403000000000000B403 /* TodayDetailUITests.swift in Sources */,
 				B0010503000000000000B503 /* EventDetailUITests.swift in Sources */,
+				B0010640000000000000B640 /* SajuTabFoundationUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

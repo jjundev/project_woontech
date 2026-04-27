@@ -40,6 +40,7 @@ def _make_task(tmp_config, task_id: str, state_name: S.StateName, escalation: st
         ("needs_attention", "ui_verification_failed", 2),
         ("needs_attention", "ui_verify_diagnostic_infra_missing", 2),
         ("needs_attention", "ui_verify_unexpected_error", 2),
+        ("needs_attention", "ui_verify_rework_loop_exhausted", 2),
         ("needs_attention", "publish_failed", 3),
         ("needs_attention", None, 0),
         ("needs_attention", "something_new", 0),
@@ -304,6 +305,186 @@ async def test_run_pipeline_resumes_impl_from_needs_attention(tmp_config, monkey
 
 
 @pytest.mark.asyncio
+async def test_run_pipeline_resume_from_ui_verify_overrides_phase(tmp_config, monkeypatch):
+    """resume_from='ui_verify' forces phase 2 entry even when state would route elsewhere.
+
+    Here the task paused at impl_review_exhausted (phase 1 by auto-routing),
+    but the explicit override should skip impl and go straight to ui_verify.
+    """
+    _make_task(
+        tmp_config,
+        "resume-force-ui",
+        "needs_attention",
+        escalation="impl_review_exhausted",
+    )
+    tmp_config.worktree_path("resume-force-ui").mkdir(parents=True, exist_ok=True)
+
+    calls: list[tuple[str, str, str | None]] = []
+
+    async def fake_plan(*args, **kwargs):
+        calls.append(("plan", "", None))
+        return True
+
+    async def fake_impl(*args, **kwargs):
+        calls.append(("impl", "", None))
+        return True
+
+    async def fake_ui_verify(config, task_id, task_dir, worktree_dir):
+        state = S.read_state(task_dir)
+        calls.append(("ui_verify", state.state, state.escalation))
+        return True
+
+    async def fake_publish(config, task_id, task_dir, worktree_dir):
+        state = S.read_state(task_dir)
+        calls.append(("publish", state.state, state.escalation))
+        return True
+
+    monkeypatch.setattr(P, "run_plan_phase", fake_plan)
+    monkeypatch.setattr(P, "run_impl_phase", fake_impl)
+    monkeypatch.setattr(P, "run_ui_verify_phase", fake_ui_verify)
+    monkeypatch.setattr(P, "run_publish_phase", fake_publish)
+    monkeypatch.setattr(P.W, "remove_worktree", lambda *args, **kwargs: None)
+
+    await P.run_pipeline(tmp_config, "resume-force-ui", resume_from="ui_verify")
+
+    assert calls == [
+        ("ui_verify", "ui_verify", None),
+        ("publish", "publishing", None),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_run_pipeline_loops_back_to_impl_when_ui_signals_rework(tmp_config, monkeypatch):
+    """ui_verify returning "loopback" must re-enter the impl phase, then ui_verify again."""
+    _make_task(tmp_config, "ui-rework-loop", "needs_attention", escalation="ui_verification_failed")
+    tmp_config.worktree_path("ui-rework-loop").mkdir(parents=True, exist_ok=True)
+
+    calls: list[tuple[str, str | None]] = []
+
+    async def fake_plan(*args, **kwargs):
+        calls.append(("plan", None))
+        return True
+
+    async def fake_impl(config, task_id, task_dir, worktree_dir, max_retries, **kwargs):
+        state = S.read_state(task_dir)
+        calls.append(("impl", state.state))
+        return True
+
+    ui_calls = {"n": 0}
+
+    async def fake_ui_verify(config, task_id, task_dir, worktree_dir):
+        ui_calls["n"] += 1
+        state = S.read_state(task_dir)
+        calls.append(("ui_verify", state.state))
+        if ui_calls["n"] == 1:
+            # First UI verify run: signal loopback (mimicking what
+            # run_ui_verify_phase does on REWORK).
+            state.ui_to_impl_loops += 1
+            state.escalation = None
+            S.write_state(task_dir, state)
+            return "loopback"
+        return True
+
+    async def fake_publish(config, task_id, task_dir, worktree_dir):
+        state = S.read_state(task_dir)
+        calls.append(("publish", state.state))
+        return True
+
+    monkeypatch.setattr(P, "run_plan_phase", fake_plan)
+    monkeypatch.setattr(P, "run_impl_phase", fake_impl)
+    monkeypatch.setattr(P, "run_ui_verify_phase", fake_ui_verify)
+    monkeypatch.setattr(P, "run_publish_phase", fake_publish)
+    monkeypatch.setattr(P.W, "remove_worktree", lambda *args, **kwargs: None)
+
+    await P.run_pipeline(tmp_config, "ui-rework-loop")
+
+    # Resume started at phase 2 (ui_verification_failed escalation), so first
+    # call is ui_verify. After loopback, loop_resume drops to 1 → impl runs,
+    # then ui_verify again (passes), then publish.
+    assert calls == [
+        ("ui_verify", "ui_verify"),
+        ("impl", "implementing"),
+        ("ui_verify", "ui_verify"),
+        ("publish", "publishing"),
+    ]
+    final = S.read_state(S.find_task_workspace(tmp_config, "ui-rework-loop"))
+    assert final.ui_to_impl_loops == 1
+    assert final.state == "done"
+
+
+@pytest.mark.asyncio
+async def test_run_pipeline_resume_from_ui_verify_resets_ui_counters(tmp_config, monkeypatch):
+    """Explicit ui_verify resume zeroes ui_review_retries AND ui_to_impl_loops.
+
+    Manual user intervention should grant a fresh loopback allowance, not carry
+    over state from the prior failed run.
+    """
+    task_dir = _make_task(
+        tmp_config,
+        "resume-reset-retries",
+        "needs_attention",
+        escalation="ui_verify_review_ambiguous",
+    )
+    state = S.read_state(task_dir)
+    state.ui_review_retries = 1
+    state.ui_to_impl_loops = 2  # was at limit
+    S.write_state(task_dir, state)
+    tmp_config.worktree_path("resume-reset-retries").mkdir(parents=True, exist_ok=True)
+
+    seen: dict[str, int] = {}
+
+    async def fake_plan(*args, **kwargs):
+        return True
+
+    async def fake_impl(*args, **kwargs):
+        return True
+
+    async def fake_ui_verify(config, task_id, task_dir, worktree_dir):
+        s = S.read_state(task_dir)
+        seen["ui_review_retries_at_entry"] = s.ui_review_retries
+        seen["ui_to_impl_loops_at_entry"] = s.ui_to_impl_loops
+        return True
+
+    async def fake_publish(*args, **kwargs):
+        return True
+
+    monkeypatch.setattr(P, "run_plan_phase", fake_plan)
+    monkeypatch.setattr(P, "run_impl_phase", fake_impl)
+    monkeypatch.setattr(P, "run_ui_verify_phase", fake_ui_verify)
+    monkeypatch.setattr(P, "run_publish_phase", fake_publish)
+    monkeypatch.setattr(P.W, "remove_worktree", lambda *args, **kwargs: None)
+
+    await P.run_pipeline(tmp_config, "resume-reset-retries", resume_from="ui_verify")
+
+    assert seen["ui_review_retries_at_entry"] == 0
+    assert seen["ui_to_impl_loops_at_entry"] == 0
+
+
+@pytest.mark.asyncio
+async def test_run_pipeline_aborts_when_resume_from_set_but_no_workspace(tmp_config, monkeypatch):
+    """Defensive: silent fall-through to fresh plan would discard the caller's intent."""
+    folder = tmp_config.todo_dir / "resume-no-workspace"
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "spec.md").write_text("# test\n", encoding="utf-8")
+    tmp_config.worktree_path("resume-no-workspace").mkdir(parents=True, exist_ok=True)
+
+    plan_called = {"n": 0}
+
+    async def fake_plan(*args, **kwargs):
+        plan_called["n"] += 1
+        return True
+
+    monkeypatch.setattr(P, "run_plan_phase", fake_plan)
+    monkeypatch.setattr(P.W, "remove_worktree", lambda *args, **kwargs: None)
+
+    # Pipeline should record the failure via the unexpected-error recovery path,
+    # not silently restart from plan.
+    await P.run_pipeline(tmp_config, "resume-no-workspace", resume_from="ui_verify")
+
+    assert plan_called["n"] == 0, "plan phase must not run when resume_from is set without workspace"
+
+
+@pytest.mark.asyncio
 async def test_run_pipeline_resumes_publish_from_needs_attention(tmp_config, monkeypatch):
     _make_task(tmp_config, "resume-needs-publish", "needs_attention", escalation="publish_failed")
     tmp_config.worktree_path("resume-needs-publish").mkdir(parents=True, exist_ok=True)
@@ -563,6 +744,73 @@ async def test_run_pipeline_uses_project_subdir_for_monorepo_phases(monorepo_con
         ("ui_verify", str(expected)),
         ("publish", str(expected)),
     ]
+
+
+@pytest.mark.asyncio
+async def test_impl_review_runtime_prompt_has_default_to_rework_clause(
+    tmp_config,
+    monkeypatch,
+):
+    """impl_review runtime prompt must spell out the default-to-REWORK fallback."""
+    from backend import agents as A
+
+    _make_task(tmp_config, "impl-review-prompt-rework", "implementing")
+    task_dir = S.find_task_workspace(tmp_config, "impl-review-prompt-rework")
+    assert task_dir is not None
+    W.create_worktree(tmp_config, "impl-review-prompt-rework")
+    worktree_dir = W.project_worktree_path(tmp_config, "impl-review-prompt-rework")
+
+    captured_prompts: list[str] = []
+    call_count = {"n": 0}
+
+    async def fake_run_agent(spec, prompt, *, cwd, task_id=None, iteration=None, hooks=None, **kw):
+        captured_prompts.append(prompt)
+        call_count["n"] += 1
+        # First call is the implementor, second is the reviewer.
+        if call_count["n"] == 1:
+            return A.AgentResult(
+                text="Did the work.\nIMPLEMENT_DONE\n",
+                tool_uses=[],
+                stop_reason="end_turn",
+            )
+        return A.AgentResult(
+            text="Looks good.\nIMPLEMENT_PASS\n",
+            tool_uses=[],
+            stop_reason="end_turn",
+        )
+
+    async def fake_emit(*args, **kwargs):
+        pass
+
+    monkeypatch.setattr(P, "emit", fake_emit)
+    monkeypatch.setattr(P.A, "run_agent", fake_run_agent)
+    monkeypatch.setattr(P, "_assert_test_artifacts_visible", lambda *a, **k: None)
+    monkeypatch.setattr(P, "_maybe_auto_commit_worktree", lambda *a, **k: True)
+    sha_calls = {"n": 0}
+
+    def fake_head_sha(_worktree):
+        sha_calls["n"] += 1
+        # Return different shas for pre/post check so impl phase advances to reviewer.
+        return f"sha{sha_calls['n']}"
+
+    monkeypatch.setattr(P, "_head_sha", fake_head_sha)
+
+    await P.run_impl_phase(
+        tmp_config, "impl-review-prompt-rework", task_dir, worktree_dir, 3
+    )
+
+    # At least implementor + reviewer ran; reviewer prompt is the LAST captured.
+    assert len(captured_prompts) >= 2
+    reviewer_prompt = captured_prompts[-1]
+    compact = " ".join(reviewer_prompt.split())
+
+    # Existing decision-branch lines (regression guard)
+    assert "respond IMPLEMENT_PASS" in reviewer_prompt
+    assert "respond IMPLEMENT_FAIL" in reviewer_prompt
+    assert "respond IMPLEMENT_REWORK_REQUIRED" in reviewer_prompt
+    # New: terminal token mandate + default-to-REWORK fallback
+    assert "default to IMPLEMENT_REWORK_REQUIRED" in compact
+    assert "End your response with exactly one of" in compact
 
 
 @pytest.mark.asyncio

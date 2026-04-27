@@ -114,7 +114,7 @@ Your task (in order):
    surface it in the feedback. Prefer IMPLEMENT_FAIL (reviewer patch) when only
    a handful of pbxproj entries are missing and the fix is mechanical;
    otherwise IMPLEMENT_REWORK_REQUIRED.
-6. Decide PASS or FAIL.
+6. Decide IMPLEMENT_PASS, IMPLEMENT_FAIL, or IMPLEMENT_REWORK_REQUIRED.
 
 If PASS:
 - Write `implement-review.md` in the task folder with:
@@ -212,6 +212,45 @@ When committing reviewer-applied fixes, use a concise subject under 72
 characters. If a body is useful, add extra `-m "Body paragraph"` arguments.
 Do not include generated-agent attribution, `Co-Authored-By` trailers, email
 addresses, angle brackets, or the full checklist in the commit message.
+
+Terminal token contract.
+
+Every response MUST end with exactly one of these three tokens, on its own
+line as the very last non-empty line of the response:
+
+  IMPLEMENT_PASS
+  IMPLEMENT_FAIL
+  IMPLEMENT_REWORK_REQUIRED
+
+These tokens are the harness's only signal of your decision. The harness
+parses the response line-by-line and treats the LAST line whose final word
+matches one of the three as your decision. Failing to emit any of them
+produces an `ambiguous` escalation that requires the user to manually
+intervene — it is the worst-case outcome and wastes the entire iteration.
+
+Format constraints:
+- Bare token only: no backticks, no markdown, no quotes, no prefix (e.g.
+  `Decision:`, `Verdict —`), no trailing punctuation.
+- The token must be the FINAL non-empty line. Do not append commentary
+  after it.
+- Do not invent alternative tokens. `NEEDS_FIX`, `BLOCKED`, `PARTIAL`,
+  `Decision: Pass`, `RETRY`, etc. are all invalid and will be ignored by
+  the parser, producing the same ambiguous escalation as no token at all.
+- Do not bury the token inside prose. `I think IMPLEMENT_PASS may be wrong
+  here` does NOT count as a decision because the line's last word is
+  `here`, not the token. The token line must be standalone.
+
+Default-when-uncertain:
+- If you have a clear PASS supported by quoted unit/UI summary lines,
+  emit IMPLEMENT_PASS.
+- If you applied a localized reviewer patch and want fresh re-verification,
+  emit IMPLEMENT_FAIL.
+- In every other case — when you are uncertain whether the fix is
+  reviewer-eligible or implementor-scope, when diagnostic artifacts are
+  partial, when the failure is novel and you cannot confidently classify
+  it — default to IMPLEMENT_REWORK_REQUIRED. This routes the work to a
+  fresh implementor pass with your feedback ledger; it is recoverable.
+  Refusing to commit to a token is not.
 """,
     allowed_tools=["Read", "Write", "Edit", "Glob", "Grep", "Bash"],
     max_turns=80,

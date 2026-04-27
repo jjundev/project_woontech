@@ -20,7 +20,8 @@ class HarnessConfig:
     ui_test_cmd: str
     default_max_plan_retries: int = 3
     default_max_impl_retries: int = 3
-    default_max_ui_review_iters: int = 2
+    default_max_ui_review_iters: int = 3
+    default_max_ui_to_impl_loops: int = 2
     github_repo: Optional[str] = None
     main_branch: str = "main"
     host: str = "127.0.0.1"
@@ -87,7 +88,8 @@ def load_config(path: Optional[Path] = None) -> HarnessConfig:
         ui_test_cmd=data["ui_test_cmd"],
         default_max_plan_retries=data.get("default_max_plan_retries", 3),
         default_max_impl_retries=data.get("default_max_impl_retries", 3),
-        default_max_ui_review_iters=data.get("default_max_ui_review_iters", 2),
+        default_max_ui_review_iters=data.get("default_max_ui_review_iters", 3),
+        default_max_ui_to_impl_loops=data.get("default_max_ui_to_impl_loops", 2),
         github_repo=data.get("github_repo"),
         main_branch=data.get("main_branch", "main"),
         host=data.get("host", "127.0.0.1"),

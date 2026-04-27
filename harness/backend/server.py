@@ -84,7 +84,7 @@ class StartPipelineReq(BaseModel):
     max_plan_retries: Optional[int] = None
     max_impl_retries: Optional[int] = None
     worktree_base: Optional[Literal["local", "remote"]] = "local"
-    resume_from: Optional[Literal["impl_review"]] = None
+    resume_from: Optional[Literal["impl_review", "ui_verify"]] = None
 
 
 @app.get("/api/tasks")
@@ -214,6 +214,16 @@ async def resume_pipeline(task_id: str, req: StartPipelineReq):
             raise HTTPException(
                 400,
                 "resume_from=impl_review requires the worktree to have commits ahead of main",
+            )
+    if req.resume_from == "ui_verify":
+        if not W.worktree_is_reusable(config, task_id):
+            raise HTTPException(
+                400, "resume_from=ui_verify requires an existing reusable worktree"
+            )
+        if W.worktree_status(config, task_id).get("commits_ahead", 0) <= 0:
+            raise HTTPException(
+                400,
+                "resume_from=ui_verify requires the worktree to have commits ahead of main",
             )
     # Preserve the persisted state so the pipeline can choose the correct resume phase.
     if _pipeline_is_running(task_id):

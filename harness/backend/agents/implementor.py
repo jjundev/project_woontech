@@ -95,13 +95,36 @@ SwiftUI accessibility rules (UI test contract):
   `app.tabBars.buttons.element(boundBy: index)` — never via a custom
   identifier on the tab child. The same caution applies to any container
   modifier that wraps a subtree already carrying named identifiers.
-- Use one identifier per accessibility element. Adding
-  `.accessibilityIdentifier(...)` to a container that already has named
-  descendants can flatten or shadow those descendant identifiers. If you need
-  both a container ID and child IDs, use
-  `.accessibilityElement(children: .contain)` on the container and verify the
-  resulting accessibility tree before shipping. Do not rely on a parent
-  identifier when descendant UI-test anchors must remain discoverable.
+- Root identifier rule (mandatory). Whenever you attach
+  `.accessibilityIdentifier(...)` to a SwiftUI container view (`VStack`,
+  `HStack`, `ZStack`, `ScrollView`, etc.) that serves as the visible root
+  of a screen, navigation destination, sheet content, or any view that
+  may be pushed onto a `NavigationStack`, you MUST also attach
+  `.accessibilityElement(children: .contain)` to the SAME container.
+  This is unconditional — it applies even when the container currently
+  has no named descendants, because future slices may add them or change
+  the navigation context (`TabView` nesting, `NavigationStack` push) in
+  ways that trigger iOS 26 identifier flattening on the descendant
+  subtree. The pairing is the contract:
+  `.accessibilityIdentifier` on a screen-root container without
+  `.accessibilityElement(children: .contain)` is a source-level
+  regression even when no test currently fails. Reviewer treats a
+  missing pair as a blocking finding.
+- Acceptable alternative for `ScrollView`/`TabView` roots that cannot
+  host `children: .contain` cleanly (e.g. when doing so changes the
+  XCTest query type expected by existing tests): place a `Color.clear`
+  overlay marker carrying the identifier as a leaf wrapper, instead of
+  putting the identifier on the scroll/tab container itself. Pick
+  exactly one of the two patterns per root and document the choice in
+  your IMPLEMENT_DONE note (e.g.
+  `Identifier OnboardingRoot lives on outer VStack with
+  .accessibilityElement(children: .contain); descendants
+  OnboardingCTA / OnboardingDisclaimerFooter remain queryable.`).
+- Container-shadowing rule. Adding `.accessibilityIdentifier(...)` to a
+  container that already has named descendants without
+  `.accessibilityElement(children: .contain)` can flatten or shadow those
+  descendant identifiers. Do not rely on a parent identifier when
+  descendant UI-test anchors must remain discoverable.
 - The XCTest query type must match the underlying control type. A
   `ScrollView` is queried via `app.scrollViews[id]`, a `Button` via
   `app.buttons[id]`, a `Text` via `app.staticTexts[id]`. Do not default to

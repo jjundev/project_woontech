@@ -18,6 +18,7 @@ struct SajuTabContentPlaceholderView: View {
             }
             .frame(maxWidth: .infinity)
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("SajuTabContentPlaceholder")
     }
 }

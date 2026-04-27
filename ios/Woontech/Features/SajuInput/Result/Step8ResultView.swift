@@ -107,6 +107,7 @@ struct Step8ResultView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(DesignTokens.bg)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("SajuResultRoot")
         .onAppear {
             // Ensure result exists + persist (NFC-6).

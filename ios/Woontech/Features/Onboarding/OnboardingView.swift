@@ -56,6 +56,7 @@ struct OnboardingView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(DesignTokens.bg)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("OnboardingRoot")
     }
 

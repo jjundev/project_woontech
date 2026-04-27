@@ -341,11 +341,53 @@ async def test_ui_verify_reviewer_patch_then_pass(tmp_config, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_ui_verify_reviewer_rework_required(tmp_config, monkeypatch):
-    """Reviewer says rework needed → escalation `ui_verify_rework_required`."""
+async def test_ui_verify_reviewer_rework_signals_loopback(tmp_config, monkeypatch):
+    """Reviewer says rework needed and loop counter under max → returns "loopback"."""
     task_dir, worktree_dir = _setup_task(
         tmp_config, "ui-reviewer-rework", max_ui_review_iters=3
     )
+    _write_ui_artifacts(worktree_dir)
+
+    fake_run, _ = _make_subprocess_run_stub([1])
+    monkeypatch.setattr(P.subprocess, "run", fake_run)
+    monkeypatch.setattr(P, "_assert_test_artifacts_visible", lambda *a, **k: None)
+
+    async def fake_resolve(config, worktree_dir, task_id):
+        return ("echo unit", "/usr/bin/false")
+
+    monkeypatch.setattr(P, "_resolve_test_commands", fake_resolve)
+
+    fake_run_agent, _ = _make_reviewer_stub(["IMPLEMENT_REWORK_REQUIRED"])
+    monkeypatch.setattr(P.A, "run_agent", fake_run_agent)
+
+    events: list[tuple[str, dict]] = []
+
+    async def fake_emit(event_type, **payload):
+        events.append((event_type, payload))
+
+    monkeypatch.setattr(P, "emit", fake_emit)
+
+    ok = await P.run_ui_verify_phase(
+        tmp_config, "ui-reviewer-rework", task_dir, worktree_dir
+    )
+
+    assert ok == "loopback"
+    state = S.read_state(task_dir)
+    assert state.escalation is None
+    assert state.ui_to_impl_loops == 1
+    assert state.ui_review_retries == 1
+    assert any(t == "ui_verify_rework_loopback" for t, _ in events)
+
+
+@pytest.mark.asyncio
+async def test_ui_verify_reviewer_rework_exhausts_after_max_loops(tmp_config, monkeypatch):
+    """Once ui_to_impl_loops reaches max, REWORK escalates instead of looping."""
+    task_dir, worktree_dir = _setup_task(
+        tmp_config, "ui-reviewer-rework-exhausted", max_ui_review_iters=3
+    )
+    state = S.read_state(task_dir)
+    state.ui_to_impl_loops = state.max_ui_to_impl_loops  # already at limit
+    S.write_state(task_dir, state)
     _write_ui_artifacts(worktree_dir)
 
     fake_run, _ = _make_subprocess_run_stub([1])
@@ -366,12 +408,12 @@ async def test_ui_verify_reviewer_rework_required(tmp_config, monkeypatch):
     monkeypatch.setattr(P, "emit", fake_emit)
 
     ok = await P.run_ui_verify_phase(
-        tmp_config, "ui-reviewer-rework", task_dir, worktree_dir
+        tmp_config, "ui-reviewer-rework-exhausted", task_dir, worktree_dir
     )
 
     assert ok is False
     state = S.read_state(task_dir)
-    assert state.escalation == "ui_verify_rework_required"
+    assert state.escalation == "ui_verify_rework_loop_exhausted"
     assert state.ui_review_retries == 1
 
 
@@ -413,10 +455,67 @@ async def test_ui_verify_review_exhausted(tmp_config, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_ui_verify_review_ambiguous_pass_token(tmp_config, monkeypatch):
-    """Reviewer responds IMPLEMENT_PASS after a UI failure — wrong, treat as ambiguous."""
+async def test_ui_verify_review_pass_remapped_when_patch_applied(tmp_config, monkeypatch):
+    """Reviewer says PASS after UI failure but committed a patch — remap to FAIL.
+
+    The next iteration re-runs UI tests; if the patch fixed things, the gate
+    passes. The protocol violation is recorded via `agent_protocol_violation`.
+    """
     task_dir, worktree_dir = _setup_task(
-        tmp_config, "ui-reviewer-ambiguous", max_ui_review_iters=2
+        tmp_config, "ui-reviewer-pass-with-patch", max_ui_review_iters=2
+    )
+    _write_ui_artifacts(worktree_dir)
+
+    # iter 1 UI test fails; iter 2 (after remap) UI test passes.
+    fake_run, call_count = _make_subprocess_run_stub([1, 0])
+    monkeypatch.setattr(P.subprocess, "run", fake_run)
+    monkeypatch.setattr(P, "_assert_test_artifacts_visible", lambda *a, **k: None)
+
+    async def fake_resolve(config, worktree_dir, task_id):
+        return ("echo unit", "/usr/bin/false")
+
+    monkeypatch.setattr(P, "_resolve_test_commands", fake_resolve)
+
+    async def fake_run_agent(spec, prompt, **kwargs):
+        # Reviewer applies a patch but returns the wrong terminal token.
+        cwd = Path(kwargs["cwd"])
+        (cwd / "pass-token-patch.swift").write_text("// reviewer patch\n", encoding="utf-8")
+        return A.AgentResult(
+            text="all good\nIMPLEMENT_PASS\n",
+            tool_uses=[],
+            stop_reason="end_turn",
+        )
+
+    monkeypatch.setattr(P.A, "run_agent", fake_run_agent)
+
+    events: list[tuple[str, dict]] = []
+
+    async def fake_emit(event_type, **payload):
+        events.append((event_type, payload))
+
+    monkeypatch.setattr(P, "emit", fake_emit)
+
+    ok = await P.run_ui_verify_phase(
+        tmp_config, "ui-reviewer-pass-with-patch", task_dir, worktree_dir
+    )
+
+    assert ok is True
+    assert call_count["n"] == 2, "UI tests run twice (iter 1 fail, iter 2 pass)"
+    state = S.read_state(task_dir)
+    assert state.escalation is None
+    violations = [p for t, p in events if t == "agent_protocol_violation"]
+    assert len(violations) == 1
+    assert violations[0]["original_decision"] == "IMPLEMENT_PASS"
+    assert violations[0]["remapped_to"] == "IMPLEMENT_FAIL"
+    assert violations[0]["phase"] == "ui_verify_review"
+    assert any(t == "ui_verify_passed" for t, _ in events)
+
+
+@pytest.mark.asyncio
+async def test_ui_verify_review_pass_remapped_no_patch_stalls(tmp_config, monkeypatch):
+    """Reviewer says PASS without committing a patch — remap to FAIL, then stall."""
+    task_dir, worktree_dir = _setup_task(
+        tmp_config, "ui-reviewer-pass-no-patch", max_ui_review_iters=2
     )
     _write_ui_artifacts(worktree_dir)
 
@@ -432,18 +531,99 @@ async def test_ui_verify_review_ambiguous_pass_token(tmp_config, monkeypatch):
     fake_run_agent, _ = _make_reviewer_stub(["IMPLEMENT_PASS"])
     monkeypatch.setattr(P.A, "run_agent", fake_run_agent)
 
+    events: list[tuple[str, dict]] = []
+
     async def fake_emit(event_type, **payload):
-        pass
+        events.append((event_type, payload))
 
     monkeypatch.setattr(P, "emit", fake_emit)
 
     ok = await P.run_ui_verify_phase(
-        tmp_config, "ui-reviewer-ambiguous", task_dir, worktree_dir
+        tmp_config, "ui-reviewer-pass-no-patch", task_dir, worktree_dir
+    )
+
+    assert ok is False
+    state = S.read_state(task_dir)
+    assert state.escalation == "ui_verify_review_stalled"
+    assert state.ui_review_retries == 1
+    assert any(t == "agent_protocol_violation" for t, _ in events)
+    assert any(t == "agent_stall" for t, _ in events)
+
+
+@pytest.mark.asyncio
+async def test_ui_verify_review_missing_token_ambiguous(tmp_config, monkeypatch):
+    """Reviewer response has no terminal token at all — escalate as ambiguous."""
+    task_dir, worktree_dir = _setup_task(
+        tmp_config, "ui-reviewer-missing-token", max_ui_review_iters=2
+    )
+    _write_ui_artifacts(worktree_dir)
+
+    fake_run, _ = _make_subprocess_run_stub([1])
+    monkeypatch.setattr(P.subprocess, "run", fake_run)
+    monkeypatch.setattr(P, "_assert_test_artifacts_visible", lambda *a, **k: None)
+
+    async def fake_resolve(config, worktree_dir, task_id):
+        return ("echo unit", "/usr/bin/false")
+
+    monkeypatch.setattr(P, "_resolve_test_commands", fake_resolve)
+
+    # Empty token → stub emits "no decision here\n" with no recognized token.
+    fake_run_agent, _ = _make_reviewer_stub([""])
+    monkeypatch.setattr(P.A, "run_agent", fake_run_agent)
+
+    events: list[tuple[str, dict]] = []
+
+    async def fake_emit(event_type, **payload):
+        events.append((event_type, payload))
+
+    monkeypatch.setattr(P, "emit", fake_emit)
+
+    ok = await P.run_ui_verify_phase(
+        tmp_config, "ui-reviewer-missing-token", task_dir, worktree_dir
     )
 
     assert ok is False
     state = S.read_state(task_dir)
     assert state.escalation == "ui_verify_review_ambiguous"
+    assert state.ui_review_retries == 1
+    assert any(t == "agent_ambiguous" for t, _ in events)
+    assert not any(t == "agent_protocol_violation" for t, _ in events)
+
+
+@pytest.mark.asyncio
+async def test_ui_reviewer_runtime_prompt_has_default_to_rework_clause(
+    tmp_config, monkeypatch
+):
+    """UI verify reviewer prompt must state the default-to-REWORK fallback."""
+    task_dir, worktree_dir = _setup_task(
+        tmp_config, "ui-reviewer-prompt-rework-clause", max_ui_review_iters=2
+    )
+
+    capture: dict[str, object] = {}
+    fake_run_agent, _ = _make_reviewer_stub(
+        ["IMPLEMENT_REWORK_REQUIRED"],
+        capture=capture,
+    )
+    monkeypatch.setattr(P.A, "run_agent", fake_run_agent)
+
+    await P._run_ui_reviewer(
+        tmp_config,
+        "ui-reviewer-prompt-rework-clause",
+        task_dir,
+        worktree_dir,
+        1,
+        "echo unit",
+        "/usr/bin/false",
+    )
+
+    prompt = str(capture["prompt"])
+    compact = " ".join(prompt.split())
+    # PASS-block guidance (existing, kept for regression)
+    assert "Do NOT respond IMPLEMENT_PASS" in prompt
+    assert "auto-remaps any IMPLEMENT_PASS" in compact
+    # New: explicit default-to-REWORK fallback + ambiguous cost
+    assert "default to IMPLEMENT_REWORK_REQUIRED" in compact
+    assert "ui_verify_review_ambiguous" in prompt
 
 
 @pytest.mark.asyncio

@@ -242,6 +242,111 @@ def test_resume_from_review_rejects_non_review_pause(client, tmp_config):
     assert "requires task to be at impl_review" in r.json()["detail"]
 
 
+def test_resume_from_ui_verify_passes_resume_from_to_pipeline(client, tmp_config, monkeypatch):
+    from backend import server
+    from backend import state as S
+
+    _make_folder(tmp_config, "resume-ui", with_spec=True)
+    task_dir = S.transition(tmp_config, "resume-ui", "ui_verify")
+    state = S.read_state(task_dir)
+    state.state = "needs_attention"
+    state.escalation = "ui_verify_review_ambiguous"
+    S.write_state(task_dir, state)
+
+    monkeypatch.setattr(server.W, "worktree_is_reusable", lambda config, task_id: True)
+    monkeypatch.setattr(
+        server.W,
+        "worktree_status",
+        lambda config, task_id: {"commits_ahead": 1},
+    )
+
+    r = client.post("/api/tasks/resume-ui/resume", json={"resume_from": "ui_verify"})
+    assert r.status_code == 200, r.text
+
+    deadline = time.time() + 1
+    while time.time() < deadline and not client.app.state.pipeline_invocations:
+        time.sleep(0.01)
+
+    assert client.app.state.pipeline_invocations
+    invocation = client.app.state.pipeline_invocations[0]
+    assert invocation["task_id"] == "resume-ui"
+    assert invocation["kwargs"]["resume_from"] == "ui_verify"
+
+
+def test_resume_from_ui_verify_allows_non_ui_escalation(client, tmp_config, monkeypatch):
+    """ui_verify resume only requires worktree+commits, not a specific state.
+
+    User may want to force a UI re-verification even from a task that paused
+    on a different escalation.
+    """
+    from backend import server
+    from backend import state as S
+
+    _make_folder(tmp_config, "resume-ui-from-impl", with_spec=True)
+    task_dir = S.transition(tmp_config, "resume-ui-from-impl", "needs_attention")
+    state = S.read_state(task_dir)
+    state.escalation = "impl_review_exhausted"
+    S.write_state(task_dir, state)
+
+    monkeypatch.setattr(server.W, "worktree_is_reusable", lambda config, task_id: True)
+    monkeypatch.setattr(
+        server.W,
+        "worktree_status",
+        lambda config, task_id: {"commits_ahead": 3},
+    )
+
+    r = client.post(
+        "/api/tasks/resume-ui-from-impl/resume",
+        json={"resume_from": "ui_verify"},
+    )
+    assert r.status_code == 200, r.text
+
+
+def test_resume_from_ui_verify_rejects_no_worktree(client, tmp_config, monkeypatch):
+    from backend import server
+    from backend import state as S
+
+    _make_folder(tmp_config, "resume-ui-no-worktree", with_spec=True)
+    task_dir = S.transition(tmp_config, "resume-ui-no-worktree", "needs_attention")
+    state = S.read_state(task_dir)
+    state.escalation = "ui_verify_review_ambiguous"
+    S.write_state(task_dir, state)
+
+    monkeypatch.setattr(server.W, "worktree_is_reusable", lambda config, task_id: False)
+
+    r = client.post(
+        "/api/tasks/resume-ui-no-worktree/resume",
+        json={"resume_from": "ui_verify"},
+    )
+    assert r.status_code == 400
+    assert "reusable worktree" in r.json()["detail"]
+
+
+def test_resume_from_ui_verify_rejects_no_commits_ahead(client, tmp_config, monkeypatch):
+    from backend import server
+    from backend import state as S
+
+    _make_folder(tmp_config, "resume-ui-no-commits", with_spec=True)
+    task_dir = S.transition(tmp_config, "resume-ui-no-commits", "needs_attention")
+    state = S.read_state(task_dir)
+    state.escalation = "ui_verify_review_ambiguous"
+    S.write_state(task_dir, state)
+
+    monkeypatch.setattr(server.W, "worktree_is_reusable", lambda config, task_id: True)
+    monkeypatch.setattr(
+        server.W,
+        "worktree_status",
+        lambda config, task_id: {"commits_ahead": 0},
+    )
+
+    r = client.post(
+        "/api/tasks/resume-ui-no-commits/resume",
+        json={"resume_from": "ui_verify"},
+    )
+    assert r.status_code == 400
+    assert "commits ahead" in r.json()["detail"]
+
+
 def test_resume_requires_needs_attention(client, tmp_config):
     from backend import state as S
 

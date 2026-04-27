@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from backend import agents as A
 from backend import pipeline as P
+from backend import state as S
+from backend import worktree as W
 from backend.agents.base import _join_text_blocks
 from backend.agents.implementor import IMPLEMENTOR
 from backend.agents.implement_reviewer import IMPLEMENT_REVIEWER
@@ -24,6 +27,34 @@ def test_implement_reviewer_prompt_has_patch_guardrails():
     # from prior iterations so the reviewer does not need to read older files.
     assert "## Still outstanding from prior iterations" in prompt
     assert "## Resolved since previous iteration" in prompt
+
+
+def test_implement_reviewer_system_prompt_mandates_terminal_token():
+    """Reviewer must end with one of three tokens; default to REWORK when uncertain."""
+    prompt = IMPLEMENT_REVIEWER.system_prompt
+
+    # Meta-mandate: must emit one of three tokens, no alternatives
+    assert "Terminal token contract" in prompt
+    assert "MUST end with exactly one" in prompt
+    assert "IMPLEMENT_PASS" in prompt
+    assert "IMPLEMENT_FAIL" in prompt
+    assert "IMPLEMENT_REWORK_REQUIRED" in prompt
+
+    # Cost of token omission is named so the LLM internalizes it
+    assert "ambiguous" in prompt.lower()
+    assert "worst-case" in prompt.lower()
+
+    # Self-defined tokens are explicitly forbidden
+    compact = " ".join(prompt.split())
+    assert "Do not invent alternative tokens" in compact
+    assert "NEEDS_FIX" in prompt  # named example to anchor the prohibition
+
+    # Default-when-uncertain rule routes ambiguity to REWORK_REQUIRED
+    assert "Default-when-uncertain" in prompt
+    assert "default to IMPLEMENT_REWORK_REQUIRED" in compact
+
+    # Decision step (task 6) was updated to enumerate all three tokens
+    assert "Decide IMPLEMENT_PASS, IMPLEMENT_FAIL, or IMPLEMENT_REWORK_REQUIRED" in prompt
 
 
 def test_pbxproj_membership_prompts_use_grep_tool_not_bash():
@@ -239,3 +270,60 @@ def test_join_text_blocks_keeps_terminal_token_detectable():
         )
         == "IMPLEMENT_REWORK_REQUIRED"
     )
+
+
+@pytest.mark.asyncio
+async def test_impl_review_runtime_prompt_includes_default_to_rework(
+    tmp_config, monkeypatch
+):
+    """impl_review reviewer prompt must state the default-to-REWORK fallback."""
+    task_id = "impl-review-prompt-rework"
+    todo_dir = tmp_config.todo_dir / task_id
+    todo_dir.mkdir(parents=True, exist_ok=True)
+    (todo_dir / "spec.md").write_text("# test\n", encoding="utf-8")
+    task_dir = S.transition(tmp_config, task_id, "implementing")
+    W.create_worktree(tmp_config, task_id)
+    worktree_dir = W.project_worktree_path(tmp_config, task_id)
+    (task_dir / "implement-plan.md").write_text("# Plan\n", encoding="utf-8")
+    (task_dir / "implement-checklist.md").write_text("# Checklist\n", encoding="utf-8")
+
+    capture: dict[str, object] = {}
+
+    async def fake_run_agent(spec, prompt, **kwargs):
+        capture["prompt"] = prompt
+        capture["kwargs"] = kwargs
+        return A.AgentResult(
+            text="all good\nIMPLEMENT_PASS\n",
+            tool_uses=[],
+            stop_reason="end_turn",
+        )
+
+    monkeypatch.setattr(P.A, "run_agent", fake_run_agent)
+
+    async def fake_resolve(config, worktree_dir, task_id):
+        return ("echo unit", "echo ui")
+
+    monkeypatch.setattr(P, "_resolve_test_commands", fake_resolve)
+    monkeypatch.setattr(P, "_assert_test_artifacts_visible", lambda *a, **k: None)
+
+    async def fake_emit(event_type, **payload):
+        pass
+
+    monkeypatch.setattr(P, "emit", fake_emit)
+
+    ok = await P.run_impl_phase(
+        tmp_config, task_id, task_dir, worktree_dir, 3,
+        skip_implementor=True,
+    )
+
+    assert ok is True
+    prompt = str(capture["prompt"])
+    compact = " ".join(prompt.split())
+    # All three tokens are named in the prompt
+    assert "IMPLEMENT_PASS" in prompt
+    assert "IMPLEMENT_FAIL" in prompt
+    assert "IMPLEMENT_REWORK_REQUIRED" in prompt
+    # Default-to-REWORK fallback rule
+    assert "default to IMPLEMENT_REWORK_REQUIRED" in compact
+    # Cost of token omission
+    assert "user intervention" in compact

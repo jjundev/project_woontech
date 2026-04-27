@@ -815,6 +815,13 @@ verification gate after this phase passes.
 If PASS, write implement-review.md and respond IMPLEMENT_PASS.
 If FAIL and reviewer patch is eligible, write implement-feedback-version-{iteration}.md, directly fix the code in the worktree, commit, and respond IMPLEMENT_FAIL.
 If FAIL and reviewer patch is not eligible, write implement-feedback-version-{iteration}.md, do not edit code, and respond IMPLEMENT_REWORK_REQUIRED.
+
+End your response with exactly one of IMPLEMENT_PASS, IMPLEMENT_FAIL, or
+IMPLEMENT_REWORK_REQUIRED on its own line. If you cannot decide
+confidently between FAIL (reviewer patch) and REWORK_REQUIRED, default to
+IMPLEMENT_REWORK_REQUIRED — it routes the work to a fresh implementor pass
+and is the safest fallback when in doubt. Leaving the response without a
+terminal token forces user intervention.
 """
         reviewer_started_at = time.time()
         result = await A.run_agent(
@@ -1071,7 +1078,15 @@ spec reinterpretation), do NOT edit code, write
 implement-feedback-version-{feedback_version}.md describing the required changes,
 and respond IMPLEMENT_REWORK_REQUIRED.
 
-Do NOT respond IMPLEMENT_PASS — the UI tests just failed.
+Do NOT respond IMPLEMENT_PASS — the UI tests just failed. The harness
+auto-remaps any IMPLEMENT_PASS in this context to IMPLEMENT_FAIL and
+re-runs UI tests in the next iteration to verify your patch.
+
+End your response with exactly one of IMPLEMENT_FAIL or
+IMPLEMENT_REWORK_REQUIRED on its own line. If you cannot decide between
+the two, default to IMPLEMENT_REWORK_REQUIRED — leaving the response
+without a terminal token will trigger ui_verify_review_ambiguous and
+force the user to manually intervene.
 """
     reviewer_started_at = time.time()
     result = await A.run_agent(
@@ -1111,16 +1126,27 @@ async def run_ui_verify_phase(
     task_id: str,
     task_dir: Path,
     worktree_dir: Path,
-) -> bool:
+) -> "bool | str":
     """Run UI tests as a publish-readiness gate, with reviewer-driven retry.
+
+    Return values:
+      - True             — gate passed, proceed to publish
+      - False            — gate failed, escalation written to state
+      - "loopback"       — UI reviewer signaled IMPLEMENT_REWORK_REQUIRED and
+                           the ui_to_impl loop counter is below max; caller
+                           should re-run the impl phase. Counter and state
+                           transitions are handled here.
+
 
     Pulled out of the impl_review iteration loop so UI tests don't run 1× per
     reviewer iteration. On failure, invokes the implement-reviewer agent to
     attempt a localized patch (accessibility identifiers, test selectors,
     minor SwiftUI tweaks) and retries up to `max_ui_review_iters` total
-    iterations. Broader rework needs surface as `ui_verify_rework_required`
-    for user intervention. With `max_ui_review_iters=1`, the reviewer is
-    skipped and behavior matches the original single-shot gate.
+    iterations. Broader rework needs surface as a "loopback" signal so the
+    pipeline re-runs the implementor phase, bounded by `max_ui_to_impl_loops`;
+    once exhausted the gate escalates `ui_rework_loop_exhausted` for user
+    intervention. With `max_ui_review_iters=1`, the reviewer is skipped and
+    behavior matches the original single-shot gate.
     """
     await emit("phase_started", task_id=task_id, phase="ui_verify")
     unit_cmd, ui_cmd = await _resolve_test_commands(config, worktree_dir, task_id)
@@ -1170,6 +1196,22 @@ async def run_ui_verify_phase(
         )
         if not diagnostics_ok:
             return False
+        if decision == "IMPLEMENT_PASS":
+            # UI tests just failed but reviewer said PASS — protocol
+            # violation. Remap to IMPLEMENT_FAIL so the next iteration
+            # re-runs UI tests and verifies any patch the reviewer made.
+            # If no patch was applied, the FAIL path's SHA check will
+            # surface ui_verify_review_stalled.
+            await emit(
+                "agent_protocol_violation",
+                task_id=task_id,
+                phase="ui_verify_review",
+                iteration=iteration,
+                original_decision="IMPLEMENT_PASS",
+                remapped_to="IMPLEMENT_FAIL",
+                text_tail=_text_tail(result.text),
+            )
+            decision = "IMPLEMENT_FAIL"
         if decision == "IMPLEMENT_FAIL":
             auto_committed = _maybe_auto_commit_worktree(
                 worktree_dir, f"ui verify reviewer patch iter {iteration}"
@@ -1209,19 +1251,36 @@ async def run_ui_verify_phase(
             continue
         if decision == "IMPLEMENT_REWORK_REQUIRED":
             state = S.read_state(task_dir)
-            state.escalation = "ui_verify_rework_required"
             state.ui_review_retries = iteration
+            max_loops = state.max_ui_to_impl_loops or config.default_max_ui_to_impl_loops
+            if state.ui_to_impl_loops < max_loops:
+                # Auto-route back to implementor: the UI reviewer wrote
+                # implement-feedback-version-{N}.md describing the required
+                # changes; run_impl_phase will pick it up. Counter prevents
+                # ui→impl→ui infinite cycles.
+                state.ui_to_impl_loops += 1
+                state.escalation = None
+                S.write_state(task_dir, state)
+                await emit(
+                    "ui_verify_rework_loopback",
+                    task_id=task_id,
+                    iteration=iteration,
+                    loop=state.ui_to_impl_loops,
+                    max_loops=max_loops,
+                )
+                return "loopback"
+            state.escalation = "ui_verify_rework_loop_exhausted"
             S.write_state(task_dir, state)
             await emit(
                 "ui_verify_failed",
                 task_id=task_id,
                 exit_code=exit_code,
                 iteration=iteration,
-                reason="rework_required",
+                reason="rework_loop_exhausted",
+                loop=state.ui_to_impl_loops,
             )
             return False
-        # IMPLEMENT_PASS or missing token — both are wrong here since UI tests
-        # just failed; treat as ambiguous and escalate.
+        # Missing token — reviewer didn't reach a decision.
         state = S.read_state(task_dir)
         state.escalation = "ui_verify_review_ambiguous"
         state.ui_review_retries = iteration
@@ -1408,6 +1467,17 @@ async def run_pipeline(
     worktree_base: str = "local",
     resume_from: Optional[str] = None,
 ) -> None:
+    """Run or resume the task pipeline.
+
+    `resume_from` overrides which phase a resumed run enters at:
+      - None              → auto-route via state.escalation / state.state
+      - "impl_review"     → enter phase 1 with implementor skipped (re-run reviewer only)
+      - "ui_verify"       → enter phase 2 (publish-readiness gate) regardless of state
+    Both explicit values require a workspace state.json to exist; otherwise
+    the pipeline aborts rather than falling through to a fresh start.
+    Endpoint-level validation (worktree reusable, commits ahead of main) is
+    enforced at /api/tasks/{id}/resume before this function is called.
+    """
     max_plan_retries = max_plan_retries or config.default_max_plan_retries
     max_impl_retries = max_impl_retries or config.default_max_impl_retries
 
@@ -1438,6 +1508,18 @@ async def run_pipeline(
         if workspace is not None and state_file is not None and state_file.exists():
             state = S.read_state(workspace)
             resume_phase = _resume_phase_index(state)
+            if resume_from == "ui_verify":
+                # Explicit override: re-enter the publish-readiness gate even
+                # if state.state would have routed elsewhere. Validation that
+                # the worktree is reusable + ahead of main is enforced at the
+                # /resume endpoint. Reset ui-side counters so the user's
+                # manual fix gets a fresh allowance (loop counter and the
+                # iteration counter both restart from 0).
+                resume_phase = 2
+                if state.ui_review_retries or state.ui_to_impl_loops:
+                    state.ui_review_retries = 0
+                    state.ui_to_impl_loops = 0
+                    S.write_state(workspace, state)
             current_phase = PHASE_NAMES[resume_phase]
             await emit("pipeline_resuming", task_id=task_id, state=state.state)
             try:
@@ -1458,6 +1540,16 @@ async def run_pipeline(
                 )
             is_resume = True
         else:
+            # Fresh start. If the caller asked for a phase-specific resume but
+            # the workspace state is gone, refuse to silently restart from
+            # plan — that would discard the user's intent and rerun unrelated
+            # phases.
+            if resume_from is not None:
+                raise RuntimeError(
+                    f"resume_from={resume_from!r} requested but no workspace "
+                    f"state found for task {task_id!r}; aborting instead of "
+                    f"falling through to a fresh plan-phase start."
+                )
             # Fresh: bootstrap workspace inside worktree, commit spec.md + state.json on feature branch.
             S.ensure_workspace(config, task_id)
             task_dir = await _set_state(config, task_id, "planning")
@@ -1486,66 +1578,86 @@ async def run_pipeline(
                     await emit("escalation", task_id=task_id, phase="plan_review")
                     return
 
-            # Implement phase
-            current_phase = PHASE_NAMES[1]
-            if resume_phase <= 1:
-                if not (is_resume and resume_phase == 1):
-                    task_dir = await _set_state(config, task_id, "implementing")
-                skip_implementor = (
-                    is_resume and resume_phase == 1 and resume_from == "impl_review"
-                )
-                if skip_implementor:
-                    impl_ok = await run_impl_phase(
-                        config,
-                        task_id,
-                        task_dir,
-                        worktree_dir,
-                        max_impl_retries,
-                        skip_implementor=True,
+            # Implement + UI verify phases (with ui→impl loopback support)
+            #
+            # When the UI reviewer signals IMPLEMENT_REWORK_REQUIRED and the
+            # ui_to_impl loop counter is below max, run_ui_verify_phase returns
+            # "loopback" and we re-enter the impl phase to consume the
+            # implement-feedback file written by the UI reviewer. The counter
+            # caps automatic ui→impl→ui cycles before escalation.
+            loop_resume = resume_phase
+            while True:
+                # Implement phase
+                current_phase = PHASE_NAMES[1]
+                if loop_resume <= 1:
+                    if not (is_resume and loop_resume == 1):
+                        task_dir = await _set_state(config, task_id, "implementing")
+                    skip_implementor = (
+                        is_resume
+                        and loop_resume == 1
+                        and resume_from == "impl_review"
                     )
-                else:
-                    impl_ok = await run_impl_phase(
-                        config,
-                        task_id,
-                        task_dir,
-                        worktree_dir,
-                        max_impl_retries,
-                    )
-                if not impl_ok:
-                    s = S.read_state(task_dir)
-                    if s.escalation is None:
-                        s.escalation = "impl_review_exhausted"
-                        S.write_state(task_dir, s)
-                    await _set_state(config, task_id, "needs_attention")
-                    await emit(
-                        "escalation",
-                        task_id=task_id,
-                        phase="impl_review",
-                        escalation=s.escalation,
-                    )
-                    return
+                    if skip_implementor:
+                        impl_ok = await run_impl_phase(
+                            config,
+                            task_id,
+                            task_dir,
+                            worktree_dir,
+                            max_impl_retries,
+                            skip_implementor=True,
+                        )
+                    else:
+                        impl_ok = await run_impl_phase(
+                            config,
+                            task_id,
+                            task_dir,
+                            worktree_dir,
+                            max_impl_retries,
+                        )
+                    if not impl_ok:
+                        s = S.read_state(task_dir)
+                        if s.escalation is None:
+                            s.escalation = "impl_review_exhausted"
+                            S.write_state(task_dir, s)
+                        await _set_state(config, task_id, "needs_attention")
+                        await emit(
+                            "escalation",
+                            task_id=task_id,
+                            phase="impl_review",
+                            escalation=s.escalation,
+                        )
+                        return
 
-            # UI verify phase (publish-readiness gate; runs UI tests once)
-            current_phase = PHASE_NAMES[2]
-            if resume_phase <= 2:
-                if not (is_resume and resume_phase == 2):
-                    task_dir = await _set_state(config, task_id, "ui_verify")
-                ui_ok = await run_ui_verify_phase(
-                    config, task_id, task_dir, worktree_dir
-                )
-                if not ui_ok:
-                    s = S.read_state(task_dir)
-                    if s.escalation is None:
-                        s.escalation = "ui_verification_failed"
-                        S.write_state(task_dir, s)
-                    await _set_state(config, task_id, "needs_attention")
-                    await emit(
-                        "escalation",
-                        task_id=task_id,
-                        phase="ui_verify",
-                        escalation=s.escalation,
+                # UI verify phase (publish-readiness gate; runs UI tests once)
+                current_phase = PHASE_NAMES[2]
+                if loop_resume <= 2:
+                    if not (is_resume and loop_resume == 2):
+                        task_dir = await _set_state(config, task_id, "ui_verify")
+                    ui_ok = await run_ui_verify_phase(
+                        config, task_id, task_dir, worktree_dir
                     )
-                    return
+                    if ui_ok == "loopback":
+                        # run_ui_verify_phase already incremented counter and
+                        # cleared escalation. Reset cycle-local resume flags so
+                        # the next impl iteration runs fresh.
+                        loop_resume = 1
+                        is_resume = False
+                        resume_from = None
+                        continue
+                    if not ui_ok:
+                        s = S.read_state(task_dir)
+                        if s.escalation is None:
+                            s.escalation = "ui_verification_failed"
+                            S.write_state(task_dir, s)
+                        await _set_state(config, task_id, "needs_attention")
+                        await emit(
+                            "escalation",
+                            task_id=task_id,
+                            phase="ui_verify",
+                            escalation=s.escalation,
+                        )
+                        return
+                break
 
             # Publish phase
             current_phase = PHASE_NAMES[3]

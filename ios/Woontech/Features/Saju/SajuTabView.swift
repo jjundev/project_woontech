@@ -27,11 +27,15 @@ struct SajuTabView: View {
                 .frame(height: 1)
 
             NavigationStack(path: $navigationPath) {
-                SajuTabContentPlaceholderView()
-                    .toolbar(.hidden, for: .navigationBar)
-                    .navigationDestination(for: SajuRoute.self) { route in
-                        sajuRouteDestination(for: route)
-                    }
+                SajuTabContentView(
+                    originProvider: deps.userSajuOrigin,
+                    categoriesProvider: deps.categories,
+                    onNavigate: { route in navigationPath.append(route) }
+                )
+                .toolbar(.hidden, for: .navigationBar)
+                .navigationDestination(for: SajuRoute.self) { route in
+                    sajuRouteDestination(for: route)
+                }
             }
         }
         .accessibilityElement(children: .contain)

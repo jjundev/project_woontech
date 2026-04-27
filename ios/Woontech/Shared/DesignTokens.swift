@@ -25,4 +25,8 @@ enum DesignTokens {
     static let tabooColor    = fireColor   // red  — 금기
     static let todayColor    = muted       // gray — 일진
     static let practiceColor = woodColor   // green — 실천
+
+    // MARK: - 사주 원국 카드 토큰
+    static let dayMasterHighlight = Color(red: 0xD6/255, green: 0xD6/255, blue: 0xD6/255) // gray2 재사용
+    static let dayMasterLineBg    = Color(red: 0xF2/255, green: 0xF2/255, blue: 0xF2/255) // gray 재사용
 }

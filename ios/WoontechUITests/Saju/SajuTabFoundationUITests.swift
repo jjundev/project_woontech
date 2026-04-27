@@ -71,12 +71,10 @@ final class SajuTabFoundationUITests: XCTestCase {
         XCTAssertTrue(menu.waitForExistence(timeout: 3))
     }
 
-    // T17
-    func test_sajuContent_placeholderVisible() {
-        launchSajuTab()
-        let placeholderText = app.staticTexts["SajuTabContentPlaceholderText"]
-        XCTAssertTrue(placeholderText.waitForExistence(timeout: 3))
-        XCTAssertEqual(placeholderText.label, "준비중")
+    // T17 — WF4-02에서 SajuTabContentPlaceholderView를 SajuTabContentView로 교체함.
+    // placeholder identifier가 더 이상 렌더되지 않으므로 skip 처리.
+    func test_sajuContent_placeholderVisible() throws {
+        throw XCTSkip("WF4-02: SajuTabContentPlaceholderView replaced by SajuTabContentView")
     }
 
     private func tapPushAndAssertDestination(

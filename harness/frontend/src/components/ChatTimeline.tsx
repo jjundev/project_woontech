@@ -38,9 +38,39 @@ interface UiTestRun {
   finished: boolean;
   exitCode?: number;
   durationS?: number;
+  /** Live tail of stdout lines streamed via `ui_tests_output`. Capped to keep React re-render cheap. */
+  lines: string[];
+  /** Number of earlier lines dropped from the head of `lines` when the cap was hit. */
+  truncated: number;
 }
 
-type Row = (ChatGroup & { kind: "group" }) | PhaseDivider | UiTestRun;
+const UI_TEST_LINES_CAP = 400;
+
+interface UiVerifyNoticeRow {
+  kind: "ui_verify_notice";
+  key: string;
+  ts: number;
+  variant: "skipped" | "failed" | "loopback" | "stalled";
+  iteration?: number;
+  text: string;
+  detail?: string;
+}
+
+interface UiReviewProgressRow {
+  kind: "ui_review_progress";
+  key: string;
+  ts: number;
+  variant: "iter_progress" | "retry";
+  iteration?: number;
+  text: string;
+}
+
+type Row =
+  | (ChatGroup & { kind: "group" })
+  | PhaseDivider
+  | UiTestRun
+  | UiVerifyNoticeRow
+  | UiReviewProgressRow;
 
 export function ChatTimeline({ events }: { events: HarnessEvent[] }) {
   const [now, setNow] = useState(() => Date.now());
@@ -83,6 +113,12 @@ export function ChatTimeline({ events }: { events: HarnessEvent[] }) {
         }
         if (row.kind === "ui_tests") {
           return <UiTestRunRow key={row.key} run={row} now={now} />;
+        }
+        if (row.kind === "ui_verify_notice") {
+          return <UiVerifyNotice key={row.key} row={row} />;
+        }
+        if (row.kind === "ui_review_progress") {
+          return <UiReviewProgress key={row.key} row={row} />;
         }
         return <ChatBubble key={row.key} group={row} now={now} />;
       })}
@@ -211,7 +247,29 @@ function buildRows(events: HarnessEvent[]): Row[] {
         startTs: event.ts,
         command: String(event.payload?.command ?? ""),
         finished: false,
+        lines: [],
+        truncated: 0,
       });
+      continue;
+    }
+
+    if (event.type === "ui_tests_output") {
+      const iteration = (event.payload?.iteration as number | undefined) ?? event.iteration;
+      const line = String(event.payload?.line ?? "");
+      // Append to the most recent un-finished ui_tests row with the same iteration.
+      // If we somehow miss the `ui_tests_started` event, drop the line silently.
+      for (let i = rows.length - 1; i >= 0; i--) {
+        const row = rows[i];
+        if (row.kind === "ui_tests" && !row.finished && row.iteration === iteration) {
+          row.lines.push(line);
+          if (row.lines.length > UI_TEST_LINES_CAP) {
+            const drop = row.lines.length - UI_TEST_LINES_CAP;
+            row.lines.splice(0, drop);
+            row.truncated += drop;
+          }
+          break;
+        }
+      }
       continue;
     }
 
@@ -227,6 +285,109 @@ function buildRows(events: HarnessEvent[]): Row[] {
           break;
         }
       }
+      continue;
+    }
+
+    if (event.type === "ui_verify_skipped") {
+      flush();
+      rows.push({
+        kind: "ui_verify_notice",
+        key: `ui_verify_skipped:${event.ts}`,
+        ts: event.ts,
+        variant: "skipped",
+        text: "UI verification skipped",
+        detail: String(event.payload?.reason ?? ""),
+      });
+      continue;
+    }
+
+    if (event.type === "ui_verify_failed") {
+      flush();
+      const iteration = (event.payload?.iteration as number | undefined) ?? event.iteration;
+      const reason = String(event.payload?.reason ?? "");
+      const exitCode = event.payload?.exit_code;
+      const detailParts: string[] = [];
+      if (reason) detailParts.push(reason);
+      if (exitCode !== undefined && exitCode !== null) detailParts.push(`exit ${exitCode}`);
+      rows.push({
+        kind: "ui_verify_notice",
+        key: `ui_verify_failed:${event.ts}`,
+        ts: event.ts,
+        variant: "failed",
+        iteration,
+        text: "UI verification failed",
+        detail: detailParts.join(" · "),
+      });
+      continue;
+    }
+
+    if (event.type === "ui_verify_rework_loopback") {
+      flush();
+      const iteration = (event.payload?.iteration as number | undefined) ?? event.iteration;
+      const loop = event.payload?.loop;
+      const maxLoops = event.payload?.max_loops;
+      rows.push({
+        kind: "ui_verify_notice",
+        key: `ui_verify_loopback:${event.ts}`,
+        ts: event.ts,
+        variant: "loopback",
+        iteration,
+        text: "Looping back to implementor",
+        detail:
+          loop !== undefined && maxLoops !== undefined
+            ? `rework ${loop}/${maxLoops}`
+            : undefined,
+      });
+      continue;
+    }
+
+    if (event.type === "agent_stall" && event.payload?.phase === "ui_verify_review") {
+      flush();
+      const iteration = (event.payload?.iteration as number | undefined) ?? event.iteration;
+      const headSha = event.payload?.head_sha;
+      rows.push({
+        kind: "ui_verify_notice",
+        key: `ui_verify_stalled:${event.ts}`,
+        ts: event.ts,
+        variant: "stalled",
+        iteration,
+        text: "Reviewer made no changes — stalled",
+        detail: headSha ? `head ${headSha}` : undefined,
+      });
+      continue;
+    }
+
+    if (event.type === "iter_progress" && event.payload?.phase === "ui_verify_review") {
+      flush();
+      const iteration = (event.payload?.iteration as number | undefined) ?? event.iteration;
+      const pre = event.payload?.pre_sha;
+      const post = event.payload?.post_sha;
+      const shaText = pre && post ? `${pre} → ${post}` : String(post || pre || "");
+      rows.push({
+        kind: "ui_review_progress",
+        key: `ui_review_iter:${event.ts}`,
+        ts: event.ts,
+        variant: "iter_progress",
+        iteration,
+        text: shaText
+          ? `Reviewer applied changes (${shaText})`
+          : "Reviewer applied changes",
+      });
+      continue;
+    }
+
+    if (event.type === "retry" && event.payload?.phase === "ui_verify_review") {
+      flush();
+      const iteration = (event.payload?.iteration as number | undefined) ?? event.iteration;
+      const next = iteration !== undefined ? iteration + 1 : undefined;
+      rows.push({
+        kind: "ui_review_progress",
+        key: `ui_review_retry:${event.ts}`,
+        ts: event.ts,
+        variant: "retry",
+        iteration,
+        text: next !== undefined ? `Retrying UI tests (iter ${next})` : "Retrying UI tests",
+      });
       continue;
     }
     // Other event types (state_changed, file_changed, agent_usage, plan_*) are
@@ -245,7 +406,10 @@ function formatDuration(seconds: number): string {
   return `${m}m ${s.toString().padStart(2, "0")}s`;
 }
 
+const UI_TEST_LINES_VISIBLE = 8;
+
 function UiTestRunRow({ run, now }: { run: UiTestRun; now: number }) {
+  const [expanded, setExpanded] = useState(false);
   const elapsedS = run.finished
     ? run.durationS ?? 0
     : Math.max(0, now / 1000 - run.startTs);
@@ -261,15 +425,82 @@ function UiTestRunRow({ run, now }: { run: UiTestRun; now: number }) {
     : failed
     ? "border-rose-700/60 bg-rose-900/20 text-rose-200"
     : "border-amber-700/60 bg-amber-900/20 text-amber-200";
+  const totalLines = run.lines.length + run.truncated;
+  const visibleLines = expanded ? run.lines : run.lines.slice(-UI_TEST_LINES_VISIBLE);
+  const hiddenCount = expanded
+    ? run.truncated
+    : run.truncated + Math.max(0, run.lines.length - UI_TEST_LINES_VISIBLE);
+  const hasLines = run.lines.length > 0;
+
   return (
     <div
-      className={`rounded-md border ${stateClass} px-2.5 py-1.5 flex items-center gap-2`}
+      className={`rounded-md border ${stateClass} px-2.5 py-1.5`}
       title={run.command}
     >
-      <span className="font-mono text-[10px]">{run.finished ? (passed ? "✓" : "✗") : "▶"}</span>
-      <span className="font-medium text-[12px]">{label}</span>
-      {run.iteration !== undefined && (
-        <span className="text-[10px] opacity-70">· iter {run.iteration}</span>
+      <div className="flex items-center gap-2">
+        <span className="font-mono text-[10px]">{run.finished ? (passed ? "✓" : "✗") : "▶"}</span>
+        <span className="font-medium text-[12px]">{label}</span>
+        {run.iteration !== undefined && (
+          <span className="text-[10px] opacity-70">· iter {run.iteration}</span>
+        )}
+        {hasLines && (
+          <>
+            <span className="flex-1" />
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              className="text-[10px] opacity-70 hover:opacity-100"
+            >
+              {expanded ? `collapse · ${totalLines} lines` : `show all · ${totalLines} lines`}
+            </button>
+          </>
+        )}
+      </div>
+      {hasLines && (
+        <div className="mt-1.5 rounded bg-slate-950/60 border border-slate-800/80 p-1.5 max-h-64 overflow-auto">
+          {hiddenCount > 0 && (
+            <div className="text-[10px] text-slate-500 italic mb-1">
+              · {hiddenCount} earlier line{hiddenCount === 1 ? "" : "s"} hidden
+            </div>
+          )}
+          <pre className="text-[10px] leading-snug text-slate-300 whitespace-pre-wrap break-all font-mono">
+            {visibleLines.join("\n")}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function UiVerifyNotice({ row }: { row: UiVerifyNoticeRow }) {
+  const styles: Record<UiVerifyNoticeRow["variant"], { stateClass: string; icon: string }> = {
+    skipped: { stateClass: "border-slate-700/60 bg-slate-900/40 text-slate-300", icon: "↷" },
+    failed: { stateClass: "border-rose-700/60 bg-rose-900/20 text-rose-200", icon: "✗" },
+    loopback: { stateClass: "border-amber-700/60 bg-amber-900/20 text-amber-200", icon: "↺" },
+    stalled: { stateClass: "border-rose-700/60 bg-rose-900/20 text-rose-200", icon: "⏸" },
+  };
+  const { stateClass, icon } = styles[row.variant];
+  return (
+    <div className={`rounded-md border ${stateClass} px-2.5 py-1.5 flex items-center gap-2`}>
+      <span className="font-mono text-[10px]">{icon}</span>
+      <span className="font-medium text-[12px]">{row.text}</span>
+      {row.iteration !== undefined && (
+        <span className="text-[10px] opacity-70">· iter {row.iteration}</span>
+      )}
+      {row.detail && (
+        <span className="text-[11px] opacity-80 font-mono break-all">· {row.detail}</span>
+      )}
+    </div>
+  );
+}
+
+function UiReviewProgress({ row }: { row: UiReviewProgressRow }) {
+  const icon = row.variant === "retry" ? "↻" : "↗";
+  return (
+    <div className="px-2 py-0.5 flex items-center gap-2 text-[11px] text-slate-400">
+      <span className="font-mono">{icon}</span>
+      <span>{row.text}</span>
+      {row.iteration !== undefined && (
+        <span className="opacity-70">· iter {row.iteration}</span>
       )}
     </div>
   );

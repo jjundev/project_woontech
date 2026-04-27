@@ -724,6 +724,7 @@ function TimelinePanel({ events }: { events: HarnessEvent[] }) {
           <FilterToggle label="text" checked={filters.agentText} onChange={setFlag("agentText")} />
           <FilterToggle label="tools" checked={filters.toolCalls} onChange={setFlag("toolCalls")} />
           <FilterToggle label="files" checked={filters.fileChanges} onChange={setFlag("fileChanges")} />
+          <FilterToggle label="logs" checked={filters.uiTestOutput} onChange={setFlag("uiTestOutput")} />
         </div>
       </div>
       <div

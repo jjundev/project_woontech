@@ -25,7 +25,7 @@ struct SajuStudySectionHeaderView: View {
                         Capsule().stroke(DesignTokens.line3, lineWidth: 1)
                     )
                     .clipShape(Capsule())
-                    .accessibilityLabel("연속 학습 \(streakDays)일")
+                    .accessibilityLabel("연속 \(streakDays)일")
                     .accessibilityIdentifier("SajuStreakBadge")
             }
 

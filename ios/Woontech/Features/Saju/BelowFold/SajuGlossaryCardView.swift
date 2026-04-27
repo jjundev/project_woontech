@@ -55,7 +55,6 @@ struct SajuGlossaryCardView: View {
             )
         }
         .buttonStyle(.plain)
-        .accessibilityElement(children: .ignore)
         .accessibilityLabel(voiceOverLabel)
         .accessibilityHint("준비중")
         .accessibilityIdentifier("SajuGlossaryCard")

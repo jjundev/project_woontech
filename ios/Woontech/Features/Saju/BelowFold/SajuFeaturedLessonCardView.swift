@@ -41,7 +41,6 @@ struct SajuFeaturedLessonCardView: View {
             )
         }
         .buttonStyle(.plain)
-        .accessibilityElement(children: .ignore)
         .accessibilityLabel("오늘의 한 가지, \(lesson.title), \(lesson.durationLabel), \(lesson.levelLabel)")
         .accessibilityIdentifier("SajuFeaturedLessonCard")
     }

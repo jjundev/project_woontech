@@ -68,7 +68,6 @@ struct SajuCourseCardView: View {
             )
         }
         .buttonStyle(.plain)
-        .accessibilityElement(children: .ignore)
         .accessibilityLabel(voiceOverLabel)
         .accessibilityIdentifier("SajuCourseCard_\(slotName)")
     }

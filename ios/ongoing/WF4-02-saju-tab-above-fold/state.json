@@ -1,6 +1,6 @@
 {
   "id": "WF4-02-saju-tab-above-fold",
-  "state": "implementing",
+  "state": "ui_verify",
   "paused_from": null,
   "title": "WF4-02 \u2014 \uc0ac\uc8fc \ud0ed above-the-fold (\uc6d0\uad6d \uce74\ub4dc + 5 \uce74\ud14c\uace0\ub9ac)",
   "plan_version": 2,
@@ -15,7 +15,7 @@
   "max_ui_to_impl_loops": 2,
   "escalation": null,
   "created_at": 1777280582.7505221,
-  "updated_at": 1777281498.041146,
+  "updated_at": 1777283038.9139352,
   "branch": "feature/WF4-02-saju-tab-above-fold",
   "pr_url": null
 }

@@ -30,6 +30,7 @@ struct SajuTabView: View {
                 SajuTabContentView(
                     originProvider: deps.userSajuOrigin,
                     categoriesProvider: deps.categories,
+                    learningPathProvider: deps.learningPath,
                     onNavigate: { route in navigationPath.append(route) }
                 )
                 .toolbar(.hidden, for: .navigationBar)

@@ -1,6 +1,6 @@
 {
   "id": "WF4-01-saju-foundation",
-  "state": "ui_verify",
+  "state": "done",
   "paused_from": null,
   "title": "WF4-01 \u2014 \uc0ac\uc8fc \ud0ed Shell + NavigationStack + DI \uc2a4\uce90\ud3f4\ub4dc",
   "plan_version": 0,
@@ -17,5 +17,5 @@
   "created_at": 1777253824.958843,
   "updated_at": 1777259267.666122,
   "branch": "feature/WF4-01-saju-foundation",
-  "pr_url": null
+  "pr_url": "https://github.com/jjundev/project_woontech/pull/37"
 }

@@ -977,6 +977,7 @@ async def _run_ui_tests_once(
     task_dir: Path,
     worktree_dir: Path,
     ui_cmd: str,
+    iteration: int,
 ) -> Optional[int]:
     """Run UI tests once via subprocess and verify diagnostic artifacts.
 
@@ -998,7 +999,22 @@ async def _run_ui_tests_once(
         S.write_state(task_dir, state)
         return None
 
+    monotonic_start = time.monotonic()
+    await emit(
+        "ui_tests_started",
+        task_id=task_id,
+        command=ui_cmd,
+        iteration=iteration,
+    )
     proc = subprocess.run(argv, cwd=str(worktree_dir))
+    duration_s = time.monotonic() - monotonic_start
+    await emit(
+        "ui_tests_finished",
+        task_id=task_id,
+        exit_code=proc.returncode,
+        duration_s=duration_s,
+        iteration=iteration,
+    )
 
     try:
         _assert_test_artifacts_visible(worktree_dir, {"ui"}, started_at)
@@ -1164,7 +1180,7 @@ async def run_ui_verify_phase(
     max_iters = max(1, state.max_ui_review_iters or config.default_max_ui_review_iters)
 
     for iteration in range(1, max_iters + 1):
-        exit_code = await _run_ui_tests_once(task_id, task_dir, worktree_dir, ui_cmd)
+        exit_code = await _run_ui_tests_once(task_id, task_dir, worktree_dir, ui_cmd, iteration)
         if exit_code is None:
             return False
         if exit_code == 0:

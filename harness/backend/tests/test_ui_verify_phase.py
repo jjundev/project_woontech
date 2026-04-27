@@ -149,6 +149,17 @@ async def test_ui_verify_passes_when_command_succeeds_and_artifacts_visible(
 
     assert ok is True
     assert any(t == "ui_verify_passed" for t, _ in events)
+    # Chat visibility: subprocess lifecycle events bracket the test run so the
+    # frontend can render a live "Running UI tests…" status pill.
+    started = [(t, p) for t, p in events if t == "ui_tests_started"]
+    finished = [(t, p) for t, p in events if t == "ui_tests_finished"]
+    assert len(started) == 1
+    assert len(finished) == 1
+    assert started[0][1].get("iteration") == 1
+    assert started[0][1].get("command") == "true"
+    assert finished[0][1].get("exit_code") == 0
+    assert finished[0][1].get("iteration") == 1
+    assert isinstance(finished[0][1].get("duration_s"), float)
     state = S.read_state(task_dir)
     assert state.escalation is None
 

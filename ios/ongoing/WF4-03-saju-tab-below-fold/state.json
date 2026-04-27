@@ -1,0 +1,21 @@
+{
+  "id": "WF4-03-saju-tab-below-fold",
+  "state": "planning",
+  "paused_from": null,
+  "title": "WF4-03 \u2014 \uc0ac\uc8fc \ud0ed below-the-fold (\uc0ac\uc8fc \uacf5\ubd80\ud558\uae30 \uc139\uc158 + Disclaimer)",
+  "plan_version": 0,
+  "impl_version": 0,
+  "plan_retries": 0,
+  "impl_retries": 0,
+  "ui_review_retries": 0,
+  "ui_to_impl_loops": 0,
+  "max_plan_retries": 3,
+  "max_impl_retries": 3,
+  "max_ui_review_iters": 3,
+  "max_ui_to_impl_loops": 2,
+  "escalation": null,
+  "created_at": 1777306831.496278,
+  "updated_at": 1777306831.4969149,
+  "branch": "feature/WF4-03-saju-tab-below-fold",
+  "pr_url": null
+}

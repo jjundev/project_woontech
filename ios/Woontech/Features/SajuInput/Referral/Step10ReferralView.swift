@@ -7,59 +7,68 @@ struct Step10ReferralView: View {
     var onBack: () -> Void = {}
 
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    headerRow
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                headerRow
 
-                    // 혜택 카드
-                    rewardCard
+                // 혜택 카드
+                rewardCard
 
-                    if let result = store.result {
-                        ShareCardView(
-                            result: result,
-                            displayNameLabel: store.input.displayNameLabel,
-                            dateLabel: ShareCardView.todayLabel()
-                        )
-                        .frame(height: 360)
-                        .accessibilityIdentifier("SajuReferralPreview")
-                    }
-
-                    // 공유 CTA 3개
-                    VStack(spacing: 10) {
-                        shareButton(titleKey: "saju.referral.share.instagram",
-                                    identifier: "SajuReferralInstagram",
-                                    primary: true)
-                        shareButton(titleKey: "saju.referral.share.copy",
-                                    identifier: "SajuReferralCopyLink",
-                                    primary: false,
-                                    action: { store.copyInviteLink() })
-                        shareButton(titleKey: "saju.referral.share.kakao",
-                                    identifier: "SajuReferralKakao",
-                                    primary: false)
-                    }
-
-                    inviteCodeCard
-
-                    if store.showToast {
-                        Text(store.toastMessage)
-                            .font(.system(size: 12))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(
-                                Capsule().fill(DesignTokens.ink)
-                            )
-                            .accessibilityIdentifier("SajuReferralToast")
-                    }
+                if let result = store.result {
+                    ShareCardView(
+                        result: result,
+                        displayNameLabel: store.input.displayNameLabel,
+                        dateLabel: ShareCardView.todayLabel()
+                    )
+                    .frame(height: 360)
+                    .accessibilityIdentifier("SajuReferralPreview")
                 }
-                .padding(20)
+
+                // 공유 CTA 3개
+                VStack(spacing: 10) {
+                    shareButton(titleKey: "saju.referral.share.instagram",
+                                identifier: "SajuReferralInstagram",
+                                primary: true)
+                    shareButton(titleKey: "saju.referral.share.copy",
+                                identifier: "SajuReferralCopyLink",
+                                primary: false,
+                                action: { store.copyInviteLink() })
+                    shareButton(titleKey: "saju.referral.share.kakao",
+                                identifier: "SajuReferralKakao",
+                                primary: false)
+                }
+
+                inviteCodeCard
+
+                if store.showToast {
+                    Text(store.toastMessage)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule().fill(DesignTokens.ink)
+                        )
+                        .accessibilityIdentifier("SajuReferralToast")
+                }
             }
+            .padding(20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(DesignTokens.bg)
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("SajuReferralRoot")
+        // Hidden marker so UI tests can locate the referral root via
+        // app.otherElements["SajuReferralRoot"]. Wrapping the ScrollView in
+        // a VStack + .accessibilityElement(children: .contain) was not
+        // surfacing reliably under iOS 26 accessibility tree flattening,
+        // so we use the same Color.clear marker pattern that SajuTabRoot
+        // uses (proven to surface as `app.otherElements`).
+        .overlay(alignment: .topLeading) {
+            Color.clear
+                .frame(width: 1, height: 1)
+                .accessibilityIdentifier("SajuReferralRoot")
+                .accessibilityHidden(false)
+                .allowsHitTesting(false)
+        }
     }
 
     private var headerRow: some View {

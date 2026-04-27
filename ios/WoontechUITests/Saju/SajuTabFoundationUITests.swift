@@ -213,36 +213,49 @@ final class SajuTabFoundationUITests: XCTestCase {
 
         // Saju tab → push elements
         sajuTabBarButton().tap()
-        XCTAssertTrue(app.otherElements["SajuTabRoot"].waitForExistence(timeout: 3))
-        app.buttons["SajuNavPush_elements"].tap()
+        XCTAssertTrue(app.otherElements["SajuTabRoot"].waitForExistence(timeout: 5))
+        let sajuPush = app.buttons["SajuNavPush_elements"]
+        XCTAssertTrue(sajuPush.waitForExistence(timeout: 5))
+        sajuPush.tap()
         XCTAssertTrue(
-            app.otherElements["SajuPlaceholderDestination_elements"].waitForExistence(timeout: 3)
+            app.otherElements["SajuPlaceholderDestination_elements"].waitForExistence(timeout: 5)
         )
 
         // Home tab → push investing
         let homeTab = app.tabBars.buttons["홈"]
+        XCTAssertTrue(homeTab.waitForExistence(timeout: 5))
         homeTab.tap()
-        XCTAssertTrue(app.otherElements["HomeDashboardRoot"].waitForExistence(timeout: 3))
-        app.buttons["HomeNavPushInvesting"].tap()
+        XCTAssertTrue(app.otherElements["HomeDashboardRoot"].waitForExistence(timeout: 5))
+        let homePush = app.buttons["HomeNavPushInvesting"]
+        XCTAssertTrue(homePush.waitForExistence(timeout: 5))
+        homePush.tap()
         // The home investing destination is `InvestingAttitudeDetailView`; assert
         // its title text is visible (was previously the deprecated placeholder).
-        XCTAssertTrue(app.staticTexts["InvestingAttitudeDetailTitle"].waitForExistence(timeout: 3))
+        // Use a longer timeout because pushing inside a TabView-nested
+        // NavigationStack after a tab-switch sequence takes longer to settle
+        // in iOS 26 than a direct boot-and-push case.
+        XCTAssertTrue(app.staticTexts["InvestingAttitudeDetailTitle"].waitForExistence(timeout: 8))
 
-        // Saju placeholder must NOT be present in home tab tree.
+        // Saju placeholder must NOT be visible in the home tab tree (current
+        // visible content). It may still exist in the off-screen saju tab tree
+        // because TabView keeps inactive tabs in memory. Assert it is not
+        // hittable from the home tab view.
+        let sajuPlaceholderInHome = app.otherElements["SajuPlaceholderDestination_elements"]
         XCTAssertFalse(
-            app.otherElements["SajuPlaceholderDestination_elements"].exists,
-            "Saju placeholder must not leak into home tab"
+            sajuPlaceholderInHome.exists && sajuPlaceholderInHome.isHittable,
+            "Saju placeholder must not be visible/hittable in home tab"
         )
 
         // Switch back to saju and confirm its stack is intact.
         sajuTabBarButton().tap()
         XCTAssertTrue(
-            app.otherElements["SajuPlaceholderDestination_elements"].waitForExistence(timeout: 3),
+            app.otherElements["SajuPlaceholderDestination_elements"].waitForExistence(timeout: 5),
             "Saju stack should remain at the elements destination"
         )
+        let homeTitleInSaju = app.staticTexts["InvestingAttitudeDetailTitle"]
         XCTAssertFalse(
-            app.staticTexts["InvestingAttitudeDetailTitle"].exists,
-            "Home destination must not leak into saju tab"
+            homeTitleInSaju.exists && homeTitleInSaju.isHittable,
+            "Home destination must not be visible/hittable in saju tab"
         )
     }
 }

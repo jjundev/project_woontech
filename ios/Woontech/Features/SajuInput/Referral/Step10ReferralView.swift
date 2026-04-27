@@ -56,7 +56,19 @@ struct Step10ReferralView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(DesignTokens.bg)
-        .accessibilityIdentifier("SajuReferralRoot")
+        // Hidden marker so UI tests can locate the referral root via
+        // app.otherElements["SajuReferralRoot"]. Wrapping the ScrollView in
+        // a VStack + .accessibilityElement(children: .contain) was not
+        // surfacing reliably under iOS 26 accessibility tree flattening,
+        // so we use the same Color.clear marker pattern that SajuTabRoot
+        // uses (proven to surface as `app.otherElements`).
+        .overlay(alignment: .topLeading) {
+            Color.clear
+                .frame(width: 1, height: 1)
+                .accessibilityIdentifier("SajuReferralRoot")
+                .accessibilityHidden(false)
+                .allowsHitTesting(false)
+        }
     }
 
     private var headerRow: some View {

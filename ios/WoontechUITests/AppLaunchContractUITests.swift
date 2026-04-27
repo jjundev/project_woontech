@@ -62,6 +62,23 @@ final class AppLaunchContractUITests: XCTestCase {
                        "OnboardingRoot must not appear when -openReferral was supplied")
     }
 
+    func test_openSajuTab_routesToSajuTab_andStaysAfterSplash() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-resetOnboarding", "-openSajuTab"]
+        app.launch()
+
+        let sajuRoot = app.otherElements["SajuTabRoot"]
+        XCTAssertTrue(sajuRoot.waitForExistence(timeout: 3),
+                      "SajuTabRoot should appear after launch with -openSajuTab")
+
+        waitPastSplash()
+
+        XCTAssertTrue(sajuRoot.exists,
+                      "SajuTabRoot must remain after splash; splash callback overrode launch-arg route")
+        XCTAssertFalse(app.otherElements["OnboardingRoot"].exists,
+                       "OnboardingRoot must not appear when -openSajuTab was supplied")
+    }
+
     func test_sajuStartStep_routesToSajuInput_andStaysAfterSplash() {
         let app = XCUIApplication()
         // -resetOnboarding makes hasSeenOnboarding=false, so without the route

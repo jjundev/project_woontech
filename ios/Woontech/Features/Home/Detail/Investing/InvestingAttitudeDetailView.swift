@@ -59,6 +59,7 @@ struct InvestingAttitudeDetailView: View {
                 .padding(.vertical, 20)
             }
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("InvestingAttitudeDetailView")
     }
 }

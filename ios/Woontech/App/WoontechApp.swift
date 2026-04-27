@@ -5,6 +5,7 @@ struct WoontechApp: App {
     @StateObject private var store: OnboardingStore
     @StateObject private var sajuStore: SajuInputStore
     @StateObject private var homeDeps: HomeDependencies
+    @StateObject private var sajuTabDeps: SajuTabDependencies
 
     init() {
         let args = ProcessInfo.processInfo.arguments
@@ -140,6 +141,7 @@ struct WoontechApp: App {
             resolvedDeps = HomeDependencies.mock
         }
         _homeDeps = StateObject(wrappedValue: resolvedDeps)
+        _sajuTabDeps = StateObject(wrappedValue: SajuTabDependencies.mock)
     }
 
     var body: some Scene {
@@ -148,6 +150,7 @@ struct WoontechApp: App {
                 .environmentObject(store)
                 .environmentObject(sajuStore)
                 .environmentObject(homeDeps)
+                .environmentObject(sajuTabDeps)
                 .onAppear {
                     applySajuStartStep()
                     applySignedInFlag()

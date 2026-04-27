@@ -12,6 +12,7 @@ struct RootView: View {
     @EnvironmentObject private var store: OnboardingStore
     @EnvironmentObject private var sajuStore: SajuInputStore
     @EnvironmentObject private var homeDeps: HomeDependencies
+    @EnvironmentObject private var sajuTabDeps: SajuTabDependencies
     @State private var route: Route = .splash
 
     var body: some View {
@@ -34,8 +35,9 @@ struct RootView: View {
                 .environmentObject(sajuStore)
                 .transition(.opacity)
             case .home:
-                HomeDashboardView()
+                MainTabContainerView()
                     .environmentObject(homeDeps)
+                    .environmentObject(sajuTabDeps)
                     .transition(.opacity)
             case .referral:
                 Step10ReferralView(onBack: {
@@ -74,6 +76,10 @@ struct RootView: View {
         if args.contains("-openReferral") {
             // Allow UI tests to land directly on referral.
             route = .referral
+        } else if args.contains("-openSajuTab") {
+            // Land on main tab container; SajuTab is selected via
+            // MainTabContainerView.parseInitialSelection().
+            route = .home
         } else if args.contains("-openHome") {
             route = .home
         } else if args.contains("-sajuStartStep") {

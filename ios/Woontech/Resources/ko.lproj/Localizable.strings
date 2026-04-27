@@ -157,3 +157,19 @@
 "saju.home.title" = "홈 (WF3)";
 "saju.home.body" = "결과는 세션 동안 유지돼요.\n홈 화면은 다음 와이어프레임에서 구현됩니다.";
 "saju.home.referral" = "친구 초대 화면 열기";
+
+/* Saju Tab (WF4-01) */
+"saju.tab.title" = "사주";
+"saju.tab.menu.label" = "사주 메뉴";
+"saju.tab.content.placeholder" = "준비중";
+"saju.tab.tabBar.label" = "사주 탭";
+"saju.tab.home.label" = "홈";
+"saju.tab.invest.label" = "투자";
+"saju.tab.my.label" = "마이";
+"saju.placeholder.elements" = "오행 분포 (준비중)";
+"saju.placeholder.tenGods" = "십성 분석 (준비중)";
+"saju.placeholder.learn" = "사주 공부 (준비중)";
+"saju.placeholder.lesson" = "레슨 (준비중)";
+"saju.placeholder.daewoon" = "대운 · 세운 (준비중)";
+"saju.placeholder.hapchung" = "합충형파 (준비중)";
+"saju.placeholder.yongsin" = "용신 · 희신 (준비중)";

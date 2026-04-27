@@ -141,7 +141,41 @@ struct WoontechApp: App {
             resolvedDeps = HomeDependencies.mock
         }
         _homeDeps = StateObject(wrappedValue: resolvedDeps)
-        _sajuTabDeps = StateObject(wrappedValue: SajuTabDependencies.mock)
+
+        // Parse Saju below-fold mock launch args for UI tests (WF4-03)
+        let sajuStreakDaysOverride: Int? = {
+            guard let idx = args.firstIndex(of: "-sajuStreakDays"),
+                  idx + 1 < args.count,
+                  let days = Int(args[idx + 1]) else { return nil }
+            return days
+        }()
+        let sajuFeaturedLessonNil = args.contains("-sajuFeaturedLessonNil")
+            && args.firstIndex(of: "-sajuFeaturedLessonNil").flatMap { idx -> String? in
+                let next = idx + 1
+                return next < args.count ? args[next] : nil
+            } == "1"
+
+        let sajuDeps: SajuTabDependencies
+        if sajuStreakDaysOverride != nil || sajuFeaturedLessonNil {
+            let overrideDays = sajuStreakDaysOverride ?? 3
+            let weeklyProgress = WeeklyProgress(completed: 3, goal: 5, streakDays: overrideDays)
+            let featuredLesson: FeaturedLesson? = sajuFeaturedLessonNil
+                ? nil
+                : FeaturedLesson(
+                    id: "L-TEN-001",
+                    title: "십성이란 무엇인가?",
+                    durationLabel: "3분",
+                    levelLabel: "초급"
+                )
+            let overrideProvider = MockSajuLearningPathProvider(
+                weeklyProgress: weeklyProgress,
+                featuredLesson: featuredLesson
+            )
+            sajuDeps = SajuTabDependencies(learningPath: overrideProvider)
+        } else {
+            sajuDeps = SajuTabDependencies.mock
+        }
+        _sajuTabDeps = StateObject(wrappedValue: sajuDeps)
     }
 
     var body: some Scene {

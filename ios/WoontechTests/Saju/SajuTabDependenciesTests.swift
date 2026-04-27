@@ -30,6 +30,9 @@ private struct StubSajuLearningPathProvider: SajuLearningPathProviding {
     let courses: [SajuCourse] = [
         SajuCourse(id: "stub", title: "Stub", lessonCount: 1, progress: 0.5, status: .current)
     ]
+    // WF4-03 신규 프로퍼티 — default 구현이 없는 프로퍼티만 명시
+    var featuredLesson: FeaturedLesson? { nil }
+    var glossaryTermCount: Int { 0 }
 }
 
 private struct StubSajuLessonProvider: SajuLessonProviding {

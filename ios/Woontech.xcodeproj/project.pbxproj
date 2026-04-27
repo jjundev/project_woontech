@@ -126,6 +126,14 @@
 		B0010704000000000000B704 /* SajuTabContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010704000000000000A704 /* SajuTabContentView.swift */; };
 		B0010705000000000000B705 /* SajuAboveFoldTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010705000000000000A705 /* SajuAboveFoldTests.swift */; };
 		B0010706000000000000B706 /* SajuAboveFoldUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010706000000000000A706 /* SajuAboveFoldUITests.swift */; };
+		B0010730000000000000B730 /* SajuStudySectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010730000000000000A730 /* SajuStudySectionView.swift */; };
+		B0010731000000000000B731 /* SajuStudySectionHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010731000000000000A731 /* SajuStudySectionHeaderView.swift */; };
+		B0010732000000000000B732 /* SajuFeaturedLessonCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010732000000000000A732 /* SajuFeaturedLessonCardView.swift */; };
+		B0010733000000000000B733 /* SajuCourseGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010733000000000000A733 /* SajuCourseGridView.swift */; };
+		B0010734000000000000B734 /* SajuCourseCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010734000000000000A734 /* SajuCourseCardView.swift */; };
+		B0010735000000000000B735 /* SajuGlossaryCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010735000000000000A735 /* SajuGlossaryCardView.swift */; };
+		B0010736000000000000B736 /* SajuBelowFoldTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010736000000000000A736 /* SajuBelowFoldTests.swift */; };
+		B0010737000000000000B737 /* SajuBelowFoldUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010737000000000000A737 /* SajuBelowFoldUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -268,6 +276,14 @@
 		A0010704000000000000A704 /* SajuTabContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuTabContentView.swift; sourceTree = "<group>"; };
 		A0010705000000000000A705 /* SajuAboveFoldTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuAboveFoldTests.swift; sourceTree = "<group>"; };
 		A0010706000000000000A706 /* SajuAboveFoldUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuAboveFoldUITests.swift; sourceTree = "<group>"; };
+		A0010730000000000000A730 /* SajuStudySectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuStudySectionView.swift; sourceTree = "<group>"; };
+		A0010731000000000000A731 /* SajuStudySectionHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuStudySectionHeaderView.swift; sourceTree = "<group>"; };
+		A0010732000000000000A732 /* SajuFeaturedLessonCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuFeaturedLessonCardView.swift; sourceTree = "<group>"; };
+		A0010733000000000000A733 /* SajuCourseGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuCourseGridView.swift; sourceTree = "<group>"; };
+		A0010734000000000000A734 /* SajuCourseCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuCourseCardView.swift; sourceTree = "<group>"; };
+		A0010735000000000000A735 /* SajuGlossaryCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuGlossaryCardView.swift; sourceTree = "<group>"; };
+		A0010736000000000000A736 /* SajuBelowFoldTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuBelowFoldTests.swift; sourceTree = "<group>"; };
+		A0010737000000000000A737 /* SajuBelowFoldUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuBelowFoldUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -373,6 +389,7 @@
 			children = (
 				A0010651000000000000A651 /* Providers */,
 				A0010710000000000000A710 /* AboveFold */,
+				A0010720000000000000A720 /* BelowFold */,
 				A0010610000000000000A610 /* SajuTabView.swift */,
 				A0010611000000000000A611 /* SajuTabHeaderView.swift */,
 				A0010612000000000000A612 /* SajuTabContentPlaceholderView.swift */,
@@ -395,6 +412,19 @@
 			path = AboveFold;
 			sourceTree = "<group>";
 		};
+		A0010720000000000000A720 /* BelowFold */ = {
+			isa = PBXGroup;
+			children = (
+				A0010730000000000000A730 /* SajuStudySectionView.swift */,
+				A0010731000000000000A731 /* SajuStudySectionHeaderView.swift */,
+				A0010732000000000000A732 /* SajuFeaturedLessonCardView.swift */,
+				A0010733000000000000A733 /* SajuCourseGridView.swift */,
+				A0010734000000000000A734 /* SajuCourseCardView.swift */,
+				A0010735000000000000A735 /* SajuGlossaryCardView.swift */,
+			);
+			path = BelowFold;
+			sourceTree = "<group>";
+		};
 		A0010651000000000000A651 /* Providers */ = {
 			isa = PBXGroup;
 			children = (
@@ -415,6 +445,7 @@
 				A0010631000000000000A631 /* SajuTabDependenciesTests.swift */,
 				A0010632000000000000A632 /* SajuMockProvidersTests.swift */,
 				A0010705000000000000A705 /* SajuAboveFoldTests.swift */,
+				A0010736000000000000A736 /* SajuBelowFoldTests.swift */,
 			);
 			path = Saju;
 			sourceTree = "<group>";
@@ -424,6 +455,7 @@
 			children = (
 				A0010640000000000000A640 /* SajuTabFoundationUITests.swift */,
 				A0010706000000000000A706 /* SajuAboveFoldUITests.swift */,
+				A0010737000000000000A737 /* SajuBelowFoldUITests.swift */,
 			);
 			path = Saju;
 			sourceTree = "<group>";
@@ -785,6 +817,7 @@
 				B0010631000000000000B631 /* SajuTabDependenciesTests.swift in Sources */,
 				B0010632000000000000B632 /* SajuMockProvidersTests.swift in Sources */,
 				B0010705000000000000B705 /* SajuAboveFoldTests.swift in Sources */,
+				B0010736000000000000B736 /* SajuBelowFoldTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -878,6 +911,12 @@
 				B0010702000000000000B702 /* SajuCategoryCardView.swift in Sources */,
 				B0010703000000000000B703 /* SajuCategoriesSection.swift in Sources */,
 				B0010704000000000000B704 /* SajuTabContentView.swift in Sources */,
+				B0010730000000000000B730 /* SajuStudySectionView.swift in Sources */,
+				B0010731000000000000B731 /* SajuStudySectionHeaderView.swift in Sources */,
+				B0010732000000000000B732 /* SajuFeaturedLessonCardView.swift in Sources */,
+				B0010733000000000000B733 /* SajuCourseGridView.swift in Sources */,
+				B0010734000000000000B734 /* SajuCourseCardView.swift in Sources */,
+				B0010735000000000000B735 /* SajuGlossaryCardView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -898,6 +937,7 @@
 				B0010503000000000000B503 /* EventDetailUITests.swift in Sources */,
 				B0010640000000000000B640 /* SajuTabFoundationUITests.swift in Sources */,
 				B0010706000000000000B706 /* SajuAboveFoldUITests.swift in Sources */,
+				B0010737000000000000B737 /* SajuBelowFoldUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

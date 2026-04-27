@@ -84,6 +84,7 @@ struct WeeklyEventsSection: View {
                 }
             }
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("WeeklyEventsSection")
     }
 }

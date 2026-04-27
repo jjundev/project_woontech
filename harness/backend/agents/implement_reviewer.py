@@ -60,6 +60,26 @@ Your task (in order):
    - Root containers carrying a UI test anchor (`*Root`, `*TabRoot`, hidden
      push triggers `*NavPush*`, `HomeBellTapCount`, etc.)
    - New views that introduce an identifier the existing UI tests query
+   - Topology trigger. If this slice's diff introduces or modifies a
+     `TabView`, a `NavigationStack`, or any `.navigationDestination` /
+     `.sheet` / `.fullScreenCover` composition root, this counts as a
+     navigation-topology change. In that case the audit is NOT limited
+     to changed files: enumerate every SwiftUI view that can now be
+     rendered as a child of the new `TabView`, or pushed onto the new
+     `NavigationStack`, even if the file itself was untouched in this
+     diff. For each such view, Read its source and confirm that any
+     root container carrying `.accessibilityIdentifier(...)` ALSO
+     carries `.accessibilityElement(children: .contain)` (or uses the
+     `Color.clear` leaf-marker pattern). A missing pair on a view newly
+     reachable in this topology is a blocking regression: identifier
+     flattening will manifest as `element not found` on the next UI
+     test run (this is exactly the WF4-01/T29 root cause —
+     `InvestingAttitudeDetailView` was untouched in the slice diff but
+     became reachable through a new TabView+NavigationStack composition,
+     and its missing `children: .contain` flattened
+     `InvestingAttitudeDetailTitle`). Eligible for reviewer patch only
+     when the fix is one line per file; otherwise
+     IMPLEMENT_REWORK_REQUIRED.
    For each such surface:
    - Read the relevant UI test file (e.g. under `WoontechUITests/`) and list
      every `app.<query>["<identifier>"]` call. Note the query type —

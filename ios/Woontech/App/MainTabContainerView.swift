@@ -64,12 +64,12 @@ struct MainTabContainerView: View {
                         String(localized: "saju.tab.title", defaultValue: "사주"),
                         systemImage: "sparkles"
                     )
+                    .accessibilityLabel(Text(String(
+                        localized: "saju.tab.tabBar.label",
+                        defaultValue: "사주 탭"
+                    )))
                 }
                 .tag(2)
-                .accessibilityLabel(Text(String(
-                    localized: "saju.tab.tabBar.label",
-                    defaultValue: "사주 탭"
-                )))
 
             // Tab 3 — 마이 (placeholder)
             MainTabPlaceholderView(label: "my")

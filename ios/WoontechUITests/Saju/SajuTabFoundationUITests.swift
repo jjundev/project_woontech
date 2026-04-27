@@ -224,7 +224,9 @@ final class SajuTabFoundationUITests: XCTestCase {
         homeTab.tap()
         XCTAssertTrue(app.otherElements["HomeDashboardRoot"].waitForExistence(timeout: 3))
         app.buttons["HomeNavPushInvesting"].tap()
-        XCTAssertTrue(app.staticTexts["HomeRoute_investingDest"].waitForExistence(timeout: 3))
+        // The home investing destination is `InvestingAttitudeDetailView`; assert
+        // its title text is visible (was previously the deprecated placeholder).
+        XCTAssertTrue(app.staticTexts["InvestingAttitudeDetailTitle"].waitForExistence(timeout: 3))
 
         // Saju placeholder must NOT be present in home tab tree.
         XCTAssertFalse(
@@ -239,7 +241,7 @@ final class SajuTabFoundationUITests: XCTestCase {
             "Saju stack should remain at the elements destination"
         )
         XCTAssertFalse(
-            app.staticTexts["HomeRoute_investingDest"].exists,
+            app.staticTexts["InvestingAttitudeDetailTitle"].exists,
             "Home destination must not leak into saju tab"
         )
     }

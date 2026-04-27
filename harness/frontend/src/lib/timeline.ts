@@ -89,24 +89,32 @@ export function titleCaseAgent(agent: string): string {
 }
 
 /** Event types that flood the feed. Gated behind filter toggles. */
-export const HIGH_VOLUME_TYPES = new Set(["agent_text", "agent_tool_call", "file_changed"]);
+export const HIGH_VOLUME_TYPES = new Set([
+  "agent_text",
+  "agent_tool_call",
+  "file_changed",
+  "ui_tests_output",
+]);
 
 export type FilterFlags = {
   agentText: boolean;
   toolCalls: boolean;
   fileChanges: boolean;
+  uiTestOutput: boolean;
 };
 
 export const DEFAULT_FILTERS: FilterFlags = {
   agentText: false,
   toolCalls: false,
   fileChanges: false,
+  uiTestOutput: false,
 };
 
 export function eventPassesFilters(event: HarnessEvent, filters: FilterFlags): boolean {
   if (event.type === "agent_text" && !filters.agentText) return false;
   if (event.type === "agent_tool_call" && !filters.toolCalls) return false;
   if (event.type === "file_changed" && !filters.fileChanges) return false;
+  if (event.type === "ui_tests_output" && !filters.uiTestOutput) return false;
   return true;
 }
 
@@ -311,6 +319,77 @@ export function describeEvent(event: HarnessEvent): EventMeta {
         inline: [
           ...(p.reason ? [{ key: "reason", value: str(p.reason) }] : []),
           ...(p.head_sha ? [{ key: "head", value: str(p.head_sha) }] : []),
+        ],
+      };
+    case "ui_tests_started":
+      return {
+        category: "control",
+        icon: "▶",
+        label: "UI tests started",
+        inline: [
+          ...(p.command ? [{ key: "cmd", value: trunc(str(p.command), 80) }] : []),
+        ],
+      };
+    case "ui_tests_finished": {
+      const exit = Number(p.exit_code ?? 0);
+      const dur = Number(p.duration_s ?? 0);
+      return {
+        category: exit === 0 ? "success" : "error",
+        icon: exit === 0 ? "✓" : "✗",
+        label: exit === 0 ? "UI tests passed" : "UI tests failed",
+        inline: [
+          { key: "exit", value: String(exit) },
+          { key: "duration", value: `${dur.toFixed(1)}s` },
+        ],
+      };
+    }
+    case "ui_tests_output": {
+      const line = trunc(str(p.line), 120);
+      return {
+        category: "agent",
+        icon: "·",
+        label: "UI test log",
+        inline: [{ key: "line", value: line }],
+      };
+    }
+    case "ui_verify_skipped":
+      return {
+        category: "warning",
+        icon: "↷",
+        label: "UI verification skipped",
+        inline: p.reason ? [{ key: "reason", value: trunc(str(p.reason), 80) }] : [],
+      };
+    case "ui_verify_passed":
+      return { category: "success", icon: "✓", label: "UI verification passed", inline: [] };
+    case "ui_verify_failed":
+      return {
+        category: "error",
+        icon: "✗",
+        label: "UI verification failed",
+        inline: [
+          ...(p.reason ? [{ key: "reason", value: trunc(str(p.reason), 80) }] : []),
+          ...(p.exit_code !== undefined ? [{ key: "exit", value: str(p.exit_code) }] : []),
+        ],
+      };
+    case "ui_verify_rework_loopback":
+      return {
+        category: "warning",
+        icon: "↺",
+        label: "Loop back to implementor",
+        inline: [
+          ...(p.loop !== undefined && p.max_loops !== undefined
+            ? [{ key: "rework", value: `${str(p.loop)}/${str(p.max_loops)}` }]
+            : []),
+        ],
+      };
+    case "agent_protocol_violation":
+      return {
+        category: "warning",
+        icon: "!",
+        label: "Protocol violation (remapped)",
+        inline: [
+          ...(p.phase ? [{ key: "phase", value: str(p.phase) }] : []),
+          ...(p.remapped_to ? [{ key: "→", value: str(p.remapped_to) }] : []),
         ],
       };
     default:

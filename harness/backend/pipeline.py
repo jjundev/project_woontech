@@ -1,6 +1,7 @@
 """Pipeline orchestration with GAN loops for plan-review and implement-review."""
 from __future__ import annotations
 
+import asyncio
 import re
 import shlex
 import subprocess
@@ -1006,7 +1007,42 @@ async def _run_ui_tests_once(
         command=ui_cmd,
         iteration=iteration,
     )
-    proc = subprocess.run(argv, cwd=str(worktree_dir))
+    # Use async subprocess so the asyncio loop stays responsive while UI tests
+    # run — otherwise WebSocket subscribers (and `ui_tests_started` itself)
+    # cannot drain until the test finishes, and the chat appears frozen.
+    # Stream stdout line-by-line, mirroring to the harness terminal AND
+    # emitting `ui_tests_output` events so the frontend can show a live tail.
+    proc = await asyncio.create_subprocess_exec(
+        *argv,
+        cwd=str(worktree_dir),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
+    )
+
+    async def _pump_output() -> None:
+        ordinal = 0
+        assert proc.stdout is not None
+        while True:
+            raw = await proc.stdout.readline()
+            if not raw:
+                break
+            line = raw.decode("utf-8", errors="replace").rstrip("\n")
+            sys.stdout.write(line + "\n")
+            sys.stdout.flush()
+            await emit(
+                "ui_tests_output",
+                task_id=task_id,
+                iteration=iteration,
+                ordinal=ordinal,
+                line=line,
+            )
+            ordinal += 1
+
+    pump_task = asyncio.create_task(_pump_output())
+    try:
+        await proc.wait()
+    finally:
+        await pump_task
     duration_s = time.monotonic() - monotonic_start
     await emit(
         "ui_tests_finished",

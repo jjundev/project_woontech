@@ -12,29 +12,37 @@ from backend import worktree as W
 
 
 def _make_subprocess_run_stub(rc_sequence: list[int]):
-    """Build a `subprocess.run` replacement that intercepts only UI-test calls.
+    """Build an `asyncio.create_subprocess_exec` replacement for UI-test calls.
 
-    `discover_new_swift_files` (called from inside `_run_ui_reviewer`) shells out
-    to `git` via `subprocess.run(..., capture_output=True)`. We pass those
-    through to the real implementation and only rig non-git invocations using
-    `rc_sequence` (one return code per scripted call).
+    The production code uses `asyncio.create_subprocess_exec` so the asyncio
+    loop stays responsive during long UI test runs (subprocess.run would block
+    the loop, starving the WebSocket sender and freezing the chat). The stub
+    yields scripted return codes from `rc_sequence` (one per call) and an empty
+    stdout stream — output streaming is exercised by integration tests, not
+    unit tests. Git invocations elsewhere in the pipeline still use the real
+    synchronous `subprocess.run`, so this stub does not need a passthrough.
     """
-    real_run = _real_subprocess.run
     counter = {"n": 0}
 
-    def fake_run(argv, cwd=None, **kwargs):
-        if argv and argv[0] == "git":
-            return real_run(argv, cwd=cwd, **kwargs)
+    class _FakeStream:
+        async def readline(self):
+            return b""
+
+    class _FakeProc:
+        def __init__(self, rc: int) -> None:
+            self.returncode = rc
+            self.stdout = _FakeStream()
+
+        async def wait(self) -> int:
+            return self.returncode
+
+    async def fake_create(*argv, **kwargs):
         idx = counter["n"]
         counter["n"] += 1
         rc = rc_sequence[idx] if idx < len(rc_sequence) else rc_sequence[-1]
+        return _FakeProc(rc)
 
-        class _R:
-            returncode = rc
-
-        return _R()
-
-    return fake_run, counter
+    return fake_create, counter
 
 
 def _setup_task(tmp_config, task_id: str, *, max_ui_review_iters: int = 1):
@@ -314,7 +322,7 @@ async def test_ui_verify_reviewer_patch_then_pass(tmp_config, monkeypatch):
     _write_ui_artifacts(worktree_dir)
 
     fake_run, call_count = _make_subprocess_run_stub([1, 0])
-    monkeypatch.setattr(P.subprocess, "run", fake_run)
+    monkeypatch.setattr(P.asyncio, "create_subprocess_exec", fake_run)
     # Skip artifact freshness checks — the helper writes them once at setup.
     monkeypatch.setattr(P, "_assert_test_artifacts_visible", lambda *a, **k: None)
 
@@ -360,7 +368,7 @@ async def test_ui_verify_reviewer_rework_signals_loopback(tmp_config, monkeypatc
     _write_ui_artifacts(worktree_dir)
 
     fake_run, _ = _make_subprocess_run_stub([1])
-    monkeypatch.setattr(P.subprocess, "run", fake_run)
+    monkeypatch.setattr(P.asyncio, "create_subprocess_exec", fake_run)
     monkeypatch.setattr(P, "_assert_test_artifacts_visible", lambda *a, **k: None)
 
     async def fake_resolve(config, worktree_dir, task_id):
@@ -402,7 +410,7 @@ async def test_ui_verify_reviewer_rework_exhausts_after_max_loops(tmp_config, mo
     _write_ui_artifacts(worktree_dir)
 
     fake_run, _ = _make_subprocess_run_stub([1])
-    monkeypatch.setattr(P.subprocess, "run", fake_run)
+    monkeypatch.setattr(P.asyncio, "create_subprocess_exec", fake_run)
     monkeypatch.setattr(P, "_assert_test_artifacts_visible", lambda *a, **k: None)
 
     async def fake_resolve(config, worktree_dir, task_id):
@@ -437,7 +445,7 @@ async def test_ui_verify_review_exhausted(tmp_config, monkeypatch):
     _write_ui_artifacts(worktree_dir)
 
     fake_run, _ = _make_subprocess_run_stub([1])
-    monkeypatch.setattr(P.subprocess, "run", fake_run)
+    monkeypatch.setattr(P.asyncio, "create_subprocess_exec", fake_run)
     monkeypatch.setattr(P, "_assert_test_artifacts_visible", lambda *a, **k: None)
 
     async def fake_resolve(config, worktree_dir, task_id):
@@ -479,7 +487,7 @@ async def test_ui_verify_review_pass_remapped_when_patch_applied(tmp_config, mon
 
     # iter 1 UI test fails; iter 2 (after remap) UI test passes.
     fake_run, call_count = _make_subprocess_run_stub([1, 0])
-    monkeypatch.setattr(P.subprocess, "run", fake_run)
+    monkeypatch.setattr(P.asyncio, "create_subprocess_exec", fake_run)
     monkeypatch.setattr(P, "_assert_test_artifacts_visible", lambda *a, **k: None)
 
     async def fake_resolve(config, worktree_dir, task_id):
@@ -531,7 +539,7 @@ async def test_ui_verify_review_pass_remapped_no_patch_stalls(tmp_config, monkey
     _write_ui_artifacts(worktree_dir)
 
     fake_run, _ = _make_subprocess_run_stub([1])
-    monkeypatch.setattr(P.subprocess, "run", fake_run)
+    monkeypatch.setattr(P.asyncio, "create_subprocess_exec", fake_run)
     monkeypatch.setattr(P, "_assert_test_artifacts_visible", lambda *a, **k: None)
 
     async def fake_resolve(config, worktree_dir, task_id):
@@ -570,7 +578,7 @@ async def test_ui_verify_review_missing_token_ambiguous(tmp_config, monkeypatch)
     _write_ui_artifacts(worktree_dir)
 
     fake_run, _ = _make_subprocess_run_stub([1])
-    monkeypatch.setattr(P.subprocess, "run", fake_run)
+    monkeypatch.setattr(P.asyncio, "create_subprocess_exec", fake_run)
     monkeypatch.setattr(P, "_assert_test_artifacts_visible", lambda *a, **k: None)
 
     async def fake_resolve(config, worktree_dir, task_id):
@@ -685,7 +693,7 @@ async def test_ui_verify_auto_commits_reviewer_dirty_patch(tmp_config, monkeypat
     _write_ui_artifacts(worktree_dir)
 
     fake_run, _ = _make_subprocess_run_stub([1, 0])
-    monkeypatch.setattr(P.subprocess, "run", fake_run)
+    monkeypatch.setattr(P.asyncio, "create_subprocess_exec", fake_run)
     monkeypatch.setattr(P, "_assert_test_artifacts_visible", lambda *a, **k: None)
 
     async def fake_resolve(config, worktree_dir, task_id):
@@ -734,7 +742,7 @@ async def test_ui_verify_stalls_when_reviewer_fail_without_patch(tmp_config, mon
     _write_ui_artifacts(worktree_dir)
 
     fake_run, _ = _make_subprocess_run_stub([1])
-    monkeypatch.setattr(P.subprocess, "run", fake_run)
+    monkeypatch.setattr(P.asyncio, "create_subprocess_exec", fake_run)
     monkeypatch.setattr(P, "_assert_test_artifacts_visible", lambda *a, **k: None)
 
     async def fake_resolve(config, worktree_dir, task_id):
@@ -769,7 +777,7 @@ async def test_ui_reviewer_test_run_requires_fresh_artifacts(tmp_config, monkeyp
     _write_ui_artifacts(worktree_dir)
 
     fake_run, _ = _make_subprocess_run_stub([1])
-    monkeypatch.setattr(P.subprocess, "run", fake_run)
+    monkeypatch.setattr(P.asyncio, "create_subprocess_exec", fake_run)
 
     calls: list[set[str]] = []
 

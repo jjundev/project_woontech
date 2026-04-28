@@ -270,11 +270,17 @@ final class SajuTenGodsDetailUITests: XCTestCase {
         launchAndPushTenGodsDetail()
         let scroll = app.scrollViews["SajuTenGodsDetailScroll"]
         XCTAssertTrue(scroll.waitForExistence(timeout: 5), "SajuTenGodsDetailScroll must exist")
-        scroll.swipeUp()
-        scroll.swipeUp()
         let learnCard = app.buttons["TenGodsLearnEntryCard"]
         XCTAssertTrue(learnCard.waitForExistence(timeout: 5),
-                      "TenGodsLearnEntryCard must be tappable")
+                      "TenGodsLearnEntryCard must exist")
+        // Scroll until the button is hittable (the learn card sits below a tall
+        // distribution + core-cards section; 2 fixed swipes proved insufficient).
+        for _ in 0..<6 {
+            if learnCard.isHittable { break }
+            scroll.swipeUp()
+        }
+        XCTAssertTrue(learnCard.isHittable,
+                      "TenGodsLearnEntryCard must be hittable after scrolling")
         learnCard.tap()
         XCTAssertTrue(
             app.otherElements["SajuPlaceholderDestination_lesson"].waitForExistence(timeout: 5),

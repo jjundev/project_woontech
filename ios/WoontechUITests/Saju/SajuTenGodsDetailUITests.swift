@@ -268,7 +268,10 @@ final class SajuTenGodsDetailUITests: XCTestCase {
     /// T50: `TenGodsLearnEntryCard` 탭 → `SajuPlaceholderDestination_lesson` + "L-TEN-001"
     func testLearnEntry_tap_pushesLessonRoute() {
         launchAndPushTenGodsDetail()
-        app.scrollViews.firstMatch.swipeUp()
+        let scroll = app.scrollViews["SajuTenGodsDetailScroll"]
+        XCTAssertTrue(scroll.waitForExistence(timeout: 5), "SajuTenGodsDetailScroll must exist")
+        scroll.swipeUp()
+        scroll.swipeUp()
         let learnCard = app.buttons["TenGodsLearnEntryCard"]
         XCTAssertTrue(learnCard.waitForExistence(timeout: 5),
                       "TenGodsLearnEntryCard must be tappable")

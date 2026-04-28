@@ -120,6 +120,8 @@ struct SajuTenGodsDetailView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 16)
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("SajuTenGodsDetailScroll")
         .background(DesignTokens.bg)
         .navigationTitle(
             String(localized: "saju.tengods.navTitle", defaultValue: "십성 분석")

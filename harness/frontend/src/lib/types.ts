@@ -50,15 +50,3 @@ export interface AgentUsagePayload {
   model_usage?: Record<string, unknown> | null;
 }
 
-export interface PlanStep {
-  index: number;
-  title: string;
-}
-
-export interface PlanStepsPayload {
-  steps: PlanStep[];
-}
-
-export interface PlanStepProgressPayload {
-  marker: string;
-}

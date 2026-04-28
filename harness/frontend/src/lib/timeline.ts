@@ -286,22 +286,6 @@ export function describeEvent(event: HarnessEvent): EventMeta {
         ],
       };
     }
-    case "plan_steps": {
-      const steps = (p.steps as Array<{ index: number; title: string }> | undefined) ?? [];
-      return {
-        category: "control",
-        icon: "≡",
-        label: "Plan steps",
-        inline: [{ key: "count", value: String(steps.length) }],
-      };
-    }
-    case "plan_step_progress":
-      return {
-        category: "control",
-        icon: "▸",
-        label: "Step",
-        inline: [{ key: "marker", value: trunc(str(p.marker), 80) }],
-      };
     case "plan_skipped":
       return {
         category: "warning",

@@ -42,6 +42,13 @@ interface UiTestRun {
   lines: string[];
   /** Number of earlier lines dropped from the head of `lines` when the cap was hit. */
   truncated: number;
+  /** "harness" = harness-driven (`ui_tests_*` events with line-by-line stream).
+   *  "reviewer_inline" = reviewer agent re-ran the UI command via Bash to verify
+   *  its own patch; only the final tool result tail is available. */
+  source?: "harness" | "reviewer_inline";
+  /** Set when `source === "reviewer_inline"` so we can match the later
+   *  `agent_tool_result` event back to this row. */
+  toolUseId?: string;
 }
 
 const UI_TEST_LINES_CAP = 400;
@@ -176,6 +183,24 @@ function buildRows(events: HarnessEvent[]): Row[] {
         current.stopReason = (event.payload?.stop_reason as string) ?? undefined;
         current.endTs = event.ts;
         flush();
+      } else {
+        // current is null when an inline UI test caused a flush mid-session.
+        // Walk backwards to close the last unfinished group for this agent.
+        const agent = event.agent ?? "";
+        for (let i = rows.length - 1; i >= 0; i--) {
+          const row = rows[i];
+          if (
+            row.kind === "group" &&
+            row.agent === agent &&
+            row.iteration === event.iteration &&
+            !row.finished
+          ) {
+            row.finished = true;
+            row.stopReason = (event.payload?.stop_reason as string) ?? undefined;
+            row.endTs = event.ts;
+            break;
+          }
+        }
       }
       continue;
     }
@@ -209,6 +234,27 @@ function buildRows(events: HarnessEvent[]): Row[] {
     }
 
     if (event.type === "agent_tool_call") {
+      // Reviewer agents are prompted to re-run the UI test command via Bash
+      // to self-verify their patch. The backend tags those calls so we can
+      // pull them out of the chat bubble and render them as their own card,
+      // matching how harness-driven UI tests appear.
+      if (event.payload?.inline_ui_test === true) {
+        flush();
+        const input = (event.payload?.input as Record<string, unknown>) ?? {};
+        rows.push({
+          kind: "ui_tests",
+          key: `ui_tests_inline:${event.ts}`,
+          iteration: event.iteration,
+          startTs: event.ts,
+          command: String(input.command ?? ""),
+          finished: false,
+          lines: [],
+          truncated: 0,
+          source: "reviewer_inline",
+          toolUseId: String(event.payload?.tool_use_id ?? ""),
+        });
+        continue;
+      }
       const agent = event.agent ?? "agent";
       if (
         !current ||
@@ -234,6 +280,36 @@ function buildRows(events: HarnessEvent[]): Row[] {
         ts: event.ts,
       });
       current.endTs = event.ts;
+      continue;
+    }
+
+    if (
+      event.type === "agent_tool_result" &&
+      event.payload?.inline_ui_test === true
+    ) {
+      const id = String(event.payload?.tool_use_id ?? "");
+      for (let i = rows.length - 1; i >= 0; i--) {
+        const row = rows[i];
+        if (
+          row.kind === "ui_tests" &&
+          row.source === "reviewer_inline" &&
+          row.toolUseId === id &&
+          !row.finished
+        ) {
+          row.finished = true;
+          row.exitCode = event.payload?.is_error ? 1 : 0;
+          const tail = (event.payload?.output_tail as string[] | undefined) ?? [];
+          if (tail.length) {
+            row.lines.push(...tail);
+            if (row.lines.length > UI_TEST_LINES_CAP) {
+              const drop = row.lines.length - UI_TEST_LINES_CAP;
+              row.lines.splice(0, drop);
+              row.truncated += drop;
+            }
+          }
+          break;
+        }
+      }
       continue;
     }
 
@@ -410,16 +486,20 @@ const UI_TEST_LINES_VISIBLE = 8;
 
 function UiTestRunRow({ run, now }: { run: UiTestRun; now: number }) {
   const [expanded, setExpanded] = useState(false);
+  const isInline = run.source === "reviewer_inline";
   const elapsedS = run.finished
     ? run.durationS ?? 0
     : Math.max(0, now / 1000 - run.startTs);
   const passed = run.finished && run.exitCode === 0;
   const failed = run.finished && run.exitCode !== 0;
+  const durationSuffix = isInline && run.durationS === undefined
+    ? ""
+    : ` (${formatDuration(elapsedS)})`;
   const label = run.finished
     ? passed
-      ? `UI tests passed (${formatDuration(elapsedS)})`
-      : `UI tests failed · exit ${run.exitCode} (${formatDuration(elapsedS)})`
-    : `Running UI tests… ${formatDuration(elapsedS)}`;
+      ? `UI tests passed${durationSuffix}`
+      : `UI tests failed · exit ${run.exitCode}${durationSuffix}`
+    : `Running UI tests…${durationSuffix}`;
   const stateClass = passed
     ? "border-emerald-700/60 bg-emerald-900/20 text-emerald-200"
     : failed
@@ -440,6 +520,11 @@ function UiTestRunRow({ run, now }: { run: UiTestRun; now: number }) {
       <div className="flex items-center gap-2">
         <span className="font-mono text-[10px]">{run.finished ? (passed ? "✓" : "✗") : "▶"}</span>
         <span className="font-medium text-[12px]">{label}</span>
+        {isInline && (
+          <span className="text-[10px] uppercase tracking-wide rounded px-1 py-0.5 border border-current opacity-70">
+            reviewer self-verify
+          </span>
+        )}
         {run.iteration !== undefined && (
           <span className="text-[10px] opacity-70">· iter {run.iteration}</span>
         )}

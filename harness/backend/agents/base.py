@@ -12,6 +12,7 @@ from claude_agent_sdk import (
     HookMatcher,
     ResultMessage,
     TextBlock,
+    ToolResultBlock,
     ToolUseBlock,
     UserMessage,
 )
@@ -23,6 +24,36 @@ from ..events import emit
 # implementor mark the start of a plan step. The harness consumes them to
 # advance the PlanStepsPanel; they remain visible in the agent_text stream.
 STEP_MARKER_RE = re.compile(r"^STEP:\s*(.+?)\s*$", re.MULTILINE)
+
+
+_TOOL_RESULT_TAIL_LINES = 40
+
+
+def _tool_result_tail(
+    content: "str | list[dict[str, Any]] | None",
+) -> list[str]:
+    """Extract the last N lines of a ToolResultBlock for display in chat.
+
+    The SDK delivers tool result content as either a plain string or a list of
+    Anthropic content blocks ({"type": "text", "text": ...} | image blocks).
+    We concatenate text-typed blocks, ignore non-text, and return the trailing
+    lines so chat can show a useful tail without dumping multi-MB xcodebuild
+    output.
+    """
+    if content is None:
+        return []
+    if isinstance(content, str):
+        text = content
+    else:
+        chunks: list[str] = []
+        for item in content:
+            if isinstance(item, dict) and item.get("type") == "text":
+                chunks.append(str(item.get("text", "")))
+        text = "\n".join(chunks)
+    if not text:
+        return []
+    lines = text.splitlines()
+    return lines[-_TOOL_RESULT_TAIL_LINES:]
 
 
 def _join_text_blocks(blocks: list[str]) -> str:
@@ -71,12 +102,20 @@ async def run_agent(
     iteration: Optional[int] = None,
     hooks: Optional[dict[str, list[HookMatcher]]] = None,
     on_user_message: Optional[Callable[[str], Awaitable[Optional[str]]]] = None,
+    inline_ui_cmd: Optional[str] = None,
 ) -> AgentResult:
     """
     Run an agent to completion on a single prompt.
 
     `hooks` is forwarded to ClaudeAgentOptions for PreToolUse/PostToolUse control —
     used by the implementor/reviewer to block Write/Edit outside the worktree.
+
+    `inline_ui_cmd` opts in to splitting the agent's own Bash run of the UI test
+    command into its own UI test card in chat. When the agent invokes Bash with
+    a command equal to `inline_ui_cmd`, the corresponding `agent_tool_call` is
+    tagged `inline_ui_test=true`, and the matching `ToolResultBlock` is surfaced
+    as an `agent_tool_result` event so the frontend can render a standalone
+    UiTestRun row instead of burying it inside the agent's chat bubble.
     """
     options = ClaudeAgentOptions(
         system_prompt=spec.system_prompt,
@@ -95,6 +134,8 @@ async def run_agent(
     total_cost_usd: Optional[float] = None
     duration_ms: Optional[int] = None
     model_usage: Optional[dict[str, Any]] = None
+    inline_ui_tool_use_ids: set[str] = set()
+    inline_ui_cmd_normalized = (inline_ui_cmd or "").strip() or None
 
     await emit("agent_started", task_id=task_id, agent=spec.name, iteration=iteration)
     async with ClaudeSDKClient(options=options) as client:
@@ -125,13 +166,47 @@ async def run_agent(
                             "input": block.input,
                         }
                         tool_uses.append(entry)
-                        await emit(
-                            "agent_tool_call",
+                        is_inline_ui_test = (
+                            inline_ui_cmd_normalized is not None
+                            and block.name == "Bash"
+                            and inline_ui_cmd_normalized
+                            in str(block.input.get("command", "")).strip()
+                        )
+                        if is_inline_ui_test:
+                            inline_ui_tool_use_ids.add(block.id)
+                        emit_kwargs: dict[str, Any] = dict(
                             task_id=task_id,
                             agent=spec.name,
                             iteration=iteration,
                             tool=block.name,
                             input=block.input,
+                            tool_use_id=block.id,
+                        )
+                        if is_inline_ui_test:
+                            emit_kwargs["inline_ui_test"] = True
+                        await emit("agent_tool_call", **emit_kwargs)
+            elif isinstance(msg, UserMessage):
+                # Surface ToolResultBlocks for inline UI test runs only — those
+                # are the calls whose `agent_tool_call` was already tagged for
+                # the frontend to render as a standalone UiTestRun card. We
+                # don't emit results for other tools to avoid flooding the
+                # event stream.
+                content = msg.content
+                if isinstance(content, list):
+                    for block in content:
+                        if not isinstance(block, ToolResultBlock):
+                            continue
+                        if block.tool_use_id not in inline_ui_tool_use_ids:
+                            continue
+                        await emit(
+                            "agent_tool_result",
+                            task_id=task_id,
+                            agent=spec.name,
+                            iteration=iteration,
+                            tool_use_id=block.tool_use_id,
+                            inline_ui_test=True,
+                            is_error=bool(block.is_error),
+                            output_tail=_tool_result_tail(block.content),
                         )
             elif isinstance(msg, ResultMessage):
                 stop_reason = getattr(msg, "stop_reason", None) or getattr(msg, "subtype", None)

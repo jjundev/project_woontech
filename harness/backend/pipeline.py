@@ -1148,6 +1148,7 @@ force the user to manually intervene.
         task_id=task_id,
         iteration=feedback_version,
         hooks=reviewer_guard,
+        inline_ui_cmd=ui_cmd,
     )
     reviewer_test_kinds = _test_kinds_from_tool_uses(result.tool_uses)
     if reviewer_test_kinds:

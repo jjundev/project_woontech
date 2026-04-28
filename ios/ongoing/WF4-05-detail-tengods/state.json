@@ -7,7 +7,7 @@
   "impl_version": 0,
   "plan_retries": 1,
   "impl_retries": 0,
-  "ui_review_retries": 0,
+  "ui_review_retries": 1,
   "ui_to_impl_loops": 0,
   "max_plan_retries": 3,
   "max_impl_retries": 3,
@@ -15,7 +15,7 @@
   "max_ui_to_impl_loops": 2,
   "escalation": null,
   "created_at": 1777345540.052876,
-  "updated_at": 1777347798.185131,
+  "updated_at": 1777376851.281046,
   "branch": "feature/WF4-05-detail-tengods",
   "pr_url": null
 }

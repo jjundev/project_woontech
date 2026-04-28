@@ -35,7 +35,7 @@ struct SajuTabView: View {
                 )
                 .toolbar(.hidden, for: .navigationBar)
                 .navigationDestination(for: SajuRoute.self) { route in
-                    sajuRouteDestination(for: route)
+                    sajuRouteDestination(for: route, deps: deps)
                 }
             }
         }

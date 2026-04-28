@@ -155,8 +155,15 @@ struct WoontechApp: App {
                 return next < args.count ? args[next] : nil
             } == "1"
 
+        // WF4-04: Parse elements detail mock launch arg.
+        // When `-sajuElementsNoGuidance` is present, the elements detail provider
+        // is constructed with `guidance: nil` so UI tests can verify the guidance
+        // card is hidden (AC#9).
+        let sajuElementsNoGuidance = args.contains("-sajuElementsNoGuidance")
+
         let sajuDeps: SajuTabDependencies
-        if sajuStreakDaysOverride != nil || sajuFeaturedLessonNil {
+        let needsCustomLearningPath = sajuStreakDaysOverride != nil || sajuFeaturedLessonNil
+        if needsCustomLearningPath || sajuElementsNoGuidance {
             let overrideDays = sajuStreakDaysOverride ?? 3
             let weeklyProgress = WeeklyProgress(completed: 3, goal: 5, streakDays: overrideDays)
             let featuredLesson: FeaturedLesson? = sajuFeaturedLessonNil
@@ -167,11 +174,16 @@ struct WoontechApp: App {
                     durationLabel: "3분",
                     levelLabel: "초급"
                 )
-            let overrideProvider = MockSajuLearningPathProvider(
-                weeklyProgress: weeklyProgress,
-                featuredLesson: featuredLesson
+            let learningPathProvider = needsCustomLearningPath
+                ? MockSajuLearningPathProvider(weeklyProgress: weeklyProgress, featuredLesson: featuredLesson)
+                : MockSajuLearningPathProvider()
+            let elementsProvider: any SajuElementsDetailProviding = sajuElementsNoGuidance
+                ? MockSajuElementsDetailProvider(guidance: nil)
+                : MockSajuElementsDetailProvider()
+            sajuDeps = SajuTabDependencies(
+                elementsDetail: elementsProvider,
+                learningPath: learningPathProvider
             )
-            sajuDeps = SajuTabDependencies(learningPath: overrideProvider)
         } else {
             sajuDeps = SajuTabDependencies.mock
         }

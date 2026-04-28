@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { api, type WorktreeBase, type WorktreeStatus } from "../lib/api";
-import type { HarnessEvent, PlanStep, TaskState, TaskStateName } from "../lib/types";
+import type { HarnessEvent, TaskState, TaskStateName } from "../lib/types";
 import {
   CATEGORY_STYLES,
   DEFAULT_FILTERS,
@@ -11,7 +11,7 @@ import {
   type FilterFlags,
 } from "../lib/timeline";
 import { ChatTimeline } from "../components/ChatTimeline";
-import { PlanStepsPanel } from "../components/PlanStepsPanel";
+
 import { CostDialog } from "../components/CostDialog";
 
 const STAGES: { key: TaskStateName; label: string }[] = [
@@ -82,7 +82,6 @@ export function TaskDetail({
 }) {
   const [task, setTask] = useState<TaskState | null>(null);
   const [files, setFiles] = useState<string[]>([]);
-  const [planSteps, setPlanSteps] = useState<PlanStep[]>([]);
   const [worktreeBase, setWorktreeBase] = useState<WorktreeBase>("local");
 
   const [tabs, setTabs] = useState<Tab[]>([]);
@@ -156,10 +155,9 @@ export function TaskDetail({
   };
 
   const refresh = () =>
-    Promise.all([api.getTask(taskId), api.getPlanSteps(taskId)]).then(([r, plan]) => {
+    api.getTask(taskId).then((r) => {
       setTask(r.state);
       setFiles(r.files);
-      setPlanSteps(plan.steps);
       if (!defaultOpenedRef.current && r.files.includes("spec.md")) {
         defaultOpenedRef.current = true;
         openTab({ source: "task", path: "spec.md" });
@@ -319,7 +317,7 @@ export function TaskDetail({
           style={{ width: paneWidths.right }}
           className="min-h-0 flex flex-col shrink-0"
         >
-          <RightPanel events={events} taskEvents={taskEvents} initialPlanSteps={planSteps} />
+          <RightPanel events={events} taskEvents={taskEvents} />
         </section>
       </div>
       {costOpen && (
@@ -340,11 +338,9 @@ function loadRightTab(): "chat" | "events" {
 function RightPanel({
   events,
   taskEvents,
-  initialPlanSteps,
 }: {
   events: HarnessEvent[];
   taskEvents: HarnessEvent[];
-  initialPlanSteps: PlanStep[];
 }) {
   const [tab, setTab] = useState<"chat" | "events">(loadRightTab);
   useEffect(() => {
@@ -364,10 +360,7 @@ function RightPanel({
         </TabButton>
       </div>
       {tab === "chat" ? (
-        <>
-          <PlanStepsPanel events={taskEvents} initialSteps={initialPlanSteps} />
-          <ChatTimeline events={taskEvents} />
-        </>
+        <ChatTimeline events={taskEvents} />
       ) : (
         <TimelinePanel events={events} />
       )}

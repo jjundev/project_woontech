@@ -1,4 +1,4 @@
-import type { PlanStepsPayload, TaskState } from "./types";
+import type { TaskState } from "./types";
 
 async function j<T>(res: Response): Promise<T> {
   if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
@@ -32,8 +32,6 @@ export const api = {
     fetch(`/api/tasks/${id}`).then((r) =>
       j<{ state: TaskState; files: string[]; task_dir: string }>(r),
     ),
-  getPlanSteps: (id: string) =>
-    fetch(`/api/tasks/${id}/plan-steps`).then((r) => j<PlanStepsPayload>(r)),
   getFile: (id: string, name: string) =>
     fetch(`/api/tasks/${id}/files/${encodeURIComponent(name)}`).then((r) =>
       j<{ name: string; content: string }>(r),

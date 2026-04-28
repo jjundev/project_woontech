@@ -852,6 +852,64 @@ def test_preflight_remediates_simdiskimaged_then_succeeds(monkeypatch, tmp_path)
     assert len(repair_calls) == 1, "repair_environment should fire exactly once"
 
 
+def test_preflight_returns_true_when_repair_ran(monkeypatch, tmp_path):
+    """preflight_check() must return True when repair_environment fires so that
+    run_test() can skip the redundant daemon purge and avoid a double-kill.
+    """
+    derived = tmp_path / "derived"
+    monkeypatch.setattr(runner, "PREFLIGHT_LOCK_PATH", tmp_path / "preflight.lock")
+
+    simctl_devices_calls = {"n": 0}
+
+    def simctl_devices_handler(cmd):
+        simctl_devices_calls["n"] += 1
+        if simctl_devices_calls["n"] == 1:
+            raise subprocess.TimeoutExpired(cmd=cmd, timeout=4)
+        return _FakeCompleted(0, _healthy_devices_json())
+
+    handlers = [
+        (lambda c: c[:2] == ["xcode-select", "-p"], _FakeCompleted(0, "/Applications/Xcode.app/Contents/Developer\n")),
+        (lambda c: c[:4] == ["xcrun", "simctl", "list", "devices"], simctl_devices_handler),
+        (
+            lambda c: c[:4] == ["xcrun", "simctl", "list", "runtimes"],
+            _FakeCompleted(0, _healthy_runtimes_json()),
+        ),
+    ]
+    monkeypatch.setattr(runner.subprocess, "run", _make_subprocess_router(handlers))
+    monkeypatch.setattr(
+        runner,
+        "resolve_simulator",
+        lambda *, ui: runner.SimulatorDevice("iPhone 17 Pro", "HEALTHY-UDID", "iOS-26-4", runner.DEFAULT_DEVICE_TYPE_ID, "Shutdown"),
+    )
+    monkeypatch.setattr(runner, "repair_environment", lambda **kw: None)
+
+    result = runner.preflight_check(ui=False, derived_data_path=derived)
+
+    assert result is True, "preflight_check must return True when repair_environment was invoked"
+
+
+def test_preflight_returns_false_when_no_repair_needed(monkeypatch, tmp_path):
+    """preflight_check() must return False when all checks pass without remediation."""
+    derived = tmp_path / "derived"
+    monkeypatch.setattr(runner, "PREFLIGHT_LOCK_PATH", tmp_path / "preflight.lock")
+
+    handlers = [
+        (lambda c: c[:2] == ["xcode-select", "-p"], _FakeCompleted(0, "/Applications/Xcode.app/Contents/Developer\n")),
+        (lambda c: c[:4] == ["xcrun", "simctl", "list", "devices"], _FakeCompleted(0, _healthy_devices_json())),
+        (lambda c: c[:4] == ["xcrun", "simctl", "list", "runtimes"], _FakeCompleted(0, _healthy_runtimes_json())),
+    ]
+    monkeypatch.setattr(runner.subprocess, "run", _make_subprocess_router(handlers))
+    monkeypatch.setattr(
+        runner,
+        "resolve_simulator",
+        lambda *, ui: runner.SimulatorDevice("iPhone 17 Pro", "HEALTHY-UDID", "iOS-26-4", runner.DEFAULT_DEVICE_TYPE_ID, "Shutdown"),
+    )
+
+    result = runner.preflight_check(ui=False, derived_data_path=derived)
+
+    assert result is False, "preflight_check must return False when no repair was needed"
+
+
 def test_persist_test_artifacts_includes_preflight_prefix_when_provided(tmp_path):
     bundle = tmp_path / "missing.xcresult"
     worktree = tmp_path / "worktree"

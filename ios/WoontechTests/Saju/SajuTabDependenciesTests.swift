@@ -26,7 +26,12 @@ private struct StubSajuElementsDetailProvider: SajuElementsDetailProviding {
 }
 
 private struct StubSajuTenGodsDetailProvider: SajuTenGodsDetailProviding {
-    let summaryLine: String = "stub tenGods"
+    let summaryHeadline: String = "stub tenGods"
+    let summaryBody: String = "stub body"
+    let groups: [TenGodGroup] = MockSajuTenGodsDetailProvider.defaultGroups
+    let topThree: [CoreTenGod] = MockSajuTenGodsDetailProvider.defaultTopThree
+    let absentWarning: AbsentWarning? = nil
+    let learnEntry: LearnEntry? = nil
 }
 
 private struct StubSajuLearningPathProvider: SajuLearningPathProviding {
@@ -54,7 +59,8 @@ final class SajuTabDependenciesTests: XCTestCase {
         XCTAssertEqual(deps.categories.categories.count, 5)
         // WF4-04: summaryLine → summaryHeadline
         XCTAssertFalse(deps.elementsDetail.summaryHeadline.isEmpty)
-        XCTAssertFalse(deps.tenGodsDetail.summaryLine.isEmpty)
+        // WF4-05: summaryLine → summaryHeadline
+        XCTAssertFalse(deps.tenGodsDetail.summaryHeadline.isEmpty)
         XCTAssertEqual(deps.learningPath.courses.count, 4)
         XCTAssertNotNil(deps.lesson.lessonTitle(forId: "L-001"))
     }
@@ -75,7 +81,8 @@ final class SajuTabDependenciesTests: XCTestCase {
         XCTAssertEqual(deps.categories.categories.first?.title, "stub")
         // WF4-04: summaryLine → summaryHeadline
         XCTAssertEqual(deps.elementsDetail.summaryHeadline, "stub headline")
-        XCTAssertEqual(deps.tenGodsDetail.summaryLine, "stub tenGods")
+        // WF4-05: summaryLine → summaryHeadline
+        XCTAssertEqual(deps.tenGodsDetail.summaryHeadline, "stub tenGods")
         XCTAssertEqual(deps.learningPath.courses.first?.id, "stub")
         XCTAssertEqual(deps.lesson.lessonTitle(forId: "L-001"), "stub-L-001")
     }

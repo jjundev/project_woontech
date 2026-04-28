@@ -173,3 +173,15 @@
 "saju.placeholder.daewoon" = "대운 · 세운 (준비중)";
 "saju.placeholder.hapchung" = "합충형파 (준비중)";
 "saju.placeholder.yongsin" = "용신 · 희신 (준비중)";
+
+/* Saju Elements Detail (WF4-04) */
+"saju.elements.navTitle"              = "오행 분포";
+"saju.elements.summary.sectionLabel"  = "오행 요약";
+"saju.elements.dist.sectionLabel"     = "5행 분포";
+"saju.elements.deficient.note"        = "부족";
+"saju.elements.guidance.sectionLabel" = "보완 가이드";
+"saju.elements.guidance.headerFormat" = "부족한 %@를 보완하려면";
+"saju.elements.guidance.direction"    = "방향";
+"saju.elements.guidance.color"        = "색상";
+"saju.elements.guidance.time"         = "시간";
+"saju.elements.guidance.action"       = "행동";

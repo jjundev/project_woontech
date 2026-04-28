@@ -18,7 +18,11 @@ private struct StubSajuCategoriesProvider: SajuCategoriesProviding {
 }
 
 private struct StubSajuElementsDetailProvider: SajuElementsDetailProviding {
-    let summaryLine: String = "stub elements"
+    // WF4-04: summaryLine 제거, 4개 필드로 교체 (breaking change 대응)
+    let summaryHeadline: String = "stub headline"
+    let summaryBody: String = "stub body"
+    let elements: [ElementDistribution] = MockSajuElementsDetailProvider.defaultElements
+    let guidance: ElementGuidance? = nil
 }
 
 private struct StubSajuTenGodsDetailProvider: SajuTenGodsDetailProviding {
@@ -48,7 +52,8 @@ final class SajuTabDependenciesTests: XCTestCase {
         XCTAssertFalse(deps.userSajuOrigin.dayMasterLine.isEmpty)
         XCTAssertEqual(deps.userSajuOrigin.pillars.count, 4)
         XCTAssertEqual(deps.categories.categories.count, 5)
-        XCTAssertFalse(deps.elementsDetail.summaryLine.isEmpty)
+        // WF4-04: summaryLine → summaryHeadline
+        XCTAssertFalse(deps.elementsDetail.summaryHeadline.isEmpty)
         XCTAssertFalse(deps.tenGodsDetail.summaryLine.isEmpty)
         XCTAssertEqual(deps.learningPath.courses.count, 4)
         XCTAssertNotNil(deps.lesson.lessonTitle(forId: "L-001"))
@@ -68,7 +73,8 @@ final class SajuTabDependenciesTests: XCTestCase {
         XCTAssertEqual(deps.userSajuOrigin.dayMasterLine, "stub day master")
         XCTAssertEqual(deps.userSajuOrigin.pillars.count, 4)
         XCTAssertEqual(deps.categories.categories.first?.title, "stub")
-        XCTAssertEqual(deps.elementsDetail.summaryLine, "stub elements")
+        // WF4-04: summaryLine → summaryHeadline
+        XCTAssertEqual(deps.elementsDetail.summaryHeadline, "stub headline")
         XCTAssertEqual(deps.tenGodsDetail.summaryLine, "stub tenGods")
         XCTAssertEqual(deps.learningPath.courses.first?.id, "stub")
         XCTAssertEqual(deps.lesson.lessonTitle(forId: "L-001"), "stub-L-001")

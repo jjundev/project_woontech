@@ -36,11 +36,14 @@ struct SajuPlaceholderDestinationView: View {
 }
 
 /// 한 곳에서 라우트 → 목적지 View로 매핑한다.
+///
+/// WF4-04: `.elements` 케이스가 `SajuElementsDetailView`로 교체됨.
+/// `deps` 파라미터를 추가해 `elementsDetail` provider를 주입한다.
 @ViewBuilder
-func sajuRouteDestination(for route: SajuRoute) -> some View {
+func sajuRouteDestination(for route: SajuRoute, deps: SajuTabDependencies) -> some View {
     switch route {
     case .elements:
-        SajuPlaceholderDestinationView(routeKey: "elements")
+        SajuElementsDetailView(provider: deps.elementsDetail)
     case .tenGods:
         SajuPlaceholderDestinationView(routeKey: "tenGods")
     case .learn:

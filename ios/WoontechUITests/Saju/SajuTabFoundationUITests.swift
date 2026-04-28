@@ -94,9 +94,18 @@ final class SajuTabFoundationUITests: XCTestCase {
         )
     }
 
-    // T18
-    func test_sajuRoute_pushElements_showsPlaceholder() {
-        tapPushAndAssertDestination(button: "SajuNavPush_elements", destinationKey: "elements")
+    // T18 — WF4-04: `.elements` 라우트가 SajuElementsDetailView로 교체됨.
+    // 이전 placeholder(`SajuPlaceholderDestination_elements`) 대신 실제 뷰를 검증한다.
+    func test_sajuRoute_pushElements_showsElementsDetailView() {
+        launchSajuTab()
+        let btn = app.buttons["SajuNavPush_elements"]
+        XCTAssertTrue(btn.waitForExistence(timeout: 3),
+                      "SajuNavPush_elements trigger button must exist")
+        btn.tap()
+        XCTAssertTrue(
+            app.otherElements["SajuElementsDetailView"].waitForExistence(timeout: 3),
+            "SajuElementsDetailView should appear after pushing .elements route"
+        )
     }
 
     // T19
@@ -151,12 +160,12 @@ final class SajuTabFoundationUITests: XCTestCase {
         sajuTabBarButton().tap()
         XCTAssertTrue(app.otherElements["SajuTabRoot"].waitForExistence(timeout: 3))
 
-        // Push elements destination.
+        // Push elements destination (WF4-04: now SajuElementsDetailView).
         let pushBtn = app.buttons["SajuNavPush_elements"]
         XCTAssertTrue(pushBtn.waitForExistence(timeout: 3))
         pushBtn.tap()
         XCTAssertTrue(
-            app.otherElements["SajuPlaceholderDestination_elements"].waitForExistence(timeout: 3)
+            app.otherElements["SajuElementsDetailView"].waitForExistence(timeout: 3)
         )
 
         // Switch to home tab.
@@ -168,7 +177,7 @@ final class SajuTabFoundationUITests: XCTestCase {
         // Switch back to saju tab — pushed destination should still be on top.
         sajuTabBarButton().tap()
         XCTAssertTrue(
-            app.otherElements["SajuPlaceholderDestination_elements"].waitForExistence(timeout: 3),
+            app.otherElements["SajuElementsDetailView"].waitForExistence(timeout: 3),
             "Saju navigation path should be preserved across tab switches"
         )
     }
@@ -209,14 +218,14 @@ final class SajuTabFoundationUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.otherElements["HomeDashboardRoot"].waitForExistence(timeout: 5))
 
-        // Saju tab → push elements
+        // Saju tab → push elements (WF4-04: now SajuElementsDetailView)
         sajuTabBarButton().tap()
         XCTAssertTrue(app.otherElements["SajuTabRoot"].waitForExistence(timeout: 5))
         let sajuPush = app.buttons["SajuNavPush_elements"]
         XCTAssertTrue(sajuPush.waitForExistence(timeout: 5))
         sajuPush.tap()
         XCTAssertTrue(
-            app.otherElements["SajuPlaceholderDestination_elements"].waitForExistence(timeout: 5)
+            app.otherElements["SajuElementsDetailView"].waitForExistence(timeout: 5)
         )
 
         // Home tab → push investing
@@ -239,20 +248,19 @@ final class SajuTabFoundationUITests: XCTestCase {
         // in iOS 26 than a direct boot-and-push case.
         XCTAssertTrue(app.staticTexts["InvestingAttitudeDetailTitle"].waitForExistence(timeout: 12))
 
-        // Saju placeholder must NOT be visible in the home tab tree (current
-        // visible content). It may still exist in the off-screen saju tab tree
-        // because TabView keeps inactive tabs in memory. Assert it is not
-        // hittable from the home tab view.
-        let sajuPlaceholderInHome = app.otherElements["SajuPlaceholderDestination_elements"]
+        // SajuElementsDetailView must NOT be hittable from the home tab tree.
+        // It may still exist in the off-screen saju tab tree because TabView
+        // keeps inactive tabs in memory. Assert it is not hittable.
+        let sajuDetailInHome = app.otherElements["SajuElementsDetailView"]
         XCTAssertFalse(
-            sajuPlaceholderInHome.exists && sajuPlaceholderInHome.isHittable,
-            "Saju placeholder must not be visible/hittable in home tab"
+            sajuDetailInHome.exists && sajuDetailInHome.isHittable,
+            "SajuElementsDetailView must not be hittable in home tab"
         )
 
-        // Switch back to saju and confirm its stack is intact.
+        // Switch back to saju and confirm its stack is intact (WF4-04: SajuElementsDetailView).
         sajuTabBarButton().tap()
         XCTAssertTrue(
-            app.otherElements["SajuPlaceholderDestination_elements"].waitForExistence(timeout: 5),
+            app.otherElements["SajuElementsDetailView"].waitForExistence(timeout: 5),
             "Saju stack should remain at the elements destination"
         )
         let homeTitleInSaju = app.staticTexts["InvestingAttitudeDetailTitle"]

@@ -25,6 +25,7 @@ ENV_DEEP_REPAIR = "WOONTECH_XCODE_DEEP_REPAIR"
 ENV_WORKTREE_DIR = "WOONTECH_WORKTREE_DIR"
 ENV_CLAUDE_PROJECT_DIR = "CLAUDE_PROJECT_DIR"
 ENV_PREFLIGHT_SKIP = "WOONTECH_PREFLIGHT_SKIP"
+ENV_UI_DAEMON_PURGE_SKIP = "WOONTECH_UI_DAEMON_PURGE_SKIP"
 PREFLIGHT_LOCK_PATH = DERIVED_DATA_ROOT / ".preflight.lock"
 TEST_ARTIFACTS_SUBDIR = Path(".harness") / "test-results"
 LLDB_ENV_FAILURE_SIGNATURES = (
@@ -512,10 +513,12 @@ def _remove_path(path: Path) -> None:
     shutil.rmtree(path, ignore_errors=True)
 
 
-def repair_environment(*, simulator_udid: str | None, derived_data_path: Path) -> None:
-    print("Detected Xcode/LLDB/CoreSimulator launch infrastructure failure; repairing environment.", flush=True)
-    if simulator_udid:
-        _run_quiet(["xcrun", "simctl", "shutdown", simulator_udid])
+def purge_coresim_daemon_state() -> None:
+    """Kill CoreSimulator/simdiskimaged daemons and clear their caches so
+    launchd respawns them clean. Subset of `repair_environment` that excludes
+    simulator erase and derived_data wipe — cheap enough to call before every
+    UI test.
+    """
     _run_quiet(["killall", "-9", "com.apple.CoreSimulator.CoreSimulatorService"])
     # simdiskimaged is a separate launchd-managed daemon that frequently crashes
     # alongside (or independently of) CoreSimulatorService. launchd will revive
@@ -523,12 +526,54 @@ def repair_environment(*, simulator_udid: str | None, derived_data_path: Path) -
     _run_quiet(["killall", "-9", "simdiskimaged"])
     time.sleep(2)
     # The CoreSimulator caches (disk images, runtime metadata) commonly carry
-    # the corruption forward across daemon restarts; clear them every repair.
-    # The heavier Xcode/DerivedData caches stay behind WOONTECH_XCODE_DEEP_REPAIR
-    # because wiping them triples cold-build time.
+    # the corruption forward across daemon restarts; clear them every purge.
     _remove_path(Path.home() / "Library/Developer/CoreSimulator/Caches")
+
+
+def _purge_daemons_before_ui_test(*, skip: bool = False) -> None:
+    """Pre-emptively call `purge_coresim_daemon_state` before each UI test so
+    daemon corruption can't slip past preflight (which only checks responsiveness)
+    and produce a 5-minute xcodebuild hang later. Honors the same fcntl preflight
+    lock as `_remediate_with_repair` so concurrent test runs don't kill each
+    other's daemons mid-boot. Skippable via `WOONTECH_UI_DAEMON_PURGE_SKIP=1`.
+
+    Pass `skip=True` when `preflight_check()` already invoked `repair_environment`
+    so the daemon is not killed a second time immediately before `simctl erase`.
+    """
+    if skip:
+        _preflight_log("daemon_purge ... skipped (preflight already ran repair_environment)")
+        return
+    if os.environ.get(ENV_UI_DAEMON_PURGE_SKIP) == "1":
+        _preflight_log("daemon_purge ... skipped (WOONTECH_UI_DAEMON_PURGE_SKIP=1)")
+        return
+    lock = _try_acquire_preflight_lock()
+    if lock is None:
+        _preflight_log("daemon_purge ... skipped (lock held by concurrent test run)")
+        return
+    held = lock is not _PREFLIGHT_LOCK_UNAVAILABLE
+    try:
+        purge_started = time.monotonic()
+        purge_coresim_daemon_state()
+        elapsed_ms = int((time.monotonic() - purge_started) * 1000)
+        note = "" if held else " (no lock)"
+        _preflight_log(f"daemon_purge ... ok ({elapsed_ms}ms){note}")
+    finally:
+        if held:
+            try:
+                lock.close()
+            except Exception:
+                pass
+
+
+def repair_environment(*, simulator_udid: str | None, derived_data_path: Path) -> None:
+    print("Detected Xcode/LLDB/CoreSimulator launch infrastructure failure; repairing environment.", flush=True)
+    if simulator_udid:
+        _run_quiet(["xcrun", "simctl", "shutdown", simulator_udid])
+    purge_coresim_daemon_state()
     if simulator_udid:
         _run_quiet(["xcrun", "simctl", "erase", simulator_udid])
+    # The heavier Xcode/DerivedData caches stay behind WOONTECH_XCODE_DEEP_REPAIR
+    # because wiping them triples cold-build time.
     _remove_path(derived_data_path)
     if os.environ.get(ENV_DEEP_REPAIR) == "1":
         _remove_path(Path.home() / "Library/Developer/Xcode/DerivedData")
@@ -625,7 +670,7 @@ def _shorten_detail(text: str, *, limit: int = 200) -> str:
     return first
 
 
-def preflight_check(*, ui: bool, derived_data_path: Path) -> None:
+def preflight_check(*, ui: bool, derived_data_path: Path) -> bool:
     """Verify Xcode toolchain, simctl responsiveness, target simulator availability,
     and writable derived-data path before xcodebuild is invoked. Each check has its
     own remediation policy (one retry max). Raises `PreflightError` on terminal
@@ -634,11 +679,15 @@ def preflight_check(*, ui: bool, derived_data_path: Path) -> None:
 
     Honors `WOONTECH_PREFLIGHT_SKIP=1` for CI/headless escape and
     `WOONTECH_SIMULATOR_UDID` via the existing `resolve_simulator()` path.
+
+    Returns True if `repair_environment` was successfully invoked during preflight,
+    so the caller can skip a redundant daemon purge immediately after.
     """
     if os.environ.get(ENV_PREFLIGHT_SKIP) == "1":
         _preflight_log("skipped (WOONTECH_PREFLIGHT_SKIP=1)")
-        return
+        return False
 
+    _repair_ran = False
     started = time.monotonic()
 
     def _check_xcode_select() -> None:
@@ -850,6 +899,7 @@ def preflight_check(*, ui: bool, derived_data_path: Path) -> None:
             )
 
     def _remediate_with_repair(reason: str) -> str:
+        nonlocal _repair_ran
         lock = _try_acquire_preflight_lock()
         if lock is None:
             return "skipped (lock held by concurrent test run)"
@@ -860,6 +910,7 @@ def preflight_check(*, ui: bool, derived_data_path: Path) -> None:
                 f"remediating ({reason}): repair_environment (kill CoreSim + erase){note}"
             )
             repair_environment(simulator_udid=None, derived_data_path=derived_data_path)
+            _repair_ran = True
             return "repair_environment" if held else "repair_environment (no lock)"
         finally:
             if held:
@@ -943,6 +994,7 @@ def preflight_check(*, ui: bool, derived_data_path: Path) -> None:
 
     elapsed = time.monotonic() - started
     _preflight_log(f"passed in {elapsed:.1f}s")
+    return _repair_ran
 
 
 def run_with_optional_repair(
@@ -997,13 +1049,14 @@ def run_test(
     code = 1
     try:
         try:
-            preflight_check(ui=ui, derived_data_path=derived_data_path)
+            repair_ran = preflight_check(ui=ui, derived_data_path=derived_data_path)
         except PreflightError as exc:
             pre_failure = exc.failure
             raise
         simulator = resolve_simulator(ui=ui)
         simulator_udid = simulator.udid
         if ui:
+            _purge_daemons_before_ui_test(skip=repair_ran)
             reset_simulator(simulator.udid)
             try:
                 boot_simulator(simulator.udid)

@@ -506,6 +506,7 @@ private struct TenGodsLearnEntryCard: View {
             }
             .frame(maxWidth: .infinity)
             .padding(14)
+            .contentShape(Rectangle())
             .overlay(
                 RoundedRectangle(cornerRadius: 6)
                     .stroke(DesignTokens.line3, lineWidth: 1)

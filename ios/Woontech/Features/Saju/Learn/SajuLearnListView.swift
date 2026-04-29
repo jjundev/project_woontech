@@ -168,6 +168,7 @@ struct ToastBannerView: View {
                 RoundedRectangle(cornerRadius: 10)
                     .fill(Color.black.opacity(0.8))
             )
+        .accessibilityElement(children: .contain)
     }
 }
 

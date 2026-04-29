@@ -79,8 +79,8 @@ final class SajuBelowFoldUITests: XCTestCase {
                       "SajuStudyAllButton must exist")
         allButton.tap()
         XCTAssertTrue(
-            app.otherElements["SajuPlaceholderDestination_learn"].waitForExistence(timeout: 5),
-            "Tapping '전체 ›' should push learn route"
+            app.otherElements["SajuLearnListView"].waitForExistence(timeout: 5),
+            "Tapping '전체 ›' should push SajuLearnListView"
         )
     }
 
@@ -207,8 +207,8 @@ final class SajuBelowFoldUITests: XCTestCase {
         XCTAssertTrue(card.waitForExistence(timeout: 5))
         card.tap()
         XCTAssertTrue(
-            app.otherElements["SajuPlaceholderDestination_learn"].waitForExistence(timeout: 5),
-            "Tapping a course card should push learn route"
+            app.otherElements["SajuLearnListView"].waitForExistence(timeout: 5),
+            "Tapping a course card should push SajuLearnListView"
         )
     }
 

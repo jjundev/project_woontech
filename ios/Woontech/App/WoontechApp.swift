@@ -161,9 +161,14 @@ struct WoontechApp: App {
         // card is hidden (AC#9).
         let sajuElementsNoGuidance = args.contains("-sajuElementsNoGuidance")
 
+        // WF4-05: Parse tenGods detail mock launch args.
+        let sajuTenGodsNoAbsentWarning = args.contains("-sajuTenGodsNoAbsentWarning")
+        let sajuTenGodsNoLearnEntry    = args.contains("-sajuTenGodsNoLearnEntry")
+
         let sajuDeps: SajuTabDependencies
         let needsCustomLearningPath = sajuStreakDaysOverride != nil || sajuFeaturedLessonNil
-        if needsCustomLearningPath || sajuElementsNoGuidance {
+        let needsCustomTenGods = sajuTenGodsNoAbsentWarning || sajuTenGodsNoLearnEntry
+        if needsCustomLearningPath || sajuElementsNoGuidance || needsCustomTenGods {
             let overrideDays = sajuStreakDaysOverride ?? 3
             let weeklyProgress = WeeklyProgress(completed: 3, goal: 5, streakDays: overrideDays)
             let featuredLesson: FeaturedLesson? = sajuFeaturedLessonNil
@@ -180,8 +185,20 @@ struct WoontechApp: App {
             let elementsProvider: any SajuElementsDetailProviding = sajuElementsNoGuidance
                 ? MockSajuElementsDetailProvider(guidance: nil)
                 : MockSajuElementsDetailProvider()
+            let tenGodsProvider: any SajuTenGodsDetailProviding = {
+                if sajuTenGodsNoAbsentWarning && sajuTenGodsNoLearnEntry {
+                    return MockSajuTenGodsDetailProvider(absentWarning: nil, learnEntry: nil)
+                } else if sajuTenGodsNoAbsentWarning {
+                    return MockSajuTenGodsDetailProvider(absentWarning: nil)
+                } else if sajuTenGodsNoLearnEntry {
+                    return MockSajuTenGodsDetailProvider(learnEntry: nil)
+                } else {
+                    return MockSajuTenGodsDetailProvider()
+                }
+            }()
             sajuDeps = SajuTabDependencies(
                 elementsDetail: elementsProvider,
+                tenGodsDetail: tenGodsProvider,
                 learningPath: learningPathProvider
             )
         } else {

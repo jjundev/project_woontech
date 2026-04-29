@@ -1,0 +1,21 @@
+{
+  "id": "WF4-05-detail-tengods",
+  "state": "ui_verify",
+  "paused_from": null,
+  "title": "WF4-05 \u2014 \uc2ed\uc131 \ubd84\uc11d \uc0c1\uc138 (\uc0ac\uc8fc \ud0ed \uce74\ud14c\uace0\ub9ac 2\ubc88 \ubaa9\uc801\uc9c0)",
+  "plan_version": 2,
+  "impl_version": 0,
+  "plan_retries": 1,
+  "impl_retries": 0,
+  "ui_review_retries": 1,
+  "ui_to_impl_loops": 0,
+  "max_plan_retries": 3,
+  "max_impl_retries": 3,
+  "max_ui_review_iters": 3,
+  "max_ui_to_impl_loops": 2,
+  "escalation": null,
+  "created_at": 1777345540.052876,
+  "updated_at": 1777380409.922988,
+  "branch": "feature/WF4-05-detail-tengods",
+  "pr_url": null
+}

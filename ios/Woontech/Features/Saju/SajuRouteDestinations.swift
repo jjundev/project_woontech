@@ -38,14 +38,20 @@ struct SajuPlaceholderDestinationView: View {
 /// 한 곳에서 라우트 → 목적지 View로 매핑한다.
 ///
 /// WF4-04: `.elements` 케이스가 `SajuElementsDetailView`로 교체됨.
-/// `deps` 파라미터를 추가해 `elementsDetail` provider를 주입한다.
+/// WF4-05: `.tenGods` 케이스가 `SajuTenGodsDetailView`로 교체됨.
+/// `onNavigate` 파라미터는 `SajuTenGodsDetailView`의 학습 유도 카드 탭 시
+/// `SajuRoute.lesson(id:)` push에 사용된다(Option A).
 @ViewBuilder
-func sajuRouteDestination(for route: SajuRoute, deps: SajuTabDependencies) -> some View {
+func sajuRouteDestination(
+    for route: SajuRoute,
+    deps: SajuTabDependencies,
+    onNavigate: @escaping (SajuRoute) -> Void
+) -> some View {
     switch route {
     case .elements:
         SajuElementsDetailView(provider: deps.elementsDetail)
     case .tenGods:
-        SajuPlaceholderDestinationView(routeKey: "tenGods")
+        SajuTenGodsDetailView(provider: deps.tenGodsDetail, onNavigate: onNavigate)
     case .learn:
         SajuPlaceholderDestinationView(routeKey: "learn")
     case .lesson(let id):

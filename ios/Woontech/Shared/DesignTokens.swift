@@ -29,4 +29,12 @@ enum DesignTokens {
     // MARK: - 사주 원국 카드 토큰
     static let dayMasterHighlight = Color(red: 0xD6/255, green: 0xD6/255, blue: 0xD6/255) // gray2 재사용
     static let dayMasterLineBg    = Color(red: 0xF2/255, green: 0xF2/255, blue: 0xF2/255) // gray 재사용
+
+    // MARK: - 십성 배지·경고 색상 (WF4-05)
+    /// "핵심" 배지 배경 — 검정(ink 재사용).
+    static let coreBadgeBg    = ink
+    /// 부재 텍스트·카드 테두리 — fireColor 재사용.
+    static let absentRed      = fireColor
+    /// 경고 카드 copy 박스 배경 — 연한 빨강.
+    static let absentRedLight = Color(red: 1.0, green: 0.9, blue: 0.9)
 }

@@ -113,9 +113,17 @@ final class SajuTabFoundationUITests: XCTestCase {
         tapPushAndAssertDestination(button: "SajuNavPush_tenGods", destinationKey: "tenGods")
     }
 
-    // T20
-    func test_sajuRoute_pushLearn_showsPlaceholder() {
-        tapPushAndAssertDestination(button: "SajuNavPush_learn", destinationKey: "learn")
+    // T20 — WF4-06: `.learn` 라우트가 SajuLearnListView로 교체됨.
+    func test_sajuRoute_pushLearn_showsLearnListView() {
+        launchSajuTab()
+        let btn = app.buttons["SajuNavPush_learn"]
+        XCTAssertTrue(btn.waitForExistence(timeout: 3),
+                      "SajuNavPush_learn trigger button must exist")
+        btn.tap()
+        XCTAssertTrue(
+            app.otherElements["SajuLearnListView"].waitForExistence(timeout: 5),
+            "SajuLearnListView should appear after pushing .learn route"
+        )
     }
 
     // T21

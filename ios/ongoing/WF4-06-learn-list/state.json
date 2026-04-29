@@ -1,12 +1,12 @@
 {
   "id": "WF4-06-learn-list",
-  "state": "implementing",
+  "state": "ui_verify",
   "paused_from": null,
   "title": "WF4-06 \u2014 \uc0ac\uc8fc \uacf5\ubd80 \ub9ac\uc2a4\ud2b8",
   "plan_version": 2,
-  "impl_version": 0,
+  "impl_version": 2,
   "plan_retries": 1,
-  "impl_retries": 0,
+  "impl_retries": 1,
   "ui_review_retries": 0,
   "ui_to_impl_loops": 0,
   "max_plan_retries": 3,
@@ -15,7 +15,7 @@
   "max_ui_to_impl_loops": 2,
   "escalation": null,
   "created_at": 1777478640.742563,
-  "updated_at": 1777479452.169436,
+  "updated_at": 1777481001.4094772,
   "branch": "feature/WF4-06-learn-list",
   "pr_url": null
 }

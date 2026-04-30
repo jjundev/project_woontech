@@ -86,9 +86,10 @@ struct SajuWeeklyProgressBannerView: View {
                 )
         )
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(
-            "이번 주 학습 진행, \(progress.completed)강 완료 중 \(progress.goal)강, 연속 \(progress.streakDays)일"
-        )
+        .accessibilityLabel({
+            let streakPart = progress.streakDays > 0 ? ", 연속 \(progress.streakDays)일" : ""
+            return "이번 주 학습 진행, \(progress.completed)강 완료 중 \(progress.goal)강\(streakPart)"
+        }())
         .accessibilityIdentifier("SajuLearnWeeklyBanner")
     }
 }

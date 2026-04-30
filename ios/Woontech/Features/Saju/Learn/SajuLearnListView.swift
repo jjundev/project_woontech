@@ -137,7 +137,7 @@ private struct CourseHeaderView: View {
                 .font(.system(size: 10))
                 .foregroundStyle(DesignTokens.muted)
         }
-        .accessibilityElement(children: .contain)
+        .accessibilityElement(children: .combine)
         .accessibilityIdentifier("SajuLearnCourseHeader")
     }
 }

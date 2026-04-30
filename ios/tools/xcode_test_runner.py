@@ -187,6 +187,45 @@ def _discover_ui_test_classes(target_worktree: Path) -> list[str]:
     return classes
 
 
+def _resolve_ui_chunk_selectors(
+    *,
+    ui: bool,
+    passthrough_args: Sequence[str],
+    target: str,
+    target_worktree: Path,
+    no_chunk_env: bool,
+) -> list[str | None]:
+    """Decide how to split a UI run into per-chunk xcodebuild invocations.
+
+    Returns a list whose length is the number of xcodebuild invocations to run.
+    Each entry is either a full `-only-testing:...` selector string to inject,
+    or None when the caller's `passthrough_args` already encode the scope.
+
+    Policy:
+        - not --ui  → [None]                  (single run, unchanged)
+        - WOONTECH_UI_NO_CHUNK=1 → [None]     (override, unchanged)
+        - --ui, no `-only-testing:` and discovered classes → per-class selectors
+        - --ui, no `-only-testing:` and nothing discovered → [None]
+        - --ui, exactly one user `-only-testing:` → [None]
+        - --ui, ≥2 user `-only-testing:` → split per selector
+
+    Splitting per-selector lets the harness's scoped UI verify (which injects
+    one `-only-testing:` per changed test class) inherit the same daemon-purge
+    and per-chunk repair retry as the no-selector full-suite path.
+    """
+    if not ui or no_chunk_env:
+        return [None]
+    user_only_testing = [a for a in passthrough_args if a.startswith("-only-testing:")]
+    if not user_only_testing:
+        discovered = _discover_ui_test_classes(target_worktree)
+        if not discovered:
+            return [None]
+        return [f"-only-testing:{target}/{cls}" for cls in discovered]
+    if len(user_only_testing) >= 2:
+        return list(user_only_testing)
+    return [None]
+
+
 def _capture_ui_failure_environment(
     out_dir: Path, test_kind: str, simulator_udid: str | None
 ) -> None:
@@ -1129,22 +1168,29 @@ def run_test(
         # UI runs of 200+ tests in a single xcodebuild invocation crash CoreSimulatorService
         # midway with Mach -308 / 'Invalid device state'. Splitting into per-class
         # invocations with a daemon purge between chunks lets each xcodebuild start with
-        # a fresh simctl service. Disable with WOONTECH_UI_NO_CHUNK=1 when running a
-        # single class via `-only-testing:` (the user is already chunking by hand).
-        chunk_classes: list[str | None]
-        if (
-            ui
-            and not user_provided_only
-            and os.environ.get("WOONTECH_UI_NO_CHUNK") != "1"
-        ):
-            discovered = _discover_ui_test_classes(target_worktree)
-            chunk_classes = list(discovered) if discovered else [None]
-        else:
-            chunk_classes = [None]
-        chunked = len(chunk_classes) > 1
+        # a fresh simctl service. The harness's scoped UI verify also bundles multiple
+        # `-only-testing:` selectors into one call; those get split per-selector so each
+        # one inherits the same daemon-purge + repair-retry envelope. Disable with
+        # WOONTECH_UI_NO_CHUNK=1.
+        chunk_selectors = _resolve_ui_chunk_selectors(
+            ui=ui,
+            passthrough_args=passthrough_args,
+            target=target,
+            target_worktree=target_worktree,
+            no_chunk_env=os.environ.get("WOONTECH_UI_NO_CHUNK") == "1",
+        )
+        # Strip `-only-testing:` from the base when we're splitting per selector
+        # so each chunk only sees its own scope (otherwise xcodebuild gets the
+        # full union and runs everything every time).
+        base_args = (
+            [a for a in passthrough_args if not a.startswith("-only-testing:")]
+            if len(chunk_selectors) > 1 and user_provided_only
+            else list(passthrough_args)
+        )
+        chunked = len(chunk_selectors) > 1
         if chunked:
             print(
-                f"[chunked] running {len(chunk_classes)} UI test classes in separate "
+                f"[chunked] running {len(chunk_selectors)} UI test selectors in separate "
                 f"xcodebuild invocations with daemon purge between chunks",
                 flush=True,
             )
@@ -1154,7 +1200,7 @@ def run_test(
         # passing chunks don't overwrite it and silently hide the regression from
         # `_persist_test_artifacts` (which only reads the canonical bundle path).
         mirrored_failure = False
-        for index, cls in enumerate(chunk_classes):
+        for index, selector in enumerate(chunk_selectors):
             if chunked and index > 0:
                 # Drop accumulated CoreSim state before the next chunk so simctl can't
                 # die mid-run on subsequent chunks. The simulator UDID is preserved;
@@ -1171,21 +1217,27 @@ def run_test(
                     overall_code = overall_code or 1
                     break
 
-            chunk_args = list(passthrough_args)
-            if cls is not None:
-                chunk_args.insert(0, f"-only-testing:WoontechUITests/{cls}")
+            chunk_args = list(base_args)
+            if selector is not None:
+                chunk_args.insert(0, selector)
             elif not user_provided_only:
                 chunk_args.insert(0, f"-only-testing:{target}")
 
+            chunk_label = (
+                selector.split(":", 1)[1] if selector else f"chunk-{index:02d}"
+            )
             chunk_bundle = (
-                _result_bundle_path(derived_data_path, f"{mode}-{index:02d}-{cls}")
+                _result_bundle_path(
+                    derived_data_path,
+                    f"{mode}-{index:02d}-{chunk_label.replace('/', '-')}",
+                )
                 if chunked
                 else result_bundle_path
             )
 
             if chunked:
                 print(
-                    f"[chunked] {index + 1}/{len(chunk_classes)}: {cls}",
+                    f"[chunked] {index + 1}/{len(chunk_selectors)}: {chunk_label}",
                     flush=True,
                 )
 
@@ -1210,7 +1262,7 @@ def run_test(
                 # chunk has failed yet by the last iteration, mirror the last
                 # chunk so the canonical bundle still reflects a real run.
                 is_failure = chunk_code != 0
-                is_last = index == len(chunk_classes) - 1
+                is_last = index == len(chunk_selectors) - 1
                 should_mirror = (is_failure and not mirrored_failure) or (
                     not mirrored_failure and is_last
                 )

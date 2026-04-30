@@ -75,13 +75,24 @@ pytest backend/tests -v
 The packaged harness commands route through `ios/tools/xcode_test_runner.py`
 instead of invoking `xcodebuild` directly. The wrapper uses an explicit
 simulator UUID destination, isolated DerivedData under
-`/tmp/woontech-derived-data/`, and a one-shot repair/retry when Xcode reports
-LLDB/CoreSimulator launch-infrastructure failures such as:
+`~/Library/Caches/woontech-derived-data/` (override with the
+`WOONTECH_DERIVED_DATA_ROOT` environment variable), and a one-shot
+repair/retry when Xcode reports CoreSimulator launch-infrastructure failures:
 
-- `DebuggerVersionStore`
-- `no debugger version`
-- `IDELaunchParametersSnapshot`
+- `Failed to install or launch the test runner`
 - `Mach error -308`
+- `simdiskimaged`
+
+LLDB-only signatures (`DebuggerVersionStore`, `no debugger version`,
+`IDELaunchParametersSnapshot`) are logged but no longer trigger the
+retry path: they appear on every cold launch with mismatched host LLDB /
+simulator runtime versions, while the tests themselves still complete.
+
+UI test runs (`--ui`) are automatically split into per-class xcodebuild
+invocations with a daemon purge between chunks, so CoreSimulatorService
+state can't accumulate across hundreds of cold app launches in one
+process. Disable with `WOONTECH_UI_NO_CHUNK=1` or by passing an explicit
+`-only-testing:` selector.
 
 Run the wrapper from the iOS project root:
 

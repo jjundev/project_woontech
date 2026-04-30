@@ -19,7 +19,7 @@ PROJECT_NAME = "Woontech.xcodeproj"
 DEFAULT_DEVICE_NAME = "iPhone 17 Pro"
 DEFAULT_DEVICE_TYPE_ID = "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro"
 UI_SIMULATOR_NAME = "Woontech UI Test iPhone 17 Pro"
-DERIVED_DATA_ROOT = Path("/tmp/woontech-derived-data")
+DERIVED_DATA_ROOT = Path(os.environ.get("WOONTECH_DERIVED_DATA_ROOT") or str(Path.home() / "Library/Caches/woontech-derived-data"))
 ENV_SIMULATOR_UDID = "WOONTECH_SIMULATOR_UDID"
 ENV_DEEP_REPAIR = "WOONTECH_XCODE_DEEP_REPAIR"
 ENV_WORKTREE_DIR = "WOONTECH_WORKTREE_DIR"
@@ -151,6 +151,40 @@ def _result_bundle_path(derived_data_path: Path, test_kind: str) -> Path:
         / "ResultBundles"
         / f"Test-Woontech-{test_kind}-{stamp}-{os.getpid()}-{unique}.xcresult"
     )
+
+
+def _discover_ui_test_classes(target_worktree: Path) -> list[str]:
+    """Top-level UI test class names under ios/WoontechUITests/.
+
+    Used to split a single xcodebuild UI run into per-class invocations so the
+    CoreSimulatorService doesn't accumulate state across hundreds of cold app
+    launches in one process. We hit the limit empirically on Apple Silicon
+    around the 200-test mark: simctl returns 'Invalid device state' / Mach -308
+    halfway through a 280-test run and the remaining tests are abandoned.
+
+    The Woontech convention is one XCTestCase per file with the class name
+    matching the file stem (`SajuResultUITests.swift` -> `SajuResultUITests`).
+    Only files ending in `UITests` are included; helper files do not match.
+    Returns class names in deterministic sort order so chunk selection is
+    reproducible.
+    """
+    # ios_root() (the default `target_worktree`) already points at the `ios/`
+    # directory, so the WoontechUITests folder is a direct child rather than
+    # nested under another `ios/`. Fall back to a workspace-rooted layout when
+    # the caller passes a worktree root override that contains the ios subdir.
+    candidates = [
+        target_worktree / "WoontechUITests",
+        target_worktree / "ios" / "WoontechUITests",
+    ]
+    base = next((c for c in candidates if c.is_dir()), None)
+    if base is None:
+        return []
+    classes: list[str] = []
+    for swift in sorted(base.rglob("*.swift")):
+        stem = swift.stem
+        if stem.endswith("UITests"):
+            classes.append(stem)
+    return classes
 
 
 def _capture_ui_failure_environment(
@@ -377,8 +411,19 @@ def choose_runtime_for_device_type(
 
 
 def is_environment_launch_failure(output: str) -> bool:
+    # Only CoreSim signatures indicate the test infrastructure is actually dead and
+    # a retry-with-repair is warranted. LLDB signatures (DebuggerVersionStore, etc.)
+    # appear on every cold launch when the host LLDB and the simulator runtime are
+    # mismatched but tests still proceed; treating them as environment failure here
+    # caused real test regressions to be discarded as "infra failure" and the result
+    # bundle to be wiped on retry. Keep the LLDB list around for diagnostic logging.
     haystack = output.lower()
-    return any(signature.lower() in haystack for signature in LLDB_ENV_FAILURE_SIGNATURES + CORESIM_ENV_FAILURE_SIGNATURES)
+    return any(signature.lower() in haystack for signature in CORESIM_ENV_FAILURE_SIGNATURES)
+
+
+def has_lldb_attach_noise(output: str) -> bool:
+    haystack = output.lower()
+    return any(signature.lower() in haystack for signature in LLDB_ENV_FAILURE_SIGNATURES)
 
 
 def _current_devices_json() -> dict[str, Any]:
@@ -1014,6 +1059,13 @@ def run_with_optional_repair(
         if attempt == 0 and is_environment_launch_failure(output):
             repair_environment(simulator_udid=simulator_udid, derived_data_path=derived_data_path)
             continue
+        if has_lldb_attach_noise(output):
+            print(
+                "Note: LLDB attach errors (DebuggerVersionStore/no debugger version) "
+                "appeared in the output but were not treated as environment failure. "
+                "Failure code is from the test result itself.",
+                flush=True,
+            )
         return code
     return 1
 
@@ -1072,23 +1124,113 @@ def run_test(
                     remediation="none",
                 )
                 raise
-        selection_args = list(xcodebuild_args)
-        if not any(arg.startswith("-only-testing:") for arg in selection_args):
-            selection_args.insert(0, f"-only-testing:{target}")
-        args = _xcodebuild_base(derived_data_path) + [
-            "-destination",
-            f"id={simulator.udid}",
-            "-resultBundlePath",
-            str(result_bundle_path),
-            "test",
-            *selection_args,
-        ]
-        code = run_with_optional_repair(
-            args,
-            simulator_udid=simulator.udid,
-            derived_data_path=derived_data_path,
-            result_bundle_path=result_bundle_path,
-        )
+        passthrough_args = list(xcodebuild_args)
+        user_provided_only = any(arg.startswith("-only-testing:") for arg in passthrough_args)
+        # UI runs of 200+ tests in a single xcodebuild invocation crash CoreSimulatorService
+        # midway with Mach -308 / 'Invalid device state'. Splitting into per-class
+        # invocations with a daemon purge between chunks lets each xcodebuild start with
+        # a fresh simctl service. Disable with WOONTECH_UI_NO_CHUNK=1 when running a
+        # single class via `-only-testing:` (the user is already chunking by hand).
+        chunk_classes: list[str | None]
+        if (
+            ui
+            and not user_provided_only
+            and os.environ.get("WOONTECH_UI_NO_CHUNK") != "1"
+        ):
+            discovered = _discover_ui_test_classes(target_worktree)
+            chunk_classes = list(discovered) if discovered else [None]
+        else:
+            chunk_classes = [None]
+        chunked = len(chunk_classes) > 1
+        if chunked:
+            print(
+                f"[chunked] running {len(chunk_classes)} UI test classes in separate "
+                f"xcodebuild invocations with daemon purge between chunks",
+                flush=True,
+            )
+
+        overall_code = 0
+        # Track whether the canonical bundle already reflects a failure so later
+        # passing chunks don't overwrite it and silently hide the regression from
+        # `_persist_test_artifacts` (which only reads the canonical bundle path).
+        mirrored_failure = False
+        for index, cls in enumerate(chunk_classes):
+            if chunked and index > 0:
+                # Drop accumulated CoreSim state before the next chunk so simctl can't
+                # die mid-run on subsequent chunks. The simulator UDID is preserved;
+                # launchd respawns the service and we re-boot the same device below.
+                _purge_daemons_before_ui_test(skip=False)
+                try:
+                    boot_simulator(simulator.udid)
+                except SimulatorBootError as exc:
+                    pre_failure = PreflightFailure(
+                        check="simulator_boot",
+                        detail=f"chunk {index} re-boot: {exc}",
+                        remediation="none",
+                    )
+                    overall_code = overall_code or 1
+                    break
+
+            chunk_args = list(passthrough_args)
+            if cls is not None:
+                chunk_args.insert(0, f"-only-testing:WoontechUITests/{cls}")
+            elif not user_provided_only:
+                chunk_args.insert(0, f"-only-testing:{target}")
+
+            chunk_bundle = (
+                _result_bundle_path(derived_data_path, f"{mode}-{index:02d}-{cls}")
+                if chunked
+                else result_bundle_path
+            )
+
+            if chunked:
+                print(
+                    f"[chunked] {index + 1}/{len(chunk_classes)}: {cls}",
+                    flush=True,
+                )
+
+            args = _xcodebuild_base(derived_data_path) + [
+                "-destination",
+                f"id={simulator.udid}",
+                "-resultBundlePath",
+                str(chunk_bundle),
+                "test",
+                *chunk_args,
+            ]
+            chunk_code = run_with_optional_repair(
+                args,
+                simulator_udid=simulator.udid,
+                derived_data_path=derived_data_path,
+                result_bundle_path=chunk_bundle,
+            )
+            if chunked:
+                # The harness consumes one canonical result bundle. Mirror the
+                # FIRST failing chunk's bundle and leave it in place so a later
+                # passing chunk can't overwrite the visible regression. If no
+                # chunk has failed yet by the last iteration, mirror the last
+                # chunk so the canonical bundle still reflects a real run.
+                is_failure = chunk_code != 0
+                is_last = index == len(chunk_classes) - 1
+                should_mirror = (is_failure and not mirrored_failure) or (
+                    not mirrored_failure and is_last
+                )
+                if should_mirror:
+                    try:
+                        _remove_path(result_bundle_path)
+                        result_bundle_path.parent.mkdir(parents=True, exist_ok=True)
+                        if chunk_bundle.exists():
+                            shutil.copytree(chunk_bundle, result_bundle_path)
+                        if is_failure:
+                            mirrored_failure = True
+                    except Exception as exc:  # noqa: BLE001 — best-effort artifact mirror
+                        print(
+                            f"warning: failed to mirror chunk bundle {chunk_bundle} -> {result_bundle_path}: {exc}",
+                            file=sys.stderr,
+                        )
+            if chunk_code != 0:
+                overall_code = chunk_code
+
+        code = overall_code
         return code
     finally:
         try:

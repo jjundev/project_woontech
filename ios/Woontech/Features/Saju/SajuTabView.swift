@@ -38,7 +38,11 @@ struct SajuTabView: View {
                     sajuRouteDestination(
                         for: route,
                         deps: deps,
-                        onNavigate: { r in navigationPath.append(r) }
+                        onNavigate: { r in navigationPath.append(r) },
+                        onReplaceTop: { r in
+                            if !navigationPath.isEmpty { navigationPath.removeLast() }
+                            navigationPath.append(r)
+                        }
                     )
                 }
             }
@@ -76,6 +80,18 @@ struct SajuTabView: View {
                     }
                     sajuUITestPushButton("SajuNavPush_lessonL001") {
                         navigationPath.append(.lesson(id: "L-001"))
+                    }
+                    // WF4-07: 기본값 레슨 (L-OH-003, nextLessonId="L-OH-004")
+                    sajuUITestPushButton("SajuNavPush_lessonLOH003") {
+                        navigationPath.append(.lesson(id: "L-OH-003"))
+                    }
+                    // WF4-07: 마지막 레슨 (L-OH-LAST, nextLessonId=nil)
+                    sajuUITestPushButton("SajuNavPush_lessonNoNext") {
+                        navigationPath.append(.lesson(id: "L-OH-LAST"))
+                    }
+                    // WF4-07: 알 수 없는 id → fallback "준비중"
+                    sajuUITestPushButton("SajuNavPush_lessonUnknownId") {
+                        navigationPath.append(.lesson(id: "__unknown__"))
                     }
                     sajuUITestPushButton("SajuNavPush_daewoon") {
                         navigationPath.append(.daewoonPlaceholder)

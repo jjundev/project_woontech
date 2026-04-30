@@ -147,6 +147,9 @@
 		B0010845000000000000B845 /* SajuLearnArticleCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010845000000000000A845 /* SajuLearnArticleCardView.swift */; };
 		B0010846000000000000B846 /* SajuLearnListTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010846000000000000A846 /* SajuLearnListTests.swift */; };
 		B0010847000000000000B847 /* SajuLearnListUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010847000000000000A847 /* SajuLearnListUITests.swift */; };
+		B0010848000000000000B848 /* SajuLessonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010848000000000000A848 /* SajuLessonView.swift */; };
+		B0010849000000000000B849 /* SajuLessonTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010849000000000000A849 /* SajuLessonTests.swift */; };
+		B0010850000000000000B850 /* SajuLessonUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0010850000000000000A850 /* SajuLessonUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -310,6 +313,9 @@
 		A0010845000000000000A845 /* SajuLearnArticleCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuLearnArticleCardView.swift; sourceTree = "<group>"; };
 		A0010846000000000000A846 /* SajuLearnListTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuLearnListTests.swift; sourceTree = "<group>"; };
 		A0010847000000000000A847 /* SajuLearnListUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuLearnListUITests.swift; sourceTree = "<group>"; };
+		A0010848000000000000A848 /* SajuLessonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuLessonView.swift; sourceTree = "<group>"; };
+		A0010849000000000000A849 /* SajuLessonTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuLessonTests.swift; sourceTree = "<group>"; };
+		A0010850000000000000A850 /* SajuLessonUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SajuLessonUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -437,6 +443,7 @@
 				A0010843000000000000A843 /* SajuWeeklyProgressBannerView.swift */,
 				A0010844000000000000A844 /* SajuLessonRowCardView.swift */,
 				A0010845000000000000A845 /* SajuLearnArticleCardView.swift */,
+				A0010848000000000000A848 /* SajuLessonView.swift */,
 			);
 			path = Learn;
 			sourceTree = "<group>";
@@ -514,6 +521,7 @@
 				A0010801000000000000A801 /* SajuElementsDetailViewTests.swift */,
 				A0010807000000000000A807 /* SajuTenGodsDetailViewTests.swift */,
 				A0010846000000000000A846 /* SajuLearnListTests.swift */,
+				A0010849000000000000A849 /* SajuLessonTests.swift */,
 			);
 			path = Saju;
 			sourceTree = "<group>";
@@ -527,6 +535,7 @@
 				A0010847000000000000A847 /* SajuLearnListUITests.swift */,
 				A0010802000000000000A802 /* SajuElementsDetailUITests.swift */,
 				A0010808000000000000A808 /* SajuTenGodsDetailUITests.swift */,
+				A0010850000000000000A850 /* SajuLessonUITests.swift */,
 			);
 			path = Saju;
 			sourceTree = "<group>";
@@ -892,6 +901,7 @@
 				B0010801000000000000B801 /* SajuElementsDetailViewTests.swift in Sources */,
 				B0010804000000000000B804 /* SajuTenGodsDetailViewTests.swift in Sources */,
 				B0010846000000000000B846 /* SajuLearnListTests.swift in Sources */,
+				B0010849000000000000B849 /* SajuLessonTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -998,6 +1008,7 @@
 				B0010843000000000000B843 /* SajuWeeklyProgressBannerView.swift in Sources */,
 				B0010844000000000000B844 /* SajuLessonRowCardView.swift in Sources */,
 				B0010845000000000000B845 /* SajuLearnArticleCardView.swift in Sources */,
+				B0010848000000000000B848 /* SajuLessonView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1022,6 +1033,7 @@
 				B0010802000000000000B802 /* SajuElementsDetailUITests.swift in Sources */,
 				B0010805000000000000B805 /* SajuTenGodsDetailUITests.swift in Sources */,
 				B0010847000000000000B847 /* SajuLearnListUITests.swift in Sources */,
+				B0010850000000000000B850 /* SajuLessonUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

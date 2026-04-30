@@ -37,4 +37,14 @@ enum DesignTokens {
     static let absentRed      = fireColor
     /// 경고 카드 copy 박스 배경 — 연한 빨강.
     static let absentRedLight = Color(red: 1.0, green: 0.9, blue: 0.9)
+
+    // MARK: - 퀴즈 색상 토큰 (WF4-07)
+    /// 정답 옵션 테두리 — ink 재사용.
+    static let quizCorrectBorder     = ink
+    /// 정답 옵션 배경 — gray 재사용.
+    static let quizCorrectBackground = gray
+    /// 오답 옵션 테두리 — absentRed(fireColor) 재사용.
+    static let quizIncorrectBorder   = absentRed
+    /// 오답 옵션 배경 — absentRedLight 재사용.
+    static let quizIncorrectBg       = absentRedLight
 }

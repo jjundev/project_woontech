@@ -145,7 +145,6 @@ struct SajuLessonView: View {
                 Text("\(lesson.currentIndex)/\(lesson.totalCount)")
                     .font(.system(size: 13))
                     .foregroundStyle(DesignTokens.muted)
-                    .accessibilityLabel("현재 \(lesson.currentIndex)강, 총 \(lesson.totalCount)강")
             }
         }
     }

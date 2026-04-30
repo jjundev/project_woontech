@@ -137,7 +137,8 @@ private struct CourseHeaderView: View {
                 .font(.system(size: 10))
                 .foregroundStyle(DesignTokens.muted)
         }
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(course.name) 코스, \(course.lessonCount)강")
         .accessibilityIdentifier("SajuLearnCourseHeader")
     }
 }

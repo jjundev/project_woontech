@@ -1,0 +1,21 @@
+{
+  "id": "WF4-07-learn-lesson",
+  "state": "planning",
+  "paused_from": null,
+  "title": "WF4-07 \u2014 \ub808\uc2a8 \uc0c1\uc138 (\ud559\uc2b5 \uacbd\ud5d8)",
+  "plan_version": 0,
+  "impl_version": 0,
+  "plan_retries": 0,
+  "impl_retries": 0,
+  "ui_review_retries": 0,
+  "ui_to_impl_loops": 0,
+  "max_plan_retries": 3,
+  "max_impl_retries": 3,
+  "max_ui_review_iters": 3,
+  "max_ui_to_impl_loops": 2,
+  "escalation": null,
+  "created_at": 1777545675.648289,
+  "updated_at": 1777545675.648881,
+  "branch": "feature/WF4-07-learn-lesson",
+  "pr_url": null
+}

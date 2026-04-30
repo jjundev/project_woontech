@@ -165,12 +165,21 @@ struct WoontechApp: App {
         let sajuTenGodsNoAbsentWarning = args.contains("-sajuTenGodsNoAbsentWarning")
         let sajuTenGodsNoLearnEntry    = args.contains("-sajuTenGodsNoLearnEntry")
 
+        // WF4-06: Parse learn list mock launch args.
+        let sajuLearnArticlesEmpty = args.contains("-sajuLearnArticlesEmpty")
+        let sajuLearnStreakZero    = args.contains("-sajuLearnStreakZero")
+
         let sajuDeps: SajuTabDependencies
         let needsCustomLearningPath = sajuStreakDaysOverride != nil || sajuFeaturedLessonNil
+            || sajuLearnArticlesEmpty || sajuLearnStreakZero
         let needsCustomTenGods = sajuTenGodsNoAbsentWarning || sajuTenGodsNoLearnEntry
         if needsCustomLearningPath || sajuElementsNoGuidance || needsCustomTenGods {
-            let overrideDays = sajuStreakDaysOverride ?? 3
-            let weeklyProgress = WeeklyProgress(completed: 3, goal: 5, streakDays: overrideDays)
+            let overrideDays: Int = {
+                if sajuLearnStreakZero { return 0 }
+                return sajuStreakDaysOverride ?? 3
+            }()
+            let overrideCompleted: Int = sajuLearnStreakZero ? 0 : 3
+            let weeklyProgress = WeeklyProgress(completed: overrideCompleted, goal: 5, streakDays: overrideDays)
             let featuredLesson: FeaturedLesson? = sajuFeaturedLessonNil
                 ? nil
                 : FeaturedLesson(
@@ -179,8 +188,15 @@ struct WoontechApp: App {
                     durationLabel: "3분",
                     levelLabel: "초급"
                 )
+            let recommendedArticles: [Article] = sajuLearnArticlesEmpty
+                ? []
+                : MockSajuLearningPathProvider.defaultRecommendedArticles
             let learningPathProvider = needsCustomLearningPath
-                ? MockSajuLearningPathProvider(weeklyProgress: weeklyProgress, featuredLesson: featuredLesson)
+                ? MockSajuLearningPathProvider(
+                    weeklyProgress: weeklyProgress,
+                    featuredLesson: featuredLesson,
+                    recommendedArticles: recommendedArticles
+                  )
                 : MockSajuLearningPathProvider()
             let elementsProvider: any SajuElementsDetailProviding = sajuElementsNoGuidance
                 ? MockSajuElementsDetailProvider(guidance: nil)

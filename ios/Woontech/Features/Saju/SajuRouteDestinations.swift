@@ -53,7 +53,11 @@ func sajuRouteDestination(
     case .tenGods:
         SajuTenGodsDetailView(provider: deps.tenGodsDetail, onNavigate: onNavigate)
     case .learn:
-        SajuPlaceholderDestinationView(routeKey: "learn")
+        // WF4-06: SajuLearnListView가 placeholder를 교체.
+        SajuLearnListView(
+            provider: deps.learningPath,
+            onNavigate: onNavigate
+        )
     case .lesson(let id):
         SajuPlaceholderDestinationView(routeKey: "lesson", identifier: id)
     case .daewoonPlaceholder:

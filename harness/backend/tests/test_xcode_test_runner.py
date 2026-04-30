@@ -1032,6 +1032,161 @@ def test_boot_simulator_raises_on_bootstatus_timeout(monkeypatch):
     assert "did not complete within 5s" in str(excinfo.value)
 
 
+# ---------------------------------------------------------------------------
+# _resolve_ui_chunk_selectors — chunking policy
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_chunks_skipped_when_not_ui(tmp_path):
+    assert runner._resolve_ui_chunk_selectors(
+        ui=False,
+        passthrough_args=[],
+        target="WoontechUITests",
+        target_worktree=tmp_path,
+        no_chunk_env=False,
+    ) == [None]
+
+
+def test_resolve_chunks_skipped_when_no_chunk_env(tmp_path, monkeypatch):
+    """WOONTECH_UI_NO_CHUNK=1 must force a single invocation even when
+    discovery would otherwise return multiple classes."""
+    monkeypatch.setattr(
+        runner, "_discover_ui_test_classes", lambda _: ["AUITests", "BUITests"]
+    )
+    assert runner._resolve_ui_chunk_selectors(
+        ui=True,
+        passthrough_args=[],
+        target="WoontechUITests",
+        target_worktree=tmp_path,
+        no_chunk_env=True,
+    ) == [None]
+
+
+def test_resolve_chunks_per_discovered_class_when_no_user_selectors(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(
+        runner,
+        "_discover_ui_test_classes",
+        lambda _: ["AppLaunchContractUITests", "SajuLessonUITests"],
+    )
+    assert runner._resolve_ui_chunk_selectors(
+        ui=True,
+        passthrough_args=["-resultBundlePath", "/tmp/x"],
+        target="WoontechUITests",
+        target_worktree=tmp_path,
+        no_chunk_env=False,
+    ) == [
+        "-only-testing:WoontechUITests/AppLaunchContractUITests",
+        "-only-testing:WoontechUITests/SajuLessonUITests",
+    ]
+
+
+def test_resolve_chunks_falls_back_to_single_when_discovery_empty(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(runner, "_discover_ui_test_classes", lambda _: [])
+    assert runner._resolve_ui_chunk_selectors(
+        ui=True,
+        passthrough_args=[],
+        target="WoontechUITests",
+        target_worktree=tmp_path,
+        no_chunk_env=False,
+    ) == [None]
+
+
+def test_resolve_single_user_selector_runs_unchunked(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        runner, "_discover_ui_test_classes", lambda _: ["AUITests", "BUITests"]
+    )
+    assert runner._resolve_ui_chunk_selectors(
+        ui=True,
+        passthrough_args=["-only-testing:WoontechUITests/SajuLessonUITests"],
+        target="WoontechUITests",
+        target_worktree=tmp_path,
+        no_chunk_env=False,
+    ) == [None]
+
+
+def test_resolve_multiple_user_selectors_split_per_selector(tmp_path):
+    """Scoped UI verify injects multiple class selectors in one call —
+    those must be split so each chunk inherits the per-chunk daemon purge
+    and repair retry envelope."""
+    selectors = [
+        "-only-testing:WoontechUITests/SajuLessonUITests",
+        "-only-testing:WoontechUITests/SajuLearnListUITests",
+        "-only-testing:WoontechUITests/AppLaunchContractUITests",
+    ]
+    assert runner._resolve_ui_chunk_selectors(
+        ui=True,
+        passthrough_args=["-resultBundlePath", "/tmp/x", *selectors],
+        target="WoontechUITests",
+        target_worktree=tmp_path,
+        no_chunk_env=False,
+    ) == selectors
+
+
+def test_resolve_multiple_user_selectors_keeps_method_level_intact(tmp_path):
+    """Method-level selectors are split per-selector unchanged. Each method
+    runs in its own xcodebuild invocation; that's slower per-method but the
+    method-level scope is small enough that it doesn't matter."""
+    selectors = [
+        "-only-testing:WoontechUITests/AClass/test_a",
+        "-only-testing:WoontechUITests/BClass/test_b",
+    ]
+    assert runner._resolve_ui_chunk_selectors(
+        ui=True,
+        passthrough_args=selectors,
+        target="WoontechUITests",
+        target_worktree=tmp_path,
+        no_chunk_env=False,
+    ) == selectors
+
+
+def test_run_test_chunks_multi_user_selectors(monkeypatch, tmp_path):
+    """End-to-end check that run_test() actually splits multi-selector
+    invocations into N xcodebuild calls, each scoped to one selector."""
+    monkeypatch.setattr(runner, "preflight_check", lambda **kw: None)
+    monkeypatch.setattr(
+        runner,
+        "resolve_simulator",
+        lambda *, ui: runner.SimulatorDevice("iPhone", "UI-SIM", "rt", "type", "Booted"),
+    )
+    monkeypatch.setattr(runner, "reset_simulator", lambda udid: None)
+    monkeypatch.setattr(runner, "boot_simulator", lambda udid: None)
+    monkeypatch.setattr(runner, "_purge_daemons_before_ui_test", lambda *, skip: None)
+    monkeypatch.setattr(runner, "_persist_test_artifacts", lambda *a, **kw: None)
+
+    invocations: list[list[str]] = []
+
+    def fake_run(args, *, simulator_udid, derived_data_path, result_bundle_path=None):
+        invocations.append(list(args))
+        return 0
+
+    monkeypatch.setattr(runner, "run_with_optional_repair", fake_run)
+
+    selectors = [
+        "-only-testing:WoontechUITests/SajuLessonUITests",
+        "-only-testing:WoontechUITests/SajuLearnListUITests",
+        "-only-testing:WoontechUITests/AppLaunchContractUITests",
+    ]
+    code = runner.run_test(
+        "WoontechUITests",
+        ui=True,
+        xcodebuild_args=selectors,
+        worktree_dir_override=str(tmp_path),
+    )
+
+    assert code == 0
+    assert len(invocations) == 3, "each selector must run as its own xcodebuild invocation"
+    # Each invocation must contain its selector and exactly one -only-testing:.
+    for args, expected in zip(invocations, selectors):
+        only_testing = [a for a in args if a.startswith("-only-testing:")]
+        assert only_testing == [expected], (
+            f"chunk should only carry its own selector, got {only_testing}"
+        )
+
+
 def test_run_test_writes_simulator_boot_marker_when_boot_fails(monkeypatch, tmp_path):
     """When boot_simulator raises, the placeholder summary must start with
     `preflight_failed: simulator_boot:` so the reviewer agent uses the same

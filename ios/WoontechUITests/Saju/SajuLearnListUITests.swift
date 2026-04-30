@@ -280,10 +280,10 @@ final class SajuLearnListUITests: XCTestCase {
         let card = app.buttons["SajuLearnLessonCard_L1"]
         XCTAssertTrue(card.waitForExistence(timeout: 3))
         card.tap()
-        // After push, lesson placeholder shows "L1" identifier
-        let lessonDest = app.otherElements["SajuPlaceholderDestination_lesson"]
+        // WF4-07: SajuLessonView replaced SajuPlaceholderDestinationView for lesson route
+        let lessonDest = app.otherElements["SajuLessonView"]
         XCTAssertTrue(lessonDest.waitForExistence(timeout: 5),
-            "Lesson destination must appear after tapping L1")
+            "SajuLessonView must appear after tapping L1")
     }
 
     // MARK: - TU-L20 Current card tap pushes lesson
@@ -293,9 +293,10 @@ final class SajuLearnListUITests: XCTestCase {
         let card = app.buttons["SajuLearnLessonCard_L4"]
         XCTAssertTrue(card.waitForExistence(timeout: 3))
         card.tap()
-        let lessonDest = app.otherElements["SajuPlaceholderDestination_lesson"]
+        // WF4-07: SajuLessonView replaced SajuPlaceholderDestinationView for lesson route
+        let lessonDest = app.otherElements["SajuLessonView"]
         XCTAssertTrue(lessonDest.waitForExistence(timeout: 5),
-            "Lesson destination must appear after tapping L4")
+            "SajuLessonView must appear after tapping L4")
     }
 
     // MARK: - TU-L21 Locked card tap shows toast

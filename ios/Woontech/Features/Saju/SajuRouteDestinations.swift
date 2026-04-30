@@ -39,13 +39,15 @@ struct SajuPlaceholderDestinationView: View {
 ///
 /// WF4-04: `.elements` 케이스가 `SajuElementsDetailView`로 교체됨.
 /// WF4-05: `.tenGods` 케이스가 `SajuTenGodsDetailView`로 교체됨.
-/// `onNavigate` 파라미터는 `SajuTenGodsDetailView`의 학습 유도 카드 탭 시
-/// `SajuRoute.lesson(id:)` push에 사용된다(Option A).
+/// WF4-07: `.lesson(id:)` 케이스가 `SajuLessonView`로 교체됨.
+/// `onNavigate` 파라미터는 push에, `onReplaceTop`은 path 마지막 element
+/// 교체(다음 강의 이동)에 사용된다.
 @ViewBuilder
 func sajuRouteDestination(
     for route: SajuRoute,
     deps: SajuTabDependencies,
-    onNavigate: @escaping (SajuRoute) -> Void
+    onNavigate: @escaping (SajuRoute) -> Void,
+    onReplaceTop: @escaping (SajuRoute) -> Void
 ) -> some View {
     switch route {
     case .elements:
@@ -59,7 +61,10 @@ func sajuRouteDestination(
             onNavigate: onNavigate
         )
     case .lesson(let id):
-        SajuPlaceholderDestinationView(routeKey: "lesson", identifier: id)
+        SajuLessonView(
+            lesson: deps.lesson.lesson(id: id),
+            onReplaceTop: onReplaceTop
+        )
     case .daewoonPlaceholder:
         SajuPlaceholderDestinationView(routeKey: "daewoon")
     case .hapchungPlaceholder:

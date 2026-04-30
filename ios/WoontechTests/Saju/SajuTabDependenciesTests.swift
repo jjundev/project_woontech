@@ -45,7 +45,27 @@ private struct StubSajuLearningPathProvider: SajuLearningPathProviding {
 }
 
 private struct StubSajuLessonProvider: SajuLessonProviding {
-    func lessonTitle(forId id: String) -> String? { "stub-\(id)" }
+    func lesson(id: String) -> Lesson {
+        Lesson(
+            id: id,
+            number: 0,
+            title: "stub-\(id)",
+            currentIndex: 0,
+            totalCount: 1,
+            sectionLabel: "stub",
+            headline: "stub",
+            conceptBox: "stub",
+            diagramPlaceholderLabel: "stub",
+            quiz: Quiz(
+                label: "stub",
+                question: "stub",
+                choices: [Choice(symbol: "A"), Choice(symbol: "B"), Choice(symbol: "C"), Choice(symbol: "D")],
+                correctIndex: 0
+            ),
+            nextLessonId: nil,
+            isFallback: false
+        )
+    }
 }
 
 final class SajuTabDependenciesTests: XCTestCase {
@@ -62,7 +82,7 @@ final class SajuTabDependenciesTests: XCTestCase {
         // WF4-05: summaryLine → summaryHeadline
         XCTAssertFalse(deps.tenGodsDetail.summaryHeadline.isEmpty)
         XCTAssertEqual(deps.learningPath.courses.count, 4)
-        XCTAssertNotNil(deps.lesson.lessonTitle(forId: "L-001"))
+        XCTAssertFalse(deps.lesson.lesson(id: "L-OH-003").isFallback)
     }
 
     // T5
@@ -84,6 +104,6 @@ final class SajuTabDependenciesTests: XCTestCase {
         // WF4-05: summaryLine → summaryHeadline
         XCTAssertEqual(deps.tenGodsDetail.summaryHeadline, "stub tenGods")
         XCTAssertEqual(deps.learningPath.courses.first?.id, "stub")
-        XCTAssertEqual(deps.lesson.lessonTitle(forId: "L-001"), "stub-L-001")
+        XCTAssertEqual(deps.lesson.lesson(id: "stub-id").id, "stub-id")
     }
 }

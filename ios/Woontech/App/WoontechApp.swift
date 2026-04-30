@@ -169,11 +169,15 @@ struct WoontechApp: App {
         let sajuLearnArticlesEmpty = args.contains("-sajuLearnArticlesEmpty")
         let sajuLearnStreakZero    = args.contains("-sajuLearnStreakZero")
 
+        // WF4-07: `-sajuLessonNoNextId` — lesson provider uses "L-OH-LAST" (nextLessonId=nil)
+        // for all lesson(id:) calls, so TU-LS16/17 can test "학습 완료" CTA flow.
+        let sajuLessonNoNextId = args.contains("-sajuLessonNoNextId")
+
         let sajuDeps: SajuTabDependencies
         let needsCustomLearningPath = sajuStreakDaysOverride != nil || sajuFeaturedLessonNil
             || sajuLearnArticlesEmpty || sajuLearnStreakZero
         let needsCustomTenGods = sajuTenGodsNoAbsentWarning || sajuTenGodsNoLearnEntry
-        if needsCustomLearningPath || sajuElementsNoGuidance || needsCustomTenGods {
+        if needsCustomLearningPath || sajuElementsNoGuidance || needsCustomTenGods || sajuLessonNoNextId {
             let overrideDays: Int = {
                 if sajuLearnStreakZero { return 0 }
                 return sajuStreakDaysOverride ?? 3
@@ -212,10 +216,16 @@ struct WoontechApp: App {
                     return MockSajuTenGodsDetailProvider()
                 }
             }()
+            // WF4-07: lesson provider override
+            let lessonProvider: any SajuLessonProviding = sajuLessonNoNextId
+                ? NoNextLessonProvider()
+                : MockSajuLessonProvider()
+
             sajuDeps = SajuTabDependencies(
                 elementsDetail: elementsProvider,
                 tenGodsDetail: tenGodsProvider,
-                learningPath: learningPathProvider
+                learningPath: learningPathProvider,
+                lesson: lessonProvider
             )
         } else {
             sajuDeps = SajuTabDependencies.mock

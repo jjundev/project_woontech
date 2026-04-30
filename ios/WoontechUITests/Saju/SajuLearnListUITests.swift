@@ -46,7 +46,7 @@ final class SajuLearnListUITests: XCTestCase {
         XCTAssertTrue(scroll.waitForExistence(timeout: 5))
         scroll.swipeUp()
         scroll.swipeUp()
-        let allBtn = app.buttons["SajuStudyHeaderAllButton"]
+        let allBtn = app.buttons["SajuStudyAllButton"]
         XCTAssertTrue(allBtn.waitForExistence(timeout: 5))
         allBtn.tap()
         XCTAssertTrue(

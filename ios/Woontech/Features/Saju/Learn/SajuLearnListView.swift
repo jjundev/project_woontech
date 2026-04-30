@@ -80,8 +80,18 @@ struct SajuLearnListView: View {
                 .accessibilityIdentifier("SajuLearnSearchButton")
             }
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("SajuLearnListView")
+        // Hidden Color.clear root marker for UI tests.
+        // Queried as app.otherElements["SajuLearnListView"].
+        // (Mirrors SajuElementsDetailView / SajuTenGodsDetailView pattern:
+        //  attaching .accessibilityElement(children:.contain) after .toolbar
+        //  causes the identifier to be masked in iOS 26 NavigationStack.)
+        .overlay(alignment: .topLeading) {
+            Color.clear
+                .frame(width: 1, height: 1)
+                .accessibilityIdentifier("SajuLearnListView")
+                .accessibilityHidden(false)
+                .allowsHitTesting(false)
+        }
     }
 
     // MARK: - Lesson Tap Handling

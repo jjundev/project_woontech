@@ -108,9 +108,18 @@ final class SajuTabFoundationUITests: XCTestCase {
         )
     }
 
-    // T19
-    func test_sajuRoute_pushTenGods_showsPlaceholder() {
-        tapPushAndAssertDestination(button: "SajuNavPush_tenGods", destinationKey: "tenGods")
+    // T19 — WF4-05: `.tenGods` 라우트가 SajuTenGodsDetailView로 교체됨.
+    // 이전 placeholder(`SajuPlaceholderDestination_tenGods`) 대신 실제 뷰를 검증한다.
+    func test_sajuRoute_pushTenGods_showsTenGodsDetailView() {
+        launchSajuTab()
+        let btn = app.buttons["SajuNavPush_tenGods"]
+        XCTAssertTrue(btn.waitForExistence(timeout: 3),
+                      "SajuNavPush_tenGods trigger button must exist")
+        btn.tap()
+        XCTAssertTrue(
+            app.otherElements["SajuTenGodsDetailView"].waitForExistence(timeout: 5),
+            "SajuTenGodsDetailView should appear after pushing .tenGods route"
+        )
     }
 
     // T20 — WF4-06: `.learn` 라우트가 SajuLearnListView로 교체됨.

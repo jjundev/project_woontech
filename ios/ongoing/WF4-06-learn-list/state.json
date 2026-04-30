@@ -7,7 +7,7 @@
   "impl_version": 2,
   "plan_retries": 1,
   "impl_retries": 1,
-  "ui_review_retries": 0,
+  "ui_review_retries": 1,
   "ui_to_impl_loops": 0,
   "max_plan_retries": 3,
   "max_impl_retries": 3,
@@ -15,7 +15,7 @@
   "max_ui_to_impl_loops": 2,
   "escalation": null,
   "created_at": 1777478640.742563,
-  "updated_at": 1777481001.4094772,
+  "updated_at": 1777523196.6426098,
   "branch": "feature/WF4-06-learn-list",
   "pr_url": null
 }
